@@ -63,6 +63,11 @@ const DatingApp = () => {
     // TODO: Apply filters logic
   };
 
+  const handleTabChange = (tabId: string) => {
+    console.log('Switching to tab:', tabId);
+    setActiveTab(tabId);
+  };
+
   const renderTabContent = () => {
     if (isAdminMode) {
       return <AdminDashboard />;
@@ -113,40 +118,42 @@ const DatingApp = () => {
     <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {/* Tab Navigation */}
       {!isAdminMode && (
-        <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 px-4 py-2">
-          <div className="flex justify-between items-center max-w-md mx-auto">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 transform hover:scale-105 ${
-                    isActive 
-                      ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-lg scale-105' 
-                      : 'text-gray-600 hover:bg-purple-50'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-xs font-medium">{tab.label}</span>
-                </button>
-              );
-            })}
+        <div className="bg-white/90 backdrop-blur-sm border-b border-purple-100 px-4 py-3 shadow-sm">
+          <div className="flex justify-center items-center max-w-lg mx-auto">
+            <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl transition-all duration-300 ease-in-out transform min-w-[80px] ${
+                      isActive 
+                        ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-lg scale-105 -translate-y-0.5' 
+                        : 'text-gray-600 hover:bg-white hover:text-gray-800 hover:scale-102 hover:shadow-sm'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 transition-all duration-200 ${isActive ? 'scale-110' : ''}`} />
+                    <span className="text-xs font-medium leading-tight">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
       {/* Top Action Bar */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
+      <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
         {/* User Info */}
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowProfile(true)}
-            className="bg-white/80 backdrop-blur-sm border-purple-200 hover:bg-purple-50"
+            className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
           >
             <img 
               src={user.avatar} 
@@ -165,10 +172,10 @@ const DatingApp = () => {
             variant="outline"
             size="sm"
             onClick={() => setIsAdminMode(!isAdminMode)}
-            className={`backdrop-blur-sm border-purple-200 ${
+            className={`backdrop-blur-sm border-purple-200 shadow-sm transition-all duration-200 ${
               isAdminMode 
-                ? 'bg-purple-500 text-white hover:bg-purple-600' 
-                : 'bg-white/80 hover:bg-purple-50'
+                ? 'bg-purple-500 text-white hover:bg-purple-600 shadow-lg' 
+                : 'bg-white/90 hover:bg-purple-50'
             }`}
           >
             <Shield className="w-4 h-4" />
@@ -180,7 +187,7 @@ const DatingApp = () => {
               variant="outline"
               size="sm"
               onClick={() => setShowFilters(true)}
-              className="bg-white/80 backdrop-blur-sm border-purple-200 hover:bg-purple-50"
+              className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
             >
               <Settings className="w-4 h-4" />
             </Button>
@@ -191,7 +198,7 @@ const DatingApp = () => {
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            className="bg-white/80 backdrop-blur-sm border-purple-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600"
+            className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 shadow-sm"
           >
             <LogOut className="w-4 h-4" />
           </Button>
@@ -199,8 +206,10 @@ const DatingApp = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-hidden">
-        {renderTabContent()}
+      <div className="flex-1 overflow-hidden relative">
+        <div key={activeTab} className="h-full animate-fade-in">
+          {renderTabContent()}
+        </div>
       </div>
 
       {/* Modals */}

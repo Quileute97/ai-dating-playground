@@ -1,10 +1,10 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Heart, Settings, Users, Bot } from 'lucide-react';
+import { Send, Heart, Settings, Users, Bot, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { aiService, AIMessage } from '@/services/aiService';
 
 interface Message {
   id: string;
@@ -14,13 +14,20 @@ interface Message {
   isAI?: boolean;
 }
 
-const ChatInterface = () => {
+interface ChatInterfaceProps {
+  user?: any;
+}
+
+const ChatInterface = ({ user }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [stranger, setStranger] = useState<any>(null);
   const [isAIMode, setIsAIMode] = useState(false);
+  const [aiPersonality, setAiPersonality] = useState('friendly');
+  const [conversationHistory, setConversationHistory] = useState<AIMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -31,7 +38,7 @@ const ChatInterface = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
     const newMessage: Message = {
@@ -42,35 +49,86 @@ const ChatInterface = () => {
     };
 
     setMessages(prev => [...prev, newMessage]);
+    
+    // Add to conversation history for AI
+    const userMessage: AIMessage = {
+      role: 'user',
+      content: inputValue
+    };
+    setConversationHistory(prev => [...prev, userMessage]);
     setInputValue('');
 
-    // Simulate stranger/AI response
-    setTimeout(() => {
-      const responses = [
-        "Hey! Nice to meet you 😊",
-        "What's your favorite thing to do on weekends?",
-        "I love your energy! Tell me about yourself",
-        "That's interesting! I've never thought about it that way",
-        "Haha, you seem fun to talk to! 😄"
-      ];
+    if (isAIMode) {
+      // Show typing indicator
+      setIsTyping(true);
       
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      
-      const response: Message = {
-        id: (Date.now() + 1).toString(),
-        text: randomResponse,
-        sender: 'stranger',
-        timestamp: new Date(),
-        isAI: isAIMode
-      };
+      try {
+        await aiService.simulateTyping();
+        const aiResponse = await aiService.generateResponse(
+          [...conversationHistory, userMessage],
+          aiPersonality
+        );
 
-      setMessages(prev => [...prev, response]);
-    }, 1000 + Math.random() * 2000);
+        const response: Message = {
+          id: (Date.now() + 1).toString(),
+          text: aiResponse.message,
+          sender: 'stranger',
+          timestamp: new Date(),
+          isAI: true
+        };
+
+        setMessages(prev => [...prev, response]);
+        
+        // Add AI response to conversation history
+        setConversationHistory(prev => [...prev, userMessage, {
+          role: 'assistant',
+          content: aiResponse.message
+        }]);
+        
+      } catch (error) {
+        console.error('AI response error:', error);
+        // Fallback response
+        const fallbackResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: 'Xin lỗi, mình đang gặp chút vấn đề. Bạn có thể thử lại không? 😅',
+          sender: 'stranger',
+          timestamp: new Date(),
+          isAI: true
+        };
+        setMessages(prev => [...prev, fallbackResponse]);
+      } finally {
+        setIsTyping(false);
+      }
+    } else {
+      // Simulate stranger response (for demo)
+      setTimeout(() => {
+        const responses = [
+          "Hey! Nice to meet you 😊",
+          "What's your favorite thing to do on weekends?",
+          "I love your energy! Tell me about yourself",
+          "That's interesting! I've never thought about it that way",
+          "Haha, you seem fun to talk to! 😄"
+        ];
+        
+        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+        
+        const response: Message = {
+          id: (Date.now() + 1).toString(),
+          text: randomResponse,
+          sender: 'stranger',
+          timestamp: new Date(),
+          isAI: false
+        };
+
+        setMessages(prev => [...prev, response]);
+      }, 1000 + Math.random() * 2000);
+    }
   };
 
   const startSearching = () => {
     setIsSearching(true);
     setMessages([]);
+    setConversationHistory([]);
     
     // Simulate searching for 3 seconds, then connect to AI
     setTimeout(() => {
@@ -93,6 +151,10 @@ const ChatInterface = () => {
       };
 
       setMessages([welcomeMessage]);
+      setConversationHistory([{
+        role: 'assistant',
+        content: welcomeMessage.text
+      }]);
     }, 3000);
   };
 
@@ -101,12 +163,14 @@ const ChatInterface = () => {
     setIsAIMode(false);
     setStranger(null);
     setMessages([]);
+    setConversationHistory([]);
+    setIsTyping(false);
   };
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 p-4 shadow-sm">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 p-4 shadow-sm animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-full">
@@ -126,7 +190,7 @@ const ChatInterface = () => {
       {/* Connection Status */}
       {!isConnected && !isSearching && (
         <div className="flex-1 flex items-center justify-center p-6">
-          <Card className="w-full max-w-md p-6 text-center bg-white/70 backdrop-blur-sm border-purple-200">
+          <Card className="w-full max-w-md p-6 text-center bg-white/70 backdrop-blur-sm border-purple-200 animate-scale-in">
             <div className="bg-gradient-to-r from-purple-500 to-pink-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <Heart className="w-8 h-8 text-white" />
             </div>
@@ -134,8 +198,9 @@ const ChatInterface = () => {
             <p className="text-gray-600 mb-6">Tìm kiếm những người bạn mới thú vị để trò chuyện cùng!</p>
             <Button 
               onClick={startSearching}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
             >
+              <Sparkles className="w-4 h-4 mr-2" />
               Bắt đầu chat
             </Button>
           </Card>
@@ -150,7 +215,7 @@ const ChatInterface = () => {
               <Users className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tìm kiếm...</h2>
-            <p className="text-gray-600 mb-4">Đang kết nối bạn với người dùng phù hợp</p>
+            <p className="text-gray-600 mb-4">Đang kết nối bạn với AI thông minh</p>
             <div className="flex justify-center">
               <div className="flex space-x-1">
                 <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
@@ -184,8 +249,10 @@ const ChatInterface = () => {
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-xs text-gray-500">Đang online</span>
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-gray-500">
+                    {isTyping ? 'Đang nhập...' : 'Đang online'}
+                  </span>
                 </div>
               </div>
               <Button variant="outline" size="sm" onClick={disconnect}>
@@ -199,12 +266,12 @@ const ChatInterface = () => {
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
               >
-                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 hover:scale-105 ${
                   message.sender === 'user'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                    : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100'
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                    : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
                 }`}>
                   <p className="text-sm">{message.text}</p>
                   <p className={`text-xs mt-1 ${
@@ -215,6 +282,20 @@ const ChatInterface = () => {
                 </div>
               </div>
             ))}
+            
+            {/* Typing Indicator */}
+            {isTyping && (
+              <div className="flex justify-start animate-fade-in">
+                <div className="bg-white/80 backdrop-blur-sm border border-purple-100 px-4 py-2 rounded-2xl shadow-md">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div ref={messagesEndRef} />
           </div>
 
@@ -225,13 +306,15 @@ const ChatInterface = () => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Nhập tin nhắn..."
-                className="flex-1 border-purple-200 focus:border-purple-400"
+                className="flex-1 border-purple-200 focus:border-purple-400 transition-colors"
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                disabled={isTyping}
               />
               <Button
                 onClick={handleSendMessage}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
                 size="sm"
+                disabled={isTyping || !inputValue.trim()}
               >
                 <Send className="w-4 h-4" />
               </Button>

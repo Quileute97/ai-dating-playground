@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MapPin, Heart, MessageCircle, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -14,6 +13,10 @@ interface NearbyUser {
   lastSeen: string;
   interests: string[];
   rating: number;
+}
+
+interface NearbyInterfaceProps {
+  user?: any;
 }
 
 const mockNearbyUsers: NearbyUser[] = [
@@ -74,7 +77,7 @@ const mockNearbyUsers: NearbyUser[] = [
   }
 ];
 
-const NearbyInterface = () => {
+const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
 
   const handleViewProfile = (user: NearbyUser) => {

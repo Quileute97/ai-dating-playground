@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Heart, X, Zap, ArrowLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -12,6 +11,10 @@ interface UserProfile {
   images: string[];
   distance: number;
   interests: string[];
+}
+
+interface SwipeInterfaceProps {
+  user?: any;
 }
 
 const mockProfiles: UserProfile[] = [
@@ -44,7 +47,7 @@ const mockProfiles: UserProfile[] = [
   }
 ];
 
-const SwipeInterface = () => {
+const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [matches, setMatches] = useState(0);

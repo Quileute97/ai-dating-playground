@@ -7,7 +7,6 @@ import {
   createConversation,
   checkForExistingMatch,
 } from "@/services/strangerMatchmakingService";
-import { isUUIDv4 } from "@/utils/uuidUtils";
 
 interface MatchResult {
   partnerId: string | null;
@@ -22,15 +21,18 @@ export function useStrangerMatchmaking(userId: string | null) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const joinQueue = useCallback(async () => {
-    console.log("[STRANGER] [joinQueue] userId =", userId);
-    if (!isUUIDv4(userId)) {
-      console.error("[STRANGER] [joinQueue] Invalid user ID. Aborting.");
+    console.log("[STRANGER] [joinQueue] userId =", userId, "Type:", typeof userId);
+    
+    if (!userId) {
+      console.error("[STRANGER] [joinQueue] No user ID provided. Aborting.");
       setStatus("error");
       return;
     }
+    
     try {
       setStatus("searching");
       await joinStrangerQueue(userId);
+      console.log("[STRANGER] [joinQueue] Successfully joined queue");
     } catch (err) {
       console.error("[STRANGER] [joinQueue] Exception error:", err);
       setStatus("error");
@@ -38,15 +40,23 @@ export function useStrangerMatchmaking(userId: string | null) {
   }, [userId]);
 
   const tryMatch = useCallback(async () => {
-    if (!isUUIDv4(userId)) return;
+    if (!userId) {
+      console.log("[STRANGER] [tryMatch] No userId, skipping");
+      return;
+    }
+
+    console.log("[STRANGER] [tryMatch] Attempting to find match for:", userId);
 
     try {
       // Case 1: I am the matcher. Look for someone in the queue.
       const partnerId = await findMatch(userId);
+      console.log("[STRANGER] [tryMatch] Found partner in queue:", partnerId);
+      
       if (partnerId) {
         console.log("[STRANGER] [tryMatch] Found partner, attempting to create conversation:", partnerId);
         const conversation = await createConversation(userId, partnerId);
         if (conversation) {
+          console.log("[STRANGER] [tryMatch] Conversation created:", conversation);
           await leaveStrangerQueue(userId);
           setMatchResult({ partnerId, conversationId: conversation.conversationId });
           setStatus("matched");
@@ -61,6 +71,8 @@ export function useStrangerMatchmaking(userId: string | null) {
         await leaveStrangerQueue(userId);
         setMatchResult(existingMatch);
         setStatus("matched");
+      } else {
+        console.log('[STRANGER] [tryMatch] No match found, continuing to search...');
       }
     } catch (err) {
       console.error('[STRANGER] [tryMatch] General exception:', err);
@@ -71,9 +83,13 @@ export function useStrangerMatchmaking(userId: string | null) {
   // Polling for a match
   useEffect(() => {
     if (status === "searching" && userId) {
-      intervalRef.current = setInterval(tryMatch, 1500);
+      console.log("[STRANGER] Starting polling for matches");
+      intervalRef.current = setInterval(tryMatch, 2000); // Slightly longer interval
       return () => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (intervalRef.current) {
+          console.log("[STRANGER] Stopping polling");
+          clearInterval(intervalRef.current);
+        }
       };
     } else if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -83,7 +99,8 @@ export function useStrangerMatchmaking(userId: string | null) {
   // Cleanup on unmount or user change
   useEffect(() => {
     return () => {
-      if (userId && isUUIDv4(userId)) {
+      if (userId) {
+        console.log("[STRANGER] Cleanup: leaving queue for user:", userId);
         leaveStrangerQueue(userId);
       }
       if (intervalRef.current) {
@@ -93,10 +110,11 @@ export function useStrangerMatchmaking(userId: string | null) {
   }, [userId]);
 
   const reset = useCallback(async () => {
+    console.log("[STRANGER] Resetting matchmaking state");
     setStatus("idle");
     setMatchResult({ partnerId: null, conversationId: null });
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (userId && isUUIDv4(userId)) {
+    if (userId) {
       await leaveStrangerQueue(userId);
     }
   }, [userId]);

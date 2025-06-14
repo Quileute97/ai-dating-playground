@@ -21,24 +21,8 @@ import AdminFakeUsersTab from "./AdminFakeUsersTab";
 import AdminAIPromptsTab from "./AdminAIPromptsTab";
 import AdminSettingsTab from "./AdminSettingsTab";
 
-interface FakeUser {
-  id: string;
-  name: string;
-  avatar: string;
-  gender: 'male' | 'female';
-  age: number;
-  bio: string;
-  aiPrompt: string;
-  isActive: boolean;
-}
-
-interface AIPrompt {
-  id: string;
-  name: string;
-  description: string;
-  prompt: string;
-  category: string;
-}
+import { toast } from "@/hooks/use-toast";
+import type { FakeUser, AIPrompt } from "@/types/admin";
 
 const mockFakeUsers: FakeUser[] = [
   {
@@ -183,17 +167,21 @@ const AdminDashboard = () => {
     setAIPrompts(prev => prev.filter(prompt => prompt.id !== promptId));
   };
 
+  // Sử dụng toast khi lưu settings thành công
   const handleSaveSettings = () => {
     // Save OpenAI API key to AI service
     if (settings.openaiApiKey) {
       aiService.setApiKey(settings.openaiApiKey);
     }
-    
-    // Here you could save other settings to localStorage or backend
+
+    // Save other settings
     localStorage.setItem('adminSettings', JSON.stringify(settings));
-    
+
+    toast({
+      title: "Đã lưu cài đặt",
+      description: "Cài đặt hệ thống đã được lưu thành công!",
+    });
     console.log('Settings saved:', settings);
-    // You could show a toast notification here
   };
 
   const handleEditFakeUser = (user: FakeUser) => setEditingFakeUser(user);

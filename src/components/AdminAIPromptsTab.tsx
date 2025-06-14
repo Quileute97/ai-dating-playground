@@ -1,9 +1,8 @@
-
 import React from "react";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AIPrompt } from "./AdminDashboard";
+import type { AIPrompt } from "@/types/admin";
 
 interface Props {
   aiPrompts: AIPrompt[];

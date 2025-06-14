@@ -1,11 +1,10 @@
-
 import React from "react";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import FakeUserChatModal from "./FakeUserChatModal";
 import PostAsFakeUserModal from "./PostAsFakeUserModal";
-import { FakeUser, AIPrompt } from "./AdminDashboard"; 
+import type { FakeUser, AIPrompt } from "@/types/admin"; 
 
 interface Props {
   fakeUsers: FakeUser[];

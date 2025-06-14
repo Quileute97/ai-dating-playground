@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Bot, MessageSquare, Settings, TrendingUp, Eye, Plus, Edit, Trash2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,11 @@ import { supabase } from "@/integrations/supabase/client";
 import HeaderAdManager from "./HeaderAdManager";
 import BankInfoManager from "./BankInfoManager";
 import UpgradeRequestsAdmin from "./UpgradeRequestsAdmin";
+
+import AdminOverviewTab from "./AdminOverviewTab";
+import AdminFakeUsersTab from "./AdminFakeUsersTab";
+import AdminAIPromptsTab from "./AdminAIPromptsTab";
+import AdminSettingsTab from "./AdminSettingsTab";
 
 interface FakeUser {
   id: string;
@@ -278,330 +284,51 @@ const AdminDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Tổng người dùng</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">1,234</div>
-                  <p className="text-xs text-muted-foreground">+12% từ tháng trước</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Chat AI</CardTitle>
-                  <Bot className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">567</div>
-                  <p className="text-xs text-muted-foreground">cuộc chat hôm nay</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Matches</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">89</div>
-                  <p className="text-xs text-muted-foreground">matches hôm nay</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Online</CardTitle>
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">156</div>
-                  <p className="text-xs text-muted-foreground">đang online</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Hoạt động gần đây</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    { user: 'Minh Anh', action: 'Match với Luna (AI)', time: '2 phút trước' },
-                    { user: 'Hoàng Nam', action: 'Chat với Alex (AI)', time: '5 phút trước' },
-                    { user: 'Thu Hà', action: 'Swipe right 3 profiles', time: '10 phút trước' }
-                  ].map((activity, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{activity.user}</p>
-                        <p className="text-sm text-gray-600">{activity.action}</p>
-                      </div>
-                      <span className="text-xs text-gray-500">{activity.time}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <AdminOverviewTab />
           </TabsContent>
 
-          {/* Fake Users Tab */}
           <TabsContent value="fake-users" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Quản lý người dùng ảo</h2>
-              <Button 
-                onClick={() => setShowAddUserModal(true)}
-                className="bg-gradient-to-r from-purple-500 to-pink-500"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Thêm user ảo
-              </Button>
-            </div>
-
-            <div className="grid gap-4">
-              {fakeUsers.map((user) => (
-                <Card key={user.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      <img 
-                        src={user.avatar} 
-                        alt={user.name}
-                        className="w-16 h-16 rounded-full object-cover"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold">{user.name}</h3>
-                          <span className="text-sm text-gray-600">
-                            {user.gender === 'female' ? '♀' : '♂'} {user.age} tuổi
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {user.isActive ? 'Hoạt động' : 'Tạm dừng'}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">{user.bio}</p>
-                        <p className="text-xs text-gray-500 italic">
-                          AI Prompt: {user.aiPrompt.substring(0, 100)}...
-                        </p>
-                        <div className="flex gap-2 mt-3">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => setChatFakeUser(user)}
-                          >
-                            Nhắn tin
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => setPostFakeUser(user)}
-                          >
-                            Đăng bài
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditFakeUser(user)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteUser(user.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            {/* Modal chat với user ảo */}
-            <FakeUserChatModal
-              isOpen={!!chatFakeUser}
-              user={chatFakeUser && {
-                id: chatFakeUser.id,
-                name: chatFakeUser.name,
-                avatar: chatFakeUser.avatar,
-                aiPrompt: chatFakeUser.aiPrompt
-              }}
-              onClose={() => setChatFakeUser(null)}
-              userRealId={user?.id || ""}
-            />
-            {/* Modal đăng bài với user ảo */}
-            <PostAsFakeUserModal
-              isOpen={!!postFakeUser}
-              user={postFakeUser && {
-                id: postFakeUser.id,
-                name: postFakeUser.name,
-                avatar: postFakeUser.avatar
-              }}
-              onClose={() => setPostFakeUser(null)}
-              onPost={content => {
-                if (postFakeUser) handlePostAsFakeUser(content, postFakeUser);
-              }}
+            <AdminFakeUsersTab
+              fakeUsers={fakeUsers}
+              setShowAddUserModal={setShowAddUserModal}
+              chatFakeUser={chatFakeUser}
+              setChatFakeUser={setChatFakeUser}
+              postFakeUser={postFakeUser}
+              setPostFakeUser={setPostFakeUser}
+              handleEditFakeUser={handleEditFakeUser}
+              handleDeleteUser={handleDeleteUser}
+              user={user}
+              aiPrompts={aiPrompts}
+              handlePostAsFakeUser={handlePostAsFakeUser}
             />
           </TabsContent>
 
-          {/* AI Prompts Tab */}
           <TabsContent value="ai-prompts" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Quản lý AI Prompts</h2>
-              <Button 
-                onClick={() => setShowAddPromptModal(true)}
-                className="bg-gradient-to-r from-blue-500 to-purple-500"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Thêm prompt mới
-              </Button>
-            </div>
-
-            <div className="grid gap-4">
-              {aiPrompts.map((prompt) => (
-                <Card key={prompt.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold">{prompt.name}</h3>
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                            {prompt.category}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-3">{prompt.description}</p>
-                        <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                          {prompt.prompt.substring(0, 150)}...
-                        </p>
-                      </div>
-
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditAIPrompt(prompt)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDeletePrompt(prompt.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <AdminAIPromptsTab
+              aiPrompts={aiPrompts}
+              setShowAddPromptModal={setShowAddPromptModal}
+              handleEditAIPrompt={handleEditAIPrompt}
+              handleDeletePrompt={handleDeletePrompt}
+            />
           </TabsContent>
 
-          {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Cài đặt hệ thống</h2>
-              <Button 
-                onClick={handleSaveSettings}
-                className="bg-gradient-to-r from-green-500 to-blue-500"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Lưu cài đặt
-              </Button>
-            </div>
-            
-            <div className="grid gap-6">
-              {/* Card: Cài đặt quảng cáo header */}
-              <HeaderAdManager
-                headerAdCode={headerAdCode}
-                setHeaderAdCode={setHeaderAdCode}
-                onSave={handleSaveHeaderAdCode}
-              />
-
-              {/* Card: Thông tin ngân hàng và QR */}
-              <BankInfoManager
-                bankInfo={bankInfo}
-                setBankInfo={setBankInfo}
-                onSave={handleSaveBankInfo}
-                qrImgUploading={qrImgUploading}
-                onQrUpload={handleQrUpload}
-              />
-
-              {/* ... keep existing AI setting and match setting cards ... */}
-              {/* Chèn phần cài đặt AI + matching, sau các cards mới thêm */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cài đặt AI</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">API Key OpenAI</label>
-                    <input 
-                      type="password" 
-                      placeholder="sk-..."
-                      value={settings.openaiApiKey}
-                      onChange={(e) => setSettings(prev => ({ ...prev, openaiApiKey: e.target.value }))}
-                      className="w-full p-2 border rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Timeout chat (giây)</label>
-                    <input 
-                      type="number" 
-                      value={settings.chatTimeout}
-                      onChange={(e) => setSettings(prev => ({ ...prev, chatTimeout: parseInt(e.target.value) }))}
-                      className="w-full p-2 border rounded-md"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cài đặt matching</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Tỉ lệ match với AI (%)</label>
-                    <input 
-                      type="number" 
-                      value={settings.aiMatchRate}
-                      onChange={(e) => setSettings(prev => ({ ...prev, aiMatchRate: parseInt(e.target.value) }))}
-                      min="0" 
-                      max="100"
-                      className="w-full p-2 border rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Phạm vi tìm kiếm mặc định (km)</label>
-                    <input 
-                      type="number" 
-                      value={settings.searchRadius}
-                      onChange={(e) => setSettings(prev => ({ ...prev, searchRadius: parseInt(e.target.value) }))}
-                      className="w-full p-2 border rounded-md"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <AdminSettingsTab
+              headerAdCode={headerAdCode}
+              setHeaderAdCode={setHeaderAdCode}
+              onSaveHeaderAd={handleSaveHeaderAdCode}
+              bankInfo={bankInfo}
+              setBankInfo={setBankInfo}
+              onSaveBankInfo={handleSaveBankInfo}
+              qrImgUploading={qrImgUploading}
+              onQrUpload={handleQrUpload}
+              settings={settings}
+              setSettings={setSettings}
+              handleSaveSettings={handleSaveSettings}
+            />
           </TabsContent>
 
-          {/* Tab: Quản lý yêu cầu nâng cấp */}
           <TabsContent value="upgrade-requests" className="space-y-6">
             <UpgradeRequestsAdmin />
           </TabsContent>
@@ -640,6 +367,25 @@ const AdminDashboard = () => {
       </div>
     </div>
   );
+};
+
+export type FakeUser = {
+  id: string;
+  name: string;
+  avatar: string;
+  gender: 'male' | 'female';
+  age: number;
+  bio: string;
+  aiPrompt: string;
+  isActive: boolean;
+};
+
+export type AIPrompt = {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+  category: string;
 };
 
 export default AdminDashboard;

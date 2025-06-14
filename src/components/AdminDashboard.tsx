@@ -271,7 +271,11 @@ const AdminDashboard = () => {
                       </div>
 
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditFakeUser(user)}
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button 
@@ -322,7 +326,11 @@ const AdminDashboard = () => {
                       </div>
 
                       <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditAIPrompt(prompt)}
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button 

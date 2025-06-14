@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Edit, Save, X, Plus } from 'lucide-react';
+import { Camera, Edit, Save, X, Plus, Loader2 } from 'lucide-react';
+import { uploadAvatar } from '@/utils/uploadAvatar';
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -24,14 +25,18 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
     location: user?.location || '',
     bio: user?.bio || 'Chào mọi người! Tôi đang tìm kiếm những kết nối thú vị.',
     interests: user?.interests || [],
-    newInterest: ''
+    newInterest: '',
+    avatar: user?.avatar || '',
   });
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
     const updatedUser = {
       ...user,
       ...profileData,
-      interests: profileData.interests
+      interests: profileData.interests,
+      avatar: profileData.avatar,
     };
     onUpdateProfile(updatedUser);
     setIsEditing(false);
@@ -52,6 +57,23 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
       ...profileData,
       interests: profileData.interests.filter(i => i !== interest)
     });
+  };
+
+  const handleCameraClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const url = await uploadAvatar(file);
+      setProfileData({ ...profileData, avatar: url });
+    } catch (err: any) {
+      alert(err.message || "Đã có lỗi xảy ra khi upload ảnh đại diện!");
+    }
+    setIsUploading(false);
   };
 
   return (
@@ -75,17 +97,33 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
               <img
-                src={user?.avatar}
+                src={profileData.avatar || user?.avatar || '/placeholder.svg'}
                 alt={user?.name}
                 className="w-24 h-24 rounded-full object-cover border-4 border-purple-200"
               />
-              {isEditing && (
-                <Button
-                  size="sm"
-                  className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0 bg-purple-500 hover:bg-purple-600"
-                >
-                  <Camera className="w-4 h-4" />
-                </Button>
+              {isUploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                </div>
+              )}
+              {isEditing && !isUploading && (
+                <>
+                  <Button
+                    size="sm"
+                    className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0 bg-purple-500 hover:bg-purple-600"
+                    type="button"
+                    onClick={handleCameraClick}
+                  >
+                    <Camera className="w-4 h-4" />
+                  </Button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                </>
               )}
             </div>
           </div>
@@ -204,9 +242,10 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
             <Button
               onClick={handleSave}
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              disabled={isUploading}
             >
               <Save className="w-4 h-4 mr-2" />
-              Lưu thay đổi
+              {isUploading ? "Đang tải lên ảnh..." : "Lưu thay đổi"}
             </Button>
           )}
         </div>

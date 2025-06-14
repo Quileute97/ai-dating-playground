@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { CreditCard, X, Loader2, CheckCircle } from 'lucide-react';
+import { CreditCard, X, Loader2, CheckCircle, BadgeCheck } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -33,6 +33,7 @@ const PayOSModal = ({
 }: PayOSModalProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'confirm' | 'processing' | 'success'>('confirm');
+  const [manualPaid, setManualPaid] = useState(false);
   const { toast } = useToast();
 
   const handlePayment = async () => {
@@ -59,7 +60,7 @@ const PayOSModal = ({
             title: "Thanh toán thành công!",
             description: `Bạn đã nâng cấp thành công ${packageName}`,
           });
-          
+            
           setTimeout(() => {
             onSuccess();
             handleClose();
@@ -81,9 +82,22 @@ const PayOSModal = ({
     }
   };
 
+  const handleManualPaid = () => {
+    setManualPaid(true);
+    toast({
+      title: "Đã ghi nhận thanh toán",
+      description: "Bạn có thể sử dụng tính năng nâng cao tạm thời (chờ admin duyệt)!",
+    });
+    onSuccess();
+    setTimeout(() => {
+      handleClose();
+    }, 1200);
+  };
+
   const handleClose = () => {
     setPaymentStep('confirm');
     setIsProcessing(false);
+    setManualPaid(false);
     onClose();
   };
 
@@ -91,120 +105,111 @@ const PayOSModal = ({
     return new Intl.NumberFormat('vi-VN').format(price);
   };
 
+  // Nội dung tối giản khung modal
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
-            Thanh toán PayOS
+            Thanh toán {packageName}
           </DialogTitle>
         </DialogHeader>
 
-        {paymentStep === 'confirm' && (
+        {paymentStep === 'confirm' && !manualPaid && (
           <div className="space-y-4">
             <Card className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
               <div className="text-center">
                 <h3 className="font-semibold text-lg mb-2">{packageName}</h3>
-                <div className="text-2xl font-bold text-orange-600 mb-2">
+                <div className="text-xl font-bold text-orange-600 mb-1">
                   {formatPrice(price)} VNĐ
                 </div>
+                {/* Mô tả rất gọn */}
                 {packageType === 'nearby' && (
-                  <p className="text-sm text-gray-600">
-                    Mở rộng phạm vi tìm kiếm lên 20km trong 30 ngày
+                  <p className="text-xs text-gray-600">
+                    Tìm người quanh đây 20km trong 30 ngày
                   </p>
                 )}
                 {packageType === 'gold' && (
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p>✨ Không giới hạn lượt match</p>
-                    <p>🚀 Mở rộng phạm vi tìm kiếm</p>
-                    <p>💎 Ưu tiên hiển thị profile</p>
-                    <p>📱 Xem ai đã thích bạn</p>
+                  <div className="text-xs text-gray-600">
+                    GOLD: Không giới hạn match + Ưu tiên đặc biệt
                   </div>
                 )}
               </div>
             </Card>
             
-            {/* Bank Info Display */}
+            {/* Bank Info Display - gọn */}
             {bankInfo && (
-              <div className="space-y-2 border p-4 rounded-lg bg-white shadow">
-                <h4 className="font-semibold text-base mb-1">Chuyển khoản ngân hàng</h4>
-                <div className="grid grid-cols-1 gap-1 text-sm">
-                  <div>
-                    <span className="font-medium">Ngân hàng:</span> {bankInfo.bankName}
-                  </div>
-                  <div>
-                    <span className="font-medium">Số tài khoản:</span> {bankInfo.accountNumber}
-                  </div>
-                  <div>
-                    <span className="font-medium">Chủ tài khoản:</span> {bankInfo.accountHolder}
-                  </div>
-                </div>
+              <div className="space-y-1 border p-3 rounded-lg bg-white shadow text-sm">
+                <div><span className="font-medium">Ngân hàng:</span> {bankInfo.bankName}</div>
+                <div><span className="font-medium">Số tài khoản:</span> {bankInfo.accountNumber}</div>
+                <div><span className="font-medium">Chủ TK:</span> {bankInfo.accountHolder}</div>
                 {bankInfo.qrUrl && (
-                  <div className="mt-2 flex flex-col items-center">
+                  <div className="mt-1 flex flex-col items-center">
                     <img 
                       src={bankInfo.qrUrl}
                       alt="QR chuyển khoản"
-                      className="w-36 h-36 object-contain rounded border"
+                      className="w-28 h-28 object-contain rounded border"
                     />
-                    <div className="mt-1 text-xs text-gray-500 text-center">
-                      Quét mã QR trên app ngân hàng để chuyển khoản
+                    <div className="mt-1 text-xs text-gray-400">
+                      Quét mã QR để chuyển khoản
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="space-y-3">
-              <h4 className="font-medium">Thông tin thanh toán:</h4>
-              <div className="bg-gray-50 p-3 rounded-lg space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Gói dịch vụ:</span>
-                  <span className="font-medium">{packageName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Giá:</span>
-                  <span className="font-medium">{formatPrice(price)} VNĐ</span>
-                </div>
-                <div className="border-t pt-2 flex justify-between font-semibold">
-                  <span>Tổng cộng:</span>
-                  <span className="text-orange-600">{formatPrice(price)} VNĐ</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={handleClose} className="flex-1">
-                Hủy
-              </Button>
+            <div className="flex flex-col gap-2">
               <Button 
                 onClick={handlePayment}
                 disabled={isProcessing}
-                className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
               >
-                Thanh toán ngay
+                Thanh toán qua PayOS
               </Button>
+              <Button 
+                onClick={handleManualPaid}
+                disabled={isProcessing || manualPaid}
+                variant="secondary"
+                className="w-full flex items-center justify-center gap-2 border border-green-400 text-green-700 font-semibold py-2"
+              >
+                <BadgeCheck className="w-4 h-4" /> Đã Thanh Toán
+              </Button>
+              <Button variant="outline" onClick={handleClose} className="w-full">
+                Hủy
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Xử lý khi user bấm Đã Thanh Toán */}
+        {manualPaid && (
+          <div className="text-center py-8 flex flex-col items-center">
+            <CheckCircle className="w-10 h-10 text-green-500 mb-2" />
+            <div className="font-semibold text-green-600 text-lg mb-1">Truy cập tạm thời đã được kích hoạt!</div>
+            <div className="text-gray-500 text-sm mb-2">
+              Bạn đã có thể sử dụng tính năng nâng cao (đợi admin xác nhận chính thức).
             </div>
           </div>
         )}
 
         {paymentStep === 'processing' && (
           <div className="text-center py-8">
-            <Loader2 className="w-12 h-12 animate-spin text-orange-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Đang xử lý thanh toán...</h3>
-            <p className="text-gray-600">Vui lòng không đóng cửa sổ này</p>
+            <Loader2 className="w-10 h-10 animate-spin text-orange-500 mx-auto mb-3" />
+            <div className="text-base font-semibold mb-1">Đang xử lý thanh toán...</div>
+            <div className="text-gray-600 text-sm">Vui lòng không đóng cửa sổ này</div>
           </div>
         )}
 
         {paymentStep === 'success' && (
           <div className="text-center py-8">
-            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-green-600 mb-2">
+            <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-3" />
+            <div className="text-base font-semibold text-green-600 mb-1">
               Thanh toán thành công!
-            </h3>
-            <p className="text-gray-600">
+            </div>
+            <div className="text-gray-500 text-sm">
               Tính năng {packageName} đã được kích hoạt
-            </p>
+            </div>
           </div>
         )}
       </DialogContent>

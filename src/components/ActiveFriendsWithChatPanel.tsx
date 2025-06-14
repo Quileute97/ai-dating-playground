@@ -3,21 +3,16 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { MessageCircle } from "lucide-react";
 import { useActiveFriendsWithPresence } from "@/hooks/useActiveFriendsWithPresence";
-import { useUser } from "@/hooks/useUser"; // Nếu có custom hook lấy user, import nó
 
-// Nhận userId qua props hoặc custom hook, VD:
-const getCurrentUserId = () => {
-  // Nếu có hook useUser hoặc lấy từ context app hãy dùng ở đây
-  // return user?.id hoặc lấy logic tương đương
-  // Có thể xóa/đổi hàm này khi đã truyền props userId cho component
-  return window?.CURRENT_USER_ID || null;
-};
+// Now the component requires a myId prop for current user id
+interface ActiveFriendsWithChatPanelProps {
+  myId: string;
+}
 
-export default function ActiveFriendsWithChatPanel() {
-  // Đổi lại: lấy id từ context/app nếu đã có, hoặc truyền prop từ cha.
-  // Bạn có thể truyền userId từ props nếu cần tuỳ vào chỗ sử dụng panel trên app.
-  const myId = getCurrentUserId();
-  const { friends, isLoading } = useActiveFriendsWithPresence(myId || undefined);
+export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithChatPanelProps) {
+  if (!myId) throw new Error("Missing myId prop in ActiveFriendsWithChatPanel");
+
+  const { friends, isLoading } = useActiveFriendsWithPresence(myId);
 
   // Chọn mặc định bạn bè đầu tiên (nếu có)
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);

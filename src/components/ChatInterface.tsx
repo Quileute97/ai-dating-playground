@@ -19,6 +19,7 @@ interface Message {
 interface ChatInterfaceProps {
   user?: any;
   isAdminMode?: boolean;
+  matchmaking?: any; // Thêm prop mới
 }
 
 interface StrangerSettings {
@@ -26,15 +27,11 @@ interface StrangerSettings {
   ageGroup: string;
 }
 
-import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
-
 const PING_SOUND_URL = "/ping.mp3"; // Dùng file ở public thư mục, nếu chưa có thì dùng URL gốc ngoài
 
-const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
+const ChatInterface = ({ user, isAdminMode = false, matchmaking }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [stranger, setStranger] = useState<any>(null);
   const [isAIMode, setIsAIMode] = useState(false);
@@ -53,10 +50,10 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+  useEffect(() => { scrollToBottom(); }, [messages]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const matchmakingStatus = matchmaking?.status;
+  const matchResult = matchmaking?.matchResult;
 
   const generateStrangerProfile = (settings: StrangerSettings) => {
     const profiles = {
@@ -96,68 +93,52 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
     return ageProfiles[Math.floor(Math.random() * ageProfiles.length)];
   };
 
-  // NẾU ĐÃ ĐĂNG NHẬP MỚI DÙNG MATCHMAKING
-  const userId = user?.id ?? null;
-  const { status: matchmakingStatus, matchResult, joinQueue, reset } = useStrangerMatchmaking(userId);
-
-  // Sửa lại startSearching: đưa user vào queue, trạng thái chờ ghép
+  // startSearching: chỉ gọi matchmaking.joinQueue()
   const startSearching = () => {
-    setIsSearching(true);
     setMessages([]);
     setConversationHistory([]);
     setIsAIMode(false);
-    setIsConnected(false);
-    joinQueue();
+    if (matchmaking?.joinQueue) matchmaking.joinQueue();
   };
 
-  // Theo dõi trạng thái ghép đôi thành công
-  useEffect(() => {
-    if (matchmakingStatus === "matched" && matchResult.conversationId && matchResult.partnerId) {
-      setIsSearching(false);
-      setIsConnected(true);
-
-      // Sử dụng minimal stranger info: ẩn danh (vì chưa có profile)
-      setStranger({
-        name: "Người lạ",
-        age: "?",
-        avatar: null,
-      });
-
-      // Tin nhắn chào mừng
-      setMessages([
-        {
-          id: Date.now().toString(),
-          text: `Bạn đã được kết nối với 1 người lạ. Hãy bắt đầu trò chuyện!`,
-          sender: "stranger",
-          timestamp: new Date(),
-        }
-      ]);
-    }
-  }, [matchmakingStatus, matchResult]);
-
-  // Nếu rời, reset
+  // Khi bấm ngắt kết nối
   const disconnect = async () => {
-    setIsConnected(false);
     setStranger(null);
     setMessages([]);
     setConversationHistory([]);
     setIsTyping(false);
-    reset();
+    if (matchmaking?.reset) await matchmaking.reset();
   };
 
-  // Thêm effect này: mỗi lần Chat tab mount lại (user switch tab vào Chat), reset chat về trạng thái ban đầu
+  // Theo dõi trạng thái ghép đôi (matchmakingStatus)
   useEffect(() => {
-    setMessages([]);
-    setConversationHistory([]);
-    setIsTyping(false);
-    // Đừng gọi reset/disconnect ở đây!
-    // Khi user tự bấm ngắt hoặc logout mới reset thật sự.
-    // ... Có thể cần clear inputValue nếu muốn:
-    setInputValue('');
-  }, [user]); 
-  // Có thể đổi sang dependency truyền qua props nếu muốn reset khi chuyển về tab Chat, ví dụ: [user, activeTab]
-  // Trong trường hợp này, mỗi khi render lại ChatInterface cho user mới hoặc lần đầu hiện, đều reset
-  
+    if (matchmakingStatus === "matched" && matchResult.conversationId && matchResult.partnerId) {
+      // ignore nếu đã hiển thị stranger (tránh reset khi quay về tab)
+      if (!stranger) {
+        // Ẩn danh, vì chưa có profile real
+        setStranger({
+          name: "Người lạ",
+          age: "?",
+          avatar: null,
+        });        
+        setMessages([
+          {
+            id: Date.now().toString(),
+            text: `Bạn đã được kết nối với 1 người lạ. Hãy bắt đầu trò chuyện!`,
+            sender: "stranger",
+            timestamp: new Date(),
+          }
+        ]);
+      }
+    }
+    // Nếu qua tab khác => giữ nguyên status/matchResult
+    // Khi ngắt kết nối, stranger = null
+    if (matchmakingStatus !== "matched" && stranger) {
+      setStranger(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchmakingStatus, matchResult]);
+
   // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)
   useEffect(() => {
     if (
@@ -307,8 +288,8 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
         </div>
       </div>
 
-      {/* Connection Status */}
-      {!isConnected && matchmakingStatus !== "searching" && (
+      {/* Connection Status (Chỉ hiện nếu chưa matched & chưa searching) */}
+      {(matchmakingStatus !== "matched" && matchmakingStatus !== "searching") && (
         <div className="flex-1 flex items-center justify-center p-6">
           <Card className="w-full max-w-md p-6 text-center bg-white/70 backdrop-blur-sm border-purple-200 animate-scale-in">
             <div className="bg-gradient-to-r from-purple-500 to-pink-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -327,7 +308,7 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
         </div>
       )}
 
-      {/* Searching */}
+      {/* Searching Status */}
       {matchmakingStatus === "searching" && (
         <div className="flex-1 flex items-center justify-center p-6">
           <Card className="w-full max-w-md p-6 text-center bg-white/70 backdrop-blur-sm border-purple-200">
@@ -347,8 +328,8 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
         </div>
       )}
 
-      {/* Chat Interface */}
-      {isConnected && stranger && (
+      {/* Chat UI khi đã được match */}
+      {matchmakingStatus === "matched" && stranger && (
         <>
           {/* Stranger Info */}
           <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 p-3">

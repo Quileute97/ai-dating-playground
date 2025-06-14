@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -12,6 +13,7 @@ import UserProfile from './UserProfile';
 import AIConfigModal from './AIConfigModal';
 import AdminLogin from './AdminLogin';
 import Timeline from './Timeline';
+import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
 
 const DatingApp = () => {
   const [activeTab, setActiveTab] = useState('chat');
@@ -24,6 +26,11 @@ const DatingApp = () => {
   const [user, setUser] = useState(null);
   const [isFirstTime, setIsFirstTime] = useState(true);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+
+  // ====== NEW: Matchmaking logic nâng lên DatingApp =======
+  const userId = user?.id ?? null;
+  const matchmaking = useStrangerMatchmaking(userId);
+  // state: matchmaking.status, matchmaking.matchResult, matchmaking.joinQueue, matchmaking.reset
 
   useEffect(() => {
     // Check if user has visited before
@@ -57,6 +64,7 @@ const DatingApp = () => {
     setIsAdminMode(false);
     setIsAdminAuthenticated(false);
     setActiveTab('chat');
+    matchmaking.reset?.(); // logout thì reset luôn matchmaking
   };
 
   const handleUpdateProfile = (updatedUser: any) => {
@@ -92,6 +100,7 @@ const DatingApp = () => {
     setIsAdminMode(true);
   };
 
+  // ========== NEW: truyền matchmaking props xuống ChatInterface ==========
   const renderTabContent = () => {
     if (isAdminMode) {
       return <AdminDashboard />;
@@ -99,7 +108,11 @@ const DatingApp = () => {
 
     switch (activeTab) {
       case 'chat':
-        return <ChatInterface user={user} isAdminMode={isAdminAuthenticated} />;
+        return <ChatInterface
+          user={user}
+          isAdminMode={isAdminAuthenticated}
+          matchmaking={matchmaking}
+        />;
       case 'dating':
         return <SwipeInterface user={user} />;
       case 'nearby':
@@ -244,19 +257,16 @@ const DatingApp = () => {
         onClose={() => setShowFilters(false)}
         onApply={handleApplyFilters}
       />
-
       <UserProfile
         isOpen={showProfile}
         onClose={() => setShowProfile(false)}
         user={user}
         onUpdateProfile={handleUpdateProfile}
       />
-
       <AIConfigModal
         isOpen={showAIConfig}
         onClose={() => setShowAIConfig(false)}
       />
-
       <AdminLogin
         isOpen={showAdminLogin}
         onClose={() => setShowAdminLogin(false)}

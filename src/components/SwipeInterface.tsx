@@ -59,7 +59,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [isGoldMember, setIsGoldMember] = useState(false);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
-  const bankInfo = useBankInfo();
+  const bankInfoHook = useBankInfo();
 
   const currentProfile = mockProfiles[currentProfileIndex];
   const maxFreeMatches = 10;
@@ -267,7 +267,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         packageType="gold"
         packageName="Gói GOLD"
         price={99000}
-        bankInfo={bankInfo}
+        bankInfo={
+          !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 
+          ? bankInfoHook.bankInfo 
+          : undefined
+        }
       />
     </div>
   );

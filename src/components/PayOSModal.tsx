@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { CreditCard, X, Loader2, CheckCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -123,6 +124,36 @@ const PayOSModal = ({
                 )}
               </div>
             </Card>
+            
+            {/* Bank Info Display */}
+            {bankInfo && (
+              <div className="space-y-2 border p-4 rounded-lg bg-white shadow">
+                <h4 className="font-semibold text-base mb-1">Chuyển khoản ngân hàng</h4>
+                <div className="grid grid-cols-1 gap-1 text-sm">
+                  <div>
+                    <span className="font-medium">Ngân hàng:</span> {bankInfo.bankName}
+                  </div>
+                  <div>
+                    <span className="font-medium">Số tài khoản:</span> {bankInfo.accountNumber}
+                  </div>
+                  <div>
+                    <span className="font-medium">Chủ tài khoản:</span> {bankInfo.accountHolder}
+                  </div>
+                </div>
+                {bankInfo.qrUrl && (
+                  <div className="mt-2 flex flex-col items-center">
+                    <img 
+                      src={bankInfo.qrUrl}
+                      alt="QR chuyển khoản"
+                      className="w-36 h-36 object-contain rounded border"
+                    />
+                    <div className="mt-1 text-xs text-gray-500 text-center">
+                      Quét mã QR trên app ngân hàng để chuyển khoản
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-3">
               <h4 className="font-medium">Thông tin thanh toán:</h4>

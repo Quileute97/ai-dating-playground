@@ -97,7 +97,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [hasExpandedRange, setHasExpandedRange] = useState(false);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
-  const bankInfo = useBankInfo();
+  const bankInfoHook = useBankInfo();
 
   useEffect(() => {
     requestLocationPermission();
@@ -551,7 +551,11 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
         packageType="nearby"
         packageName="Mở rộng phạm vi"
         price={49000}
-        bankInfo={bankInfo}
+        bankInfo={
+          !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 
+          ? bankInfoHook.bankInfo 
+          : undefined
+        }
       />
     </div>
   );

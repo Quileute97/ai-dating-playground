@@ -12,6 +12,9 @@ import FakeUserChatModal from './FakeUserChatModal';
 import PostAsFakeUserModal from './PostAsFakeUserModal';
 import { supabase } from "@/integrations/supabase/client";
 
+import HeaderAdManager from "./HeaderAdManager";
+import BankInfoManager from "./BankInfoManager";
+
 interface FakeUser {
   id: string;
   name: string;
@@ -469,104 +472,20 @@ const AdminDashboard = () => {
             
             <div className="grid gap-6">
               {/* Card: Cài đặt quảng cáo header */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quản lý mã quảng cáo header</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Mã quảng cáo (dán script/HTML sẽ nhúng lên &lt;head&gt; của web)
-                    </label>
-                    <textarea
-                      value={headerAdCode}
-                      onChange={e => setHeaderAdCode(e.target.value)}
-                      className="w-full min-h-[100px] font-mono rounded p-2 border resize-y"
-                      placeholder="<script>...</script>"
-                    ></textarea>
-                    <Button
-                      className="mt-2"
-                      onClick={handleSaveHeaderAdCode}
-                      variant="secondary"
-                    >
-                      Lưu mã quảng cáo
-                    </Button>
-                    { !headerAdCode && (
-                      <div className="text-xs text-destructive mt-1">
-                        ⚠️ Bạn chưa dán mã quảng cáo nào.
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <HeaderAdManager
+                headerAdCode={headerAdCode}
+                setHeaderAdCode={setHeaderAdCode}
+                onSave={handleSaveHeaderAdCode}
+              />
 
               {/* Card: Thông tin ngân hàng và QR */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tài khoản ngân hàng &amp; QR nâng cấp</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="block text-sm mb-1 font-medium">Ngân hàng</label>
-                    <input
-                      className="w-full p-2 rounded border"
-                      value={bankInfo.bankName}
-                      onChange={e =>
-                        setBankInfo(bi => ({ ...bi, bankName: e.target.value }))
-                      }
-                      placeholder="Ví dụ: Vietcombank"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1 font-medium">Số tài khoản</label>
-                    <input
-                      className="w-full p-2 rounded border"
-                      value={bankInfo.accountNumber}
-                      onChange={e =>
-                        setBankInfo(bi => ({ ...bi, accountNumber: e.target.value }))
-                      }
-                      placeholder="Ví dụ: 0123456789"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1 font-medium">Chủ tài khoản</label>
-                    <input
-                      className="w-full p-2 rounded border"
-                      value={bankInfo.accountHolder}
-                      onChange={e =>
-                        setBankInfo(bi => ({ ...bi, accountHolder: e.target.value }))
-                      }
-                      placeholder="Ví dụ: NGUYEN VAN A"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1 font-medium">Ảnh QR chuyển khoản</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleQrUpload}
-                      className="block"
-                    />
-                    {qrImgUploading && (
-                      <p className="text-xs mt-1 text-gray-500">Đang tải ảnh...</p>
-                    )}
-                    {bankInfo.qrUrl && !qrImgUploading && (
-                      <img
-                        src={bankInfo.qrUrl}
-                        alt="QR chuyển khoản"
-                        className="max-w-[180px] mt-2 rounded border"
-                      />
-                    )}
-                  </div>
-                  <Button
-                    className="mt-2"
-                    onClick={handleSaveBankInfo}
-                    variant="secondary"
-                  >
-                    Lưu thông tin ngân hàng &amp; QR
-                  </Button>
-                </CardContent>
-              </Card>
+              <BankInfoManager
+                bankInfo={bankInfo}
+                setBankInfo={setBankInfo}
+                onSave={handleSaveBankInfo}
+                qrImgUploading={qrImgUploading}
+                onQrUpload={handleQrUpload}
+              />
 
               {/* ... keep existing AI setting and match setting cards ... */}
               {/* Chèn phần cài đặt AI + matching, sau các cards mới thêm */}

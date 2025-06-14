@@ -247,7 +247,7 @@ const DatingApp = () => {
           {/* RIGHT: ActiveFriendsWithChatPanel (can collapse, refactored) */}
           {isRightPanelOpen ? (
             <div className="relative">
-              <ActiveFriendsWithChatPanel />
+              <ActiveFriendsWithChatPanel myId={user.id} />
               <SidePanelToggle
                 isOpen={isRightPanelOpen}
                 side="right"

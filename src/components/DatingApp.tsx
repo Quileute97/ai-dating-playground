@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -13,6 +12,8 @@ import UserProfile from './UserProfile';
 import AIConfigModal from './AIConfigModal';
 import AdminLogin from './AdminLogin';
 import Timeline from './Timeline';
+import RealTimeActivityPanel from './RealTimeActivityPanel';
+import ActiveFriendsWithChatPanel from './ActiveFriendsWithChatPanel';
 import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
 
 const DatingApp = () => {

@@ -147,8 +147,13 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
 
   // Thêm effect này: mỗi lần Chat tab mount lại (user switch tab vào Chat), reset chat về trạng thái ban đầu
   useEffect(() => {
-    disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setMessages([]);
+    setConversationHistory([]);
+    setIsTyping(false);
+    // Đừng gọi reset/disconnect ở đây!
+    // Khi user tự bấm ngắt hoặc logout mới reset thật sự.
+    // ... Có thể cần clear inputValue nếu muốn:
+    setInputValue('');
   }, [user]); 
   // Có thể đổi sang dependency truyền qua props nếu muốn reset khi chuyển về tab Chat, ví dụ: [user, activeTab]
   // Trong trường hợp này, mỗi khi render lại ChatInterface cho user mới hoặc lần đầu hiện, đều reset

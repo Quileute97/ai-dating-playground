@@ -95,6 +95,39 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          age: number | null
+          avatar: string | null
+          created_at: string | null
+          gender: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          name: string | null
+        }
+        Insert: {
+          age?: number | null
+          avatar?: string | null
+          created_at?: string | null
+          gender?: string | null
+          id: string
+          lat?: number | null
+          lng?: number | null
+          name?: string | null
+        }
+        Update: {
+          age?: number | null
+          avatar?: string | null
+          created_at?: string | null
+          gender?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name?: string | null
+        }
+        Relationships: []
+      }
       stranger_queue: {
         Row: {
           created_at: string

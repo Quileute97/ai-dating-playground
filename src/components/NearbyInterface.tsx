@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import NearbyChatWindow from './NearbyChatWindow';
@@ -7,7 +8,9 @@ import NearbyProfileView from "./NearbyProfileView";
 import NearbyMain from "./NearbyMain";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react"; // Only allow: arrow-left, map-pin, message-circle, heart
+import { MapPin } from "lucide-react";
+import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
+import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
 
 interface NearbyUser {
   id: string;
@@ -26,69 +29,6 @@ interface NearbyInterfaceProps {
   user?: any;
 }
 
-const mockNearbyUsers: NearbyUser[] = [
-  {
-    id: '1',
-    name: 'Lan Anh',
-    age: 24,
-    distance: 0.8,
-    avatar: '/placeholder.svg',
-    isOnline: true,
-    lastSeen: 'Đang online',
-    interests: ['Yoga', 'Cafe'],
-    rating: 4.8,
-    isLiked: false
-  },
-  {
-    id: '2',
-    name: 'Minh Đức',
-    age: 26,
-    distance: 1.2,
-    avatar: '/placeholder.svg',
-    isOnline: false,
-    lastSeen: '5 phút trước',
-    interests: ['Gaming', 'Công nghệ'],
-    rating: 4.5,
-    isLiked: false
-  },
-  {
-    id: '3',
-    name: 'Thu Trang',
-    age: 23,
-    distance: 2.1,
-    avatar: '/placeholder.svg',
-    isOnline: true,
-    lastSeen: 'Đang online',
-    interests: ['Du lịch', 'Nhiếp ảnh'],
-    rating: 4.9,
-    isLiked: false
-  },
-  {
-    id: '4',
-    name: 'Hoàng Việt',
-    age: 28,
-    distance: 3.5,
-    avatar: '/placeholder.svg',
-    isOnline: false,
-    lastSeen: '1 giờ trước',
-    interests: ['Thể thao', 'Âm nhạc'],
-    rating: 4.3,
-    isLiked: false
-  },
-  {
-    id: '5',
-    name: 'Mai Linh',
-    age: 22,
-    distance: 4.8,
-    avatar: '/placeholder.svg',
-    isOnline: true,
-    lastSeen: 'Đang online',
-    interests: ['Sách', 'Phim'],
-    rating: 4.7,
-    isLiked: false
-  }
-];
-
 const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
   const [chatUser, setChatUser] = useState<NearbyUser | null>(null);
@@ -98,7 +38,6 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(
     null
   );
-  const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>(mockNearbyUsers);
   const [hasExpandedRange, setHasExpandedRange] = useState(false);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
@@ -106,36 +45,37 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const { data: nearbyUpgrade, isLoading: nearbyLoading } = useUpgradeStatus(user?.id, "nearby");
   const upgradeStatus = nearbyUpgrade?.status;
 
+  // Bước 1: Lấy vị trí & cập nhật lên profiles
   useEffect(() => {
     requestLocationPermission();
   }, []);
 
-  const requestLocationPermission = async () => {
-    if (!navigator.geolocation) {
-      setLocationPermission('denied');
-      return;
-    }
+  useUpdateProfileLocation(user?.id, userLocation);
 
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000
-        });
-      });
+  // Lấy danh sách user quanh đây thật từ Supabase
+  const searchRadius = hasExpandedRange && upgradeStatus === "approved" ? 20 : 5;
+  const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, searchRadius);
 
-      setUserLocation({
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
-      });
-      setLocationPermission('granted');
-      console.log('GPS location granted:', position.coords);
-    } catch (error) {
-      console.error('GPS permission denied:', error);
-      setLocationPermission('denied');
-    }
-  };
+  // Giả lập dữ liệu với interests, rating, online...
+  function profileToNearbyUser(profile: any): NearbyUser {
+    // Có thể bổ sung logic lấy interests, avatar, lastSeen thật
+    return {
+      id: profile.id,
+      name: profile.name || "Chưa đặt tên",
+      age: profile.age || 18,
+      distance: Math.round(profile.distance * 10) / 10,
+      avatar: profile.avatar || "/placeholder.svg",
+      isOnline: Math.random() > 0.4, // Nếu có trạng thái thật thì lấy thật
+      lastSeen: (Math.random() > 0.5 ? "Đang online" : "Vừa xong"),
+      interests: ["Đang cập nhật"],
+      rating: Math.round(40 + Math.random() * 10) / 10,
+      isLiked: false
+    };
+  }
+
+  const nearbyUsers: NearbyUser[] = React.useMemo(() =>
+    profiles.map(profileToNearbyUser), [profiles]
+  );
 
   const handleExpandRange = () => {
     if (upgradeStatus !== "approved") {
@@ -151,35 +91,6 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     }
     if (!hasExpandedRange) {
       setHasExpandedRange(true);
-      const extendedUsers = [
-        ...nearbyUsers,
-        {
-          id: '6',
-          name: 'Phương Anh',
-          age: 25,
-          distance: 8.2,
-          avatar: '/placeholder.svg',
-          isOnline: true,
-          lastSeen: 'Đang online',
-          interests: ['Thời trang', 'Làm đẹp'],
-          rating: 4.6,
-          isLiked: false
-        },
-        {
-          id: '7',
-          name: 'Tuấn Minh',
-          age: 27,
-          distance: 12.5,
-          avatar: '/placeholder.svg',
-          isOnline: false,
-          lastSeen: '2 giờ trước',
-          interests: ['Kinh doanh', 'Đầu tư'],
-          rating: 4.4,
-          isLiked: false
-        }
-      ];
-      setNearbyUsers(extendedUsers);
-
       toast({
         title: "Đã mở rộng phạm vi! 🎉",
         description: "Tìm thấy thêm nhiều người trong phạm vi 20km",
@@ -192,26 +103,11 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
 
   const handleLikeUser = (userId: string, event?: React.MouseEvent) => {
     if (event) event.stopPropagation();
-    const updatedUsers = nearbyUsers.map((u) =>
-      u.id === userId ? { ...u, isLiked: !u.isLiked } : u
-    );
-    setNearbyUsers(updatedUsers);
-    const user = updatedUsers.find((u) => u.id === userId);
-    if (user) {
-      toast({
-        title: user.isLiked ? "Đã thích!" : "Đã bỏ thích!",
-        description: user.isLiked ? `Bạn đã thích ${user.name}` : `Bạn đã bỏ thích ${user.name}`,
-      });
-      if (user.isLiked && Math.random() > 0.5) {
-        setTimeout(() => {
-          toast({
-            title: "🎉 Có match mới!",
-            description: `${user.name} cũng đã thích bạn! Hãy bắt đầu trò chuyện.`,
-          });
-        }, 1000);
-      }
-    }
-    console.log('Like user:', userId);
+    // TODO: dùng Supabase cho like thật
+    toast({
+      title: "Đã thích!",
+      description: `Bạn đã thích user ${userId}`,
+    });
   };
 
   const handleMessageUser = (userId: string, event?: React.MouseEvent) => {
@@ -290,7 +186,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
       setShowPayOSModal={setShowPayOSModal}
       showPayOSModal={showPayOSModal}
       upgradeStatus={upgradeStatus}
-      nearbyLoading={nearbyLoading}
+      nearbyLoading={nearbyLoading || profilesLoading}
       onExpandRange={handleExpandRange}
       disableExpand={hasExpandedRange}
       bankInfo={fullBankInfo}

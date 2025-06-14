@@ -109,9 +109,13 @@ const FakeUserConversationModal: React.FC<Props> = ({ isOpen, onClose, fakeUser 
         .select("*")
         .eq("conversation_id", activeConv.id)
         .order("created_at", { ascending: true });
-      setMessages(data || []);
+      // Map sender to 'real'|'fake'
+      const mappedMsgs: Message[] = (data || []).map((msg: any) => ({
+        ...msg,
+        sender: msg.sender === "fake" ? "fake" : "real",
+      }));
+      setMessages(mappedMsgs);
       setLoadingMsgs(false);
-      // Khi chọn conv mới, kéo xuống cuối
       setTimeout(() => {
         chatRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 50);
@@ -139,7 +143,12 @@ const FakeUserConversationModal: React.FC<Props> = ({ isOpen, onClose, fakeUser 
       .select("*")
       .eq("conversation_id", activeConv.id)
       .order("created_at", { ascending: true });
-    setMessages(data || []);
+    // Map sender to 'real'|'fake'
+    const mappedMsgs: Message[] = (data || []).map((msg: any) => ({
+      ...msg,
+      sender: msg.sender === "fake" ? "fake" : "real",
+    }));
+    setMessages(mappedMsgs);
     setSending(false);
   };
 
@@ -256,4 +265,3 @@ const FakeUserConversationModal: React.FC<Props> = ({ isOpen, onClose, fakeUser 
 };
 
 export default FakeUserConversationModal;
-

@@ -1,7 +1,10 @@
+
 import React, { useState } from 'react';
-import { Heart, X, Zap, ArrowLeft } from 'lucide-react';
+import { Heart, X, Zap, ArrowLeft, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import PayOSModal from './PayOSModal';
 
 interface UserProfile {
   id: string;
@@ -52,13 +55,35 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [matches, setMatches] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
+  const [dailyMatches, setDailyMatches] = useState(7); // User has used 7 out of 10 free matches
+  const [isGoldMember, setIsGoldMember] = useState(false);
+  const [showPayOSModal, setShowPayOSModal] = useState(false);
+  const { toast } = useToast();
 
   const currentProfile = mockProfiles[currentProfileIndex];
+  const maxFreeMatches = 10;
+  const remainingMatches = maxFreeMatches - dailyMatches;
 
   const handleSwipe = (direction: 'left' | 'right' | 'super') => {
+    // Check if user has reached daily limit and is not gold member
+    if (!isGoldMember && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
+      toast({
+        title: "Đã hết lượt match miễn phí!",
+        description: "Nâng cấp GOLD để có không giới hạn lượt match",
+        variant: "destructive"
+      });
+      setShowPayOSModal(true);
+      return;
+    }
+
     setSwipeDirection(direction === 'super' ? 'right' : direction);
     
     if (direction === 'right' || direction === 'super') {
+      // Increment daily matches count
+      if (!isGoldMember) {
+        setDailyMatches(prev => prev + 1);
+      }
+
       // Simulate match (30% chance)
       if (Math.random() > 0.7) {
         setMatches(prev => prev + 1);
@@ -75,6 +100,14 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     }, 300);
   };
 
+  const handleGoldUpgrade = () => {
+    setIsGoldMember(true);
+    toast({
+      title: "Chào mừng thành viên GOLD! 👑",
+      description: "Bạn đã có quyền truy cập không giới hạn!",
+    });
+  };
+
   if (!currentProfile) {
     return (
       <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50">
@@ -89,6 +122,24 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
 
   return (
     <div className="h-full bg-gradient-to-br from-pink-50 to-purple-50 p-4 relative overflow-hidden">
+      {/* Gold Member Badge */}
+      {isGoldMember && (
+        <div className="absolute top-4 left-4 z-10 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+          <Crown className="w-4 h-4" />
+          GOLD
+        </div>
+      )}
+
+      {/* Daily Matches Counter */}
+      {!isGoldMember && (
+        <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
+          {remainingMatches <= 3 && (
+            <span className="text-red-500">⚠️ </span>
+          )}
+          {remainingMatches}/10 lượt còn lại
+        </div>
+      )}
+
       {/* Match Notification */}
       {showMatch && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-pink-500/90 to-purple-500/90 backdrop-blur-sm">
@@ -164,6 +215,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             size="icon"
             className="w-14 h-14 rounded-full border-blue-200 hover:bg-blue-50 hover:border-blue-300"
             onClick={() => handleSwipe('super')}
+            disabled={!isGoldMember && dailyMatches >= maxFreeMatches}
           >
             <Zap className="w-6 h-6 text-blue-500" />
           </Button>
@@ -173,16 +225,48 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             size="icon"
             className="w-14 h-14 rounded-full border-green-200 hover:bg-green-50 hover:border-green-300"
             onClick={() => handleSwipe('right')}
+            disabled={!isGoldMember && dailyMatches >= maxFreeMatches}
           >
             <Heart className="w-6 h-6 text-green-500" />
           </Button>
         </div>
 
+        {/* Upgrade Banner */}
+        {!isGoldMember && remainingMatches <= 3 && (
+          <Card className="mt-4 p-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+            <div className="text-center">
+              <Crown className="w-8 h-8 mx-auto mb-2" />
+              <h3 className="font-semibold mb-1">Nâng cấp GOLD</h3>
+              <p className="text-sm opacity-90 mb-3">
+                Không giới hạn lượt match + nhiều tính năng khác
+              </p>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="text-orange-600"
+                onClick={() => setShowPayOSModal(true)}
+              >
+                Nâng cấp ngay - 99,000 VNĐ
+              </Button>
+            </div>
+          </Card>
+        )}
+
         {/* Stats */}
-        <div className="text-center text-sm text-gray-600">
+        <div className="text-center text-sm text-gray-600 mt-2">
           {matches} matches • {mockProfiles.length - currentProfileIndex - 1} còn lại
         </div>
       </div>
+
+      {/* PayOS Modal */}
+      <PayOSModal
+        isOpen={showPayOSModal}
+        onClose={() => setShowPayOSModal(false)}
+        onSuccess={handleGoldUpgrade}
+        packageType="gold"
+        packageName="Gói GOLD"
+        price={99000}
+      />
     </div>
   );
 };

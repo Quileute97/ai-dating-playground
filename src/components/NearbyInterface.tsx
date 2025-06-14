@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
-import { MapPin, Heart, MessageCircle, Star, Navigation, ArrowLeft } from 'lucide-react';
+import { MapPin, Heart, MessageCircle, Star, Navigation, ArrowLeft, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import PayOSModal from './PayOSModal';
 
 interface NearbyUser {
   id: string;
@@ -91,6 +91,8 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [locationPermission, setLocationPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>(mockNearbyUsers);
+  const [hasExpandedRange, setHasExpandedRange] = useState(false);
+  const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -122,6 +124,43 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
       console.error('GPS permission denied:', error);
       setLocationPermission('denied');
     }
+  };
+
+  const handleExpandRange = () => {
+    setHasExpandedRange(true);
+    // Add more users from wider range
+    const extendedUsers = [
+      ...nearbyUsers,
+      {
+        id: '6',
+        name: 'Phương Anh',
+        age: 25,
+        distance: 8.2,
+        avatar: '/placeholder.svg',
+        isOnline: true,
+        lastSeen: 'Đang online',
+        interests: ['Thời trang', 'Làm đẹp'],
+        rating: 4.6,
+        isLiked: false
+      },
+      {
+        id: '7',
+        name: 'Tuấn Minh',
+        age: 27,
+        distance: 12.5,
+        avatar: '/placeholder.svg',
+        isOnline: false,
+        lastSeen: '2 giờ trước',
+        interests: ['Kinh doanh', 'Đầu tư'],
+        rating: 4.4,
+        isLiked: false
+      }
+    ];
+    setNearbyUsers(extendedUsers);
+    toast({
+      title: "Đã mở rộng phạm vi! 🎉",
+      description: "Tìm thấy thêm nhiều người trong phạm vi 20km",
+    });
   };
 
   const handleViewProfile = (user: NearbyUser) => {
@@ -372,9 +411,15 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
                 GPS
               </div>
             )}
+            {hasExpandedRange && (
+              <div className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                <Crown className="w-3 h-3" />
+                Mở rộng
+              </div>
+            )}
           </div>
           <p className="text-gray-600 text-sm">
-            {nearbyUsers.length} người trong phạm vi 5km
+            {nearbyUsers.length} người trong phạm vi {hasExpandedRange ? '20km' : '5km'}
           </p>
         </div>
 
@@ -466,18 +511,45 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
         </ScrollArea>
 
         {/* Upgrade Banner */}
-        <Card className="mt-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-          <div className="text-center">
-            <h3 className="font-semibold mb-1">Mở rộng phạm vi tìm kiếm</h3>
-            <p className="text-sm opacity-90 mb-3">
-              Nâng cấp để tìm kiếm trong phạm vi 20km
-            </p>
-            <Button variant="secondary" size="sm" className="text-purple-600">
-              Nâng cấp ngay
-            </Button>
-          </div>
-        </Card>
+        {!hasExpandedRange ? (
+          <Card className="mt-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+            <div className="text-center">
+              <h3 className="font-semibold mb-1">Mở rộng phạm vi tìm kiếm</h3>
+              <p className="text-sm opacity-90 mb-3">
+                Nâng cấp để tìm kiếm trong phạm vi 20km
+              </p>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="text-purple-600"
+                onClick={() => setShowPayOSModal(true)}
+              >
+                Nâng cấp ngay - 49,000 VNĐ
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <Card className="mt-4 p-4 bg-gradient-to-r from-green-500 to-blue-500 text-white">
+            <div className="text-center">
+              <Crown className="w-8 h-8 mx-auto mb-2" />
+              <h3 className="font-semibold mb-1">Phạm vi đã mở rộng!</h3>
+              <p className="text-sm opacity-90">
+                Bạn có thể tìm kiếm trong phạm vi 20km
+              </p>
+            </div>
+          </Card>
+        )}
       </div>
+
+      {/* PayOS Modal */}
+      <PayOSModal
+        isOpen={showPayOSModal}
+        onClose={() => setShowPayOSModal(false)}
+        onSuccess={handleExpandRange}
+        packageType="nearby"
+        packageName="Mở rộng phạm vi"
+        price={49000}
+      />
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -29,18 +28,34 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
   const [error, setError] = useState('');
   const [info, setInfo] = useState(''); // Thông báo thành công/xác nhận
 
+  // Utility: Cleanup all Supabase Auth keys in localStorage and sessionStorage
+  const cleanupAuthState = () => {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+  };
+
   // Đăng nhập với Supabase Auth
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     setInfo('');
-    // Làm sạch auth state tránh limbo
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        localStorage.removeItem(key);
-      }
-    });
+    // Làm sạch storage, logout toàn cục trước khi login
+    cleanupAuthState();
+    try {
+      // Bắt buộc signOut toàn cục
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (err) {
+      // Ignore errors here – may be logout stale session
+    }
     try {
       const { data, error: loginError } = await supabase.auth.signInWithPassword({
         email: loginData.email,
@@ -71,11 +86,13 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
         name: profiles?.name || user.email,
         age: profiles?.age,
         gender: profiles?.gender,
-        interests: [] // bạn có thể phát triển thêm
+        interests: []
       });
       setIsLoading(false);
       setError('');
       onClose();
+      // Force reload page để nhận session/rols cập nhật
+      window.location.href = "/";
     } catch (ex: any) {
       setError('Có lỗi xảy ra: ' + ex.message);
       setIsLoading(false);

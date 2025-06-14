@@ -20,14 +20,14 @@ export function useStrangerMatchmaking(userId: string | null) {
   const [matchResult, setMatchResult] = useState<MatchResult>({ partnerId: null, conversationId: null });
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Thêm user vào hàng chờ
+  // Thêm user vào hàng chờ: chỉ cho user thật (UUID v4)
   const joinQueue = useCallback(async () => {
-    console.log("[STRANGER] [joinQueue] ƯU TIÊN LOG: userId =", userId, "status =", status);
-    if (!userId) {
-      console.log("[STRANGER] [joinQueue] userId null, bỏ qua.");
+    console.log("[STRANGER] [joinQueue] userId =", userId, "status =", status);
+    if (!userId || !isUUIDv4(userId)) {
+      console.log("[STRANGER] [joinQueue] chỉ cho UUIDv4 (user thật) vào hàng chờ. Bỏ qua user anonymous.");
+      setStatus("error");
       return;
     }
-
     try {
       console.log("[STRANGER] [joinQueue] Kiểm tra đã có queue chưa với userId:", userId);
       const { data: existing, error: existingError } = await supabase
@@ -65,11 +65,11 @@ export function useStrangerMatchmaking(userId: string | null) {
     }
   }, [userId, status]);
 
-  // Tìm ghép đôi user khác trong queue, ƯU TIÊN user thật với nhau
+  // Poll tìm ghép đôi: chỉ match user thật với nhau (UUID v4 <-> UUID v4)
   const tryMatch = useCallback(async () => {
-    console.log("[STRANGER] [tryMatch] === POLLING === userId =", userId, "status =", status);
-    if (!userId) {
-      console.log("[STRANGER] [tryMatch] userId null, bỏ qua.");
+    console.log("[STRANGER] [tryMatch] POLLING userId =", userId, "status =", status);
+    if (!userId || !isUUIDv4(userId)) {
+      console.log("[STRANGER] [tryMatch] userId không hợp lệ hoặc không phải UUIDv4. Không tìm match.");
       return;
     }
     try {
@@ -84,23 +84,15 @@ export function useStrangerMatchmaking(userId: string | null) {
       }
       if (!queueList) return;
 
-      // Loại bỏ chính mình khỏi queue
-      const available = queueList.filter((item: any) => item.user_id !== userId);
-      // Phân nhóm: user thật (UUID v4) và anonymous (id không phải UUID v4)
-      const realUsers = available.filter((i: any) => isUUIDv4(i.user_id));
-      const anonUsers = available.filter((i: any) => !isUUIDv4(i.user_id));
-
+      // Chỉ lấy userId là UUIDv4, bỏ hết anonymous
+      const others = queueList.filter((item: any) => item.user_id !== userId && isUUIDv4(item.user_id));
       let partnerId: string | null = null;
-      if (realUsers.length > 0) {
-        // Ưu tiên ghép với user thật trước
-        partnerId = realUsers[0].user_id;
-        console.log("[STRANGER] [tryMatch] Ưu tiên match với user thật:", partnerId);
-      } else if (anonUsers.length > 0) {
-        // Nếu không có user thật, ghép với anonymous
-        partnerId = anonUsers[0].user_id;
-        console.log("[STRANGER] [tryMatch] Không có user thật, match với anonymous:", partnerId);
+      if (others.length > 0) {
+        // Chỉ match với user thật khác (UUIDv4)
+        partnerId = others[0].user_id;
+        console.log("[STRANGER] [tryMatch] ONLY real user match:", partnerId);
       } else {
-        console.log("[STRANGER] [tryMatch] Không tìm thấy ai để match...");
+        console.log("[STRANGER] [tryMatch] Không tìm thấy ai đủ điều kiện để match (UUIDv4 only).");
         return;
       }
 

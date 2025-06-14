@@ -1,9 +1,12 @@
 
 import React, { useState } from 'react';
-import { Users, Bot, MessageSquare, Settings, TrendingUp, Eye, Plus, Edit, Trash2 } from 'lucide-react';
+import { Users, Bot, MessageSquare, Settings, TrendingUp, Eye, Plus, Edit, Trash2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AddFakeUserModal from './AddFakeUserModal';
+import AddAIPromptModal from './AddAIPromptModal';
+import { aiService } from '@/services/aiService';
 
 interface FakeUser {
   id: string;
@@ -68,6 +71,53 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [fakeUsers, setFakeUsers] = useState(mockFakeUsers);
   const [aiPrompts, setAIPrompts] = useState(mockAIPrompts);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showAddPromptModal, setShowAddPromptModal] = useState(false);
+  
+  // Settings state
+  const [settings, setSettings] = useState({
+    openaiApiKey: '',
+    chatTimeout: 60,
+    aiMatchRate: 30,
+    searchRadius: 5
+  });
+
+  const handleAddFakeUser = (userData: Omit<FakeUser, 'id'>) => {
+    const newUser: FakeUser = {
+      ...userData,
+      id: Date.now().toString()
+    };
+    setFakeUsers(prev => [...prev, newUser]);
+  };
+
+  const handleAddAIPrompt = (promptData: Omit<AIPrompt, 'id'>) => {
+    const newPrompt: AIPrompt = {
+      ...promptData,
+      id: Date.now().toString()
+    };
+    setAIPrompts(prev => [...prev, newPrompt]);
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    setFakeUsers(prev => prev.filter(user => user.id !== userId));
+  };
+
+  const handleDeletePrompt = (promptId: string) => {
+    setAIPrompts(prev => prev.filter(prompt => prompt.id !== promptId));
+  };
+
+  const handleSaveSettings = () => {
+    // Save OpenAI API key to AI service
+    if (settings.openaiApiKey) {
+      aiService.setApiKey(settings.openaiApiKey);
+    }
+    
+    // Here you could save other settings to localStorage or backend
+    localStorage.setItem('adminSettings', JSON.stringify(settings));
+    
+    console.log('Settings saved:', settings);
+    // You could show a toast notification here
+  };
 
   return (
     <div className="h-full bg-gradient-to-br from-gray-50 to-blue-50 p-6 overflow-y-auto">
@@ -164,7 +214,10 @@ const AdminDashboard = () => {
           <TabsContent value="fake-users" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Quản lý người dùng ảo</h2>
-              <Button className="bg-gradient-to-r from-purple-500 to-pink-500">
+              <Button 
+                onClick={() => setShowAddUserModal(true)}
+                className="bg-gradient-to-r from-purple-500 to-pink-500"
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Thêm user ảo
               </Button>
@@ -203,7 +256,12 @@ const AdminDashboard = () => {
                         <Button variant="outline" size="sm">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteUser(user.id)}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -218,7 +276,10 @@ const AdminDashboard = () => {
           <TabsContent value="ai-prompts" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Quản lý AI Prompts</h2>
-              <Button className="bg-gradient-to-r from-blue-500 to-purple-500">
+              <Button 
+                onClick={() => setShowAddPromptModal(true)}
+                className="bg-gradient-to-r from-blue-500 to-purple-500"
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Thêm prompt mới
               </Button>
@@ -246,7 +307,12 @@ const AdminDashboard = () => {
                         <Button variant="outline" size="sm">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeletePrompt(prompt.id)}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -259,7 +325,16 @@ const AdminDashboard = () => {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
-            <h2 className="text-xl font-semibold">Cài đặt hệ thống</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Cài đặt hệ thống</h2>
+              <Button 
+                onClick={handleSaveSettings}
+                className="bg-gradient-to-r from-green-500 to-blue-500"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Lưu cài đặt
+              </Button>
+            </div>
             
             <div className="grid gap-6">
               <Card>
@@ -272,6 +347,8 @@ const AdminDashboard = () => {
                     <input 
                       type="password" 
                       placeholder="sk-..."
+                      value={settings.openaiApiKey}
+                      onChange={(e) => setSettings(prev => ({ ...prev, openaiApiKey: e.target.value }))}
                       className="w-full p-2 border rounded-md"
                     />
                   </div>
@@ -279,7 +356,8 @@ const AdminDashboard = () => {
                     <label className="block text-sm font-medium mb-2">Timeout chat (giây)</label>
                     <input 
                       type="number" 
-                      defaultValue={60}
+                      value={settings.chatTimeout}
+                      onChange={(e) => setSettings(prev => ({ ...prev, chatTimeout: parseInt(e.target.value) }))}
                       className="w-full p-2 border rounded-md"
                     />
                   </div>
@@ -295,7 +373,8 @@ const AdminDashboard = () => {
                     <label className="block text-sm font-medium mb-2">Tỉ lệ match với AI (%)</label>
                     <input 
                       type="number" 
-                      defaultValue={30}
+                      value={settings.aiMatchRate}
+                      onChange={(e) => setSettings(prev => ({ ...prev, aiMatchRate: parseInt(e.target.value) }))}
                       min="0" 
                       max="100"
                       className="w-full p-2 border rounded-md"
@@ -305,7 +384,8 @@ const AdminDashboard = () => {
                     <label className="block text-sm font-medium mb-2">Phạm vi tìm kiếm mặc định (km)</label>
                     <input 
                       type="number" 
-                      defaultValue={5}
+                      value={settings.searchRadius}
+                      onChange={(e) => setSettings(prev => ({ ...prev, searchRadius: parseInt(e.target.value) }))}
                       className="w-full p-2 border rounded-md"
                     />
                   </div>
@@ -314,6 +394,19 @@ const AdminDashboard = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Modals */}
+        <AddFakeUserModal
+          isOpen={showAddUserModal}
+          onClose={() => setShowAddUserModal(false)}
+          onAdd={handleAddFakeUser}
+        />
+
+        <AddAIPromptModal
+          isOpen={showAddPromptModal}
+          onClose={() => setShowAddPromptModal(false)}
+          onAdd={handleAddAIPrompt}
+        />
       </div>
     </div>
   );

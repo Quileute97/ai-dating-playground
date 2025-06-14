@@ -145,6 +145,14 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
     reset();
   };
 
+  // Thêm effect này: mỗi lần Chat tab mount lại (user switch tab vào Chat), reset chat về trạng thái ban đầu
+  useEffect(() => {
+    disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); 
+  // Có thể đổi sang dependency truyền qua props nếu muốn reset khi chuyển về tab Chat, ví dụ: [user, activeTab]
+  // Trong trường hợp này, mỗi khi render lại ChatInterface cho user mới hoặc lần đầu hiện, đều reset
+  
   // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)
   useEffect(() => {
     if (

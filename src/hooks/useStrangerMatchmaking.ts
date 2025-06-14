@@ -20,9 +20,29 @@ export function useStrangerMatchmaking(userId: string | null) {
   const [matchResult, setMatchResult] = useState<MatchResult>({ partnerId: null, conversationId: null });
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Hàm xóa mọi user ảo khỏi queue
+  const removeAllAnonymousFromQueue = useCallback(async () => {
+    // Lấy tất cả các user_id không phải UUIDv4 khỏi queue và xóa hết
+    const { data: queueList, error } = await supabase
+      .from("stranger_queue")
+      .select("user_id");
+    if (!queueList) return;
+    const anonIds = queueList
+      .filter((item: any) => !isUUIDv4(item.user_id))
+      .map((item: any) => item.user_id);
+
+    if (anonIds.length > 0) {
+      console.log("[STRANGER] [removeAllAnonymousFromQueue] Đang xoá user ảo khỏi queue:", anonIds);
+      await supabase.from("stranger_queue").delete().in("user_id", anonIds);
+    }
+  }, []);
+
   // Thêm user vào hàng chờ: chỉ cho user thật (UUID v4)
   const joinQueue = useCallback(async () => {
     console.log("[STRANGER] [joinQueue] userId =", userId, "status =", status);
+    // Xoá mọi user ảo khỏi queue trước khi thao tác tiếp
+    await removeAllAnonymousFromQueue();
+
     if (!userId || !isUUIDv4(userId)) {
       console.log("[STRANGER] [joinQueue] chỉ cho UUIDv4 (user thật) vào hàng chờ. Bỏ qua user anonymous.");
       setStatus("error");
@@ -63,7 +83,7 @@ export function useStrangerMatchmaking(userId: string | null) {
       console.log("[STRANGER] [joinQueue] Exception error:", err);
       setStatus("error");
     }
-  }, [userId, status]);
+  }, [userId, status, removeAllAnonymousFromQueue]);
 
   // Poll tìm ghép đôi: chỉ match user thật với nhau (UUID v4 <-> UUID v4)
   const tryMatch = useCallback(async () => {
@@ -73,6 +93,9 @@ export function useStrangerMatchmaking(userId: string | null) {
       return;
     }
     try {
+      // Xóa mọi user ảo nếu vẫn còn trong queue
+      await removeAllAnonymousFromQueue();
+
       const { data: queueList, error: queueError } = await supabase
         .from("stranger_queue")
         .select("user_id, created_at")
@@ -86,6 +109,7 @@ export function useStrangerMatchmaking(userId: string | null) {
 
       // Chỉ lấy userId là UUIDv4, bỏ hết anonymous
       const others = queueList.filter((item: any) => item.user_id !== userId && isUUIDv4(item.user_id));
+      console.log("[STRANGER] [tryMatch] Queue hiện tại (UUID v4):", others.map(u => u.user_id));
       let partnerId: string | null = null;
       if (others.length > 0) {
         // Chỉ match với user thật khác (UUIDv4)
@@ -112,12 +136,9 @@ export function useStrangerMatchmaking(userId: string | null) {
       if (existed && existed.length > 0) {
         conversationId = existed[0].id;
       } else {
-        // Khi match giữa 2 user thật, cho phép gán user_real_id, user_fake_id đều là UUID
-        // Để cả 2 đều xem được conversation, sẽ insert 2 chiều (mỗi người là real ở 1 bản ghi)
         let cCreated = null;
         let createConvError = null;
         if (isUUIDv4(userId) && isUUIDv4(partnerId)) {
-          // Ghép 2 user thật -> tạo 2 conversation mirror
           const { data: c1, error: e1 } = await supabase
             .from("conversations")
             .insert([{ user_real_id: userId, user_fake_id: partnerId }])
@@ -127,11 +148,11 @@ export function useStrangerMatchmaking(userId: string | null) {
             .from("conversations")
             .insert([{ user_real_id: partnerId, user_fake_id: userId }])
             .select("id");
-          cCreated = c1; // chỉ trả về id của userId bản ghi đầu
+          cCreated = c1;
           createConvError = e1 || e2;
           conversationId = c1?.id;
         } else {
-          // 1 bên là user thật, 1 bên là anonymous (hoặc fake)
+          // Trường hợp này không bao giờ xảy ra nữa, do đã lọc ở trên
           const { data: c, error: e } = await supabase
             .from("conversations")
             .insert([{ user_real_id: userId, user_fake_id: partnerId }])
@@ -140,6 +161,7 @@ export function useStrangerMatchmaking(userId: string | null) {
           cCreated = c;
           createConvError = e;
           conversationId = c?.id;
+          console.log("[STRANGER] [tryMatch] LỖI: Đã lọc rồi mà vẫn còn user ảo?");
         }
         if (createConvError) {
           setStatus("error");
@@ -156,7 +178,7 @@ export function useStrangerMatchmaking(userId: string | null) {
     } catch (err) {
       setStatus("error");
     }
-  }, [userId, status]);
+  }, [userId, status, removeAllAnonymousFromQueue]);
 
   // Poll tìm ghép đôi auto mỗi 1.5s
   useEffect(() => {

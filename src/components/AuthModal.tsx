@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, Mail, Lock, User, Calendar } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -25,47 +26,96 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
     interests: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [info, setInfo] = useState(''); // Thông báo thành công/xác nhận
 
+  // Đăng nhập với Supabase Auth
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      const userData = {
-        id: '1',
-        name: 'User Demo',
+    setError('');
+    setInfo('');
+    // Làm sạch auth state tránh limbo
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    try {
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
         email: loginData.email,
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-        age: 25,
-        gender: 'male',
-        interests: ['Music', 'Travel', 'Photography']
-      };
-      onLogin(userData);
+        password: loginData.password,
+      });
+      if (loginError) {
+        setError('Sai email hoặc mật khẩu.');
+        setIsLoading(false);
+        return;
+      }
+      const user = data.user;
+      if (!user) {
+        setError('Không thể xác thực user!');
+        setIsLoading(false);
+        return;
+      }
+      // Lấy info profile từ bảng profiles nếu có
+      const { data: profiles, error: pErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      onLogin({
+        ...user,
+        ...(profiles || {}),
+        email: user.email,
+        avatar: profiles?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', // fallback
+        name: profiles?.name || user.email,
+        age: profiles?.age,
+        gender: profiles?.gender,
+        interests: [] // bạn có thể phát triển thêm
+      });
       setIsLoading(false);
+      setError('');
       onClose();
-    }, 1500);
+    } catch (ex: any) {
+      setError('Có lỗi xảy ra: ' + ex.message);
+      setIsLoading(false);
+    }
   };
 
+  // Đăng ký với Supabase Auth (yêu cầu xác nhận email)
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      const userData = {
-        id: '1',
-        name: registerData.name,
+    setError('');
+    setInfo('');
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      const { data, error: signupError } = await supabase.auth.signUp({
         email: registerData.email,
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-        age: parseInt(registerData.age),
-        gender: registerData.gender,
-        interests: registerData.interests.split(',').map(i => i.trim())
-      };
-      onLogin(userData);
+        password: registerData.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            name: registerData.name,
+            age: registerData.age,
+            gender: registerData.gender,
+            // Tùy bạn có map interests sang meta hay không
+          }
+        }
+      });
+      if (signupError) {
+        setError(signupError.message || 'Đăng ký thất bại.');
+        setIsLoading(false);
+        return;
+      }
+      setInfo(
+        'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản trước khi đăng nhập.'
+      );
       setIsLoading(false);
-      onClose();
-    }, 1500);
+    } catch (ex: any) {
+      setError('Có lỗi xảy ra: ' + ex.message);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -122,6 +172,12 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
                       />
                     </div>
                   </div>
+                  {error && (
+                    <div className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</div>
+                  )}
+                  {info && (
+                    <div className="text-green-600 text-sm bg-green-50 p-2 rounded">{info}</div>
+                  )}
                   <Button 
                     type="submit" 
                     className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600" 
@@ -223,6 +279,12 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
                       />
                     </div>
                   </div>
+                  {error && (
+                    <div className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</div>
+                  )}
+                  {info && (
+                    <div className="text-green-600 text-sm bg-green-50 p-2 rounded">{info}</div>
+                  )}
                   <Button 
                     type="submit" 
                     className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600" 
@@ -237,6 +299,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
                       'Tạo tài khoản'
                     )}
                   </Button>
+                  <div className="text-xs text-gray-500 mt-2">Sau khi đăng ký, bạn cần kiểm tra email để xác nhận tài khoản trước khi đăng nhập.</div>
                 </form>
               </CardContent>
             </Card>

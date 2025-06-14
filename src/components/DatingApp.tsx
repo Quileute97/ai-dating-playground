@@ -245,10 +245,19 @@ const DatingApp = () => {
         </div>
       </div>
 
-      {/* Tab Content */}
+      {/* Tab Content + Side Panels */}
       <div className="flex-1 overflow-hidden relative">
-        <div key={activeTab} className="h-full animate-fade-in">
-          {renderTabContent()}
+        <div className="h-full flex flex-row">
+          {/* LEFT: RealTimeActivityPanel (hidden on mobile) */}
+          <RealTimeActivityPanel />
+          {/* CENTER: main tab content */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            <div key={activeTab} className="h-full animate-fade-in">
+              {renderTabContent()}
+            </div>
+          </div>
+          {/* RIGHT: ActiveFriendsWithChatPanel (hidden on mobile) */}
+          <ActiveFriendsWithChatPanel />
         </div>
       </div>
 

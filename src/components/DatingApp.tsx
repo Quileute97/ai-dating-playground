@@ -222,21 +222,23 @@ const DatingApp = () => {
       <div className="flex-1 overflow-hidden relative">
         <div className="h-full flex flex-row">
           {/* LEFT: RealTimeActivityPanel (can collapse, refactored) */}
-          {isLeftPanelOpen ? (
-            <div className="relative">
-              <RealTimeActivityPanel userId={user?.id} />
+          {!isAdminMode && ( // Ẩn panel khi là admin
+            isLeftPanelOpen ? (
+              <div className="relative">
+                <RealTimeActivityPanel userId={user?.id} />
+                <SidePanelToggle
+                  isOpen={isLeftPanelOpen}
+                  side="left"
+                  onToggle={setIsLeftPanelOpen}
+                />
+              </div>
+            ) : (
               <SidePanelToggle
                 isOpen={isLeftPanelOpen}
                 side="left"
                 onToggle={setIsLeftPanelOpen}
               />
-            </div>
-          ) : (
-            <SidePanelToggle
-              isOpen={isLeftPanelOpen}
-              side="left"
-              onToggle={setIsLeftPanelOpen}
-            />
+            )
           )}
           {/* CENTER: main tab content */}
           <div className="flex-1 min-w-0 flex flex-col">
@@ -245,21 +247,23 @@ const DatingApp = () => {
             </div>
           </div>
           {/* RIGHT: ActiveFriendsWithChatPanel (can collapse, refactored) */}
-          {isRightPanelOpen ? (
-            <div className="relative">
-              <ActiveFriendsWithChatPanel myId={user.id} />
+          {!isAdminMode && ( // Ẩn panel khi là admin
+            isRightPanelOpen ? (
+              <div className="relative">
+                <ActiveFriendsWithChatPanel myId={user.id} />
+                <SidePanelToggle
+                  isOpen={isRightPanelOpen}
+                  side="right"
+                  onToggle={setIsRightPanelOpen}
+                />
+              </div>
+            ) : (
               <SidePanelToggle
                 isOpen={isRightPanelOpen}
                 side="right"
                 onToggle={setIsRightPanelOpen}
               />
-            </div>
-          ) : (
-            <SidePanelToggle
-              isOpen={isRightPanelOpen}
-              side="right"
-              onToggle={setIsRightPanelOpen}
-            />
+            )
           )}
         </div>
       </div>

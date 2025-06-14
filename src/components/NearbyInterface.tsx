@@ -5,6 +5,9 @@ import { useBankInfo } from "@/hooks/useBankInfo";
 import { useUpgradeStatus } from './hooks/useUpgradeStatus';
 import NearbyProfileView from "./NearbyProfileView";
 import NearbyMain from "./NearbyMain";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { MapPin } from "lucide-react"; // Only allow: arrow-left, map-pin, message-circle, heart
 
 interface NearbyUser {
   id: string;
@@ -227,7 +230,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
       <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4 flex items-center justify-center">
         <Card className="max-w-md p-6 text-center">
           <div className="bg-gradient-to-r from-blue-500 to-purple-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Navigation className="w-8 h-8 text-white animate-pulse" />
+            <MapPin className="w-8 h-8 text-white animate-pulse" />
           </div>
           <h3 className="text-lg font-semibold mb-2">Đang yêu cầu truy cập GPS</h3>
           <p className="text-gray-600 mb-4">
@@ -274,6 +277,11 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     return <NearbyChatWindow user={chatUser} onClose={handleCloseChat} />;
   }
 
+  // Only pass bankInfo if all required fields are present
+  const fullBankInfo = (!bankInfoHook.loading && bankInfoHook.bankInfo.bankName && bankInfoHook.bankInfo.accountNumber && bankInfoHook.bankInfo.accountHolder && bankInfoHook.bankInfo.qrUrl)
+    ? bankInfoHook.bankInfo
+    : undefined;
+
   return (
     <NearbyMain
       users={nearbyUsers}
@@ -285,11 +293,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
       nearbyLoading={nearbyLoading}
       onExpandRange={handleExpandRange}
       disableExpand={hasExpandedRange}
-      bankInfo={
-        !bankInfoHook.loading && bankInfoHook.bankInfo.bankName
-          ? bankInfoHook.bankInfo
-          : undefined
-      }
+      bankInfo={fullBankInfo}
       onViewProfile={handleViewProfile}
       onLikeUser={handleLikeUser}
       onMessageUser={handleMessageUser}

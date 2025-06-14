@@ -1,4 +1,3 @@
-
 import React from "react";
 import NearbyUserList from "./NearbyUserList";
 import NearbyFeatureBanner from "./NearbyFeatureBanner";
@@ -32,7 +31,12 @@ interface NearbyMainProps {
   nearbyLoading: boolean;
   onExpandRange: () => void;
   disableExpand: boolean;
-  bankInfo: BankInfoType | undefined;
+  bankInfo: {
+    bankName: string;
+    accountNumber: string;
+    accountHolder: string;
+    qrUrl: string;
+  } | undefined;
   onViewProfile: (u: NearbyUser) => void;
   onLikeUser: (userId: string, e?: React.MouseEvent) => void;
   onMessageUser: (userId: string, e?: React.MouseEvent) => void;

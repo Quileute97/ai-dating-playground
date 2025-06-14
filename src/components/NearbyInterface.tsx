@@ -100,7 +100,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
   const { data: nearbyUpgrade, isLoading: nearbyLoading } = useUpgradeStatus(user?.id, 'nearby');
-  const hasUpgrade = nearbyUpgrade?.status === "approved" || nearbyUpgrade?.status === "pending";
+  const upgradeStatus = nearbyUpgrade?.status; // approved | pending | rejected | undefined
 
   useEffect(() => {
     requestLocationPermission();
@@ -134,7 +134,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   };
 
   const handleExpandRange = () => {
-    if (!hasUpgrade) {
+    if (!upgradeStatus) {
       // Create a new request for upgrade
       const extendedUsers = [
         ...nearbyUsers,
@@ -520,7 +520,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
         </ScrollArea>
 
         {/* Upgrade Banner */}
-        {!hasUpgrade && !nearbyLoading ? (
+        {(!upgradeStatus || upgradeStatus === "rejected") && !nearbyLoading ? (
           <Card className="mt-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
             <div className="text-center">
               <h3 className="font-semibold mb-1">Mở rộng phạm vi tìm kiếm</h3>
@@ -535,6 +535,16 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
               >
                 Nâng cấp ngay - 49,000 VNĐ
               </Button>
+            </div>
+          </Card>
+        ) : upgradeStatus === "pending" && !nearbyLoading ? (
+          <Card className="mt-4 p-4 bg-gradient-to-r from-yellow-500 to-orange-400 text-white">
+            <div className="text-center">
+              <Crown className="w-8 h-8 mx-auto mb-2" />
+              <h3 className="font-semibold mb-1">Yêu cầu mở rộng phạm vi đang chờ duyệt</h3>
+              <p className="text-sm opacity-90 mb-2">
+                Vui lòng chờ admin kiểm tra thanh toán. Khi duyệt xong, bạn sẽ tìm được nhiều người mới hơn!
+              </p>
             </div>
           </Card>
         ) : (

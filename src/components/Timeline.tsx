@@ -6,15 +6,26 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
+import { VN_PROVINCES } from "@/utils/vnProvinces";
+import HashtagPostsModal from "./HashtagPostsModal";
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
-  { id: 1, name: "🔥 Fire", url: "https://cdn-icons-png.flaticon.com/512/833/833314.png" },
-  { id: 2, name: "🤣 Haha", url: "https://cdn-icons-png.flaticon.com/512/742/742751.png" },
-  { id: 3, name: "💖 Heart", url: "https://cdn-icons-png.flaticon.com/512/833/833472.png" },
-  { id: 4, name: "🥺 UwU", url: "https://cdn-icons-png.flaticon.com/512/742/742920.png" },
-  { id: 5, name: "🤙 Chất", url: "https://cdn-icons-png.flaticon.com/512/2583/2583346.png" },
+  { id: 1, name: "🔥 Fire", url: "https://cdn-icons-png.flaticon.com/512/833/833314.png", code: ":fire:" },
+  { id: 2, name: "🤣 Haha", url: "https://cdn-icons-png.flaticon.com/512/742/742751.png", code: ":haha:" },
+  { id: 3, name: "💖 Heart", url: "https://cdn-icons-png.flaticon.com/512/833/833472.png", code: ":heart:" },
+  { id: 4, name: "🥺 UwU", url: "https://cdn-icons-png.flaticon.com/512/742/742920.png", code: ":uwu:" },
+  { id: 5, name: "🤙 Chất", url: "https://cdn-icons-png.flaticon.com/512/2583/2583346.png", code: ":chat:" },
+  { id: 6, name: "🐶 Cute", url: "https://cdn-icons-png.flaticon.com/512/616/616408.png", code: ":cute:" },
+  { id: 7, name: "🎉 Party", url: "https://cdn-icons-png.flaticon.com/512/616/616495.png", code: ":party:" },
+  { id: 8, name: "🌈 Rainbow", url: "https://cdn-icons-png.flaticon.com/512/616/616408.png", code: ":rainbow:" },
+  { id: 9, name: "😎 Cool", url: "https://cdn-icons-png.flaticon.com/512/616/616490.png", code: ":cool:" },
+  { id: 10, name: "🐧 Pengu", url: "https://cdn-icons-png.flaticon.com/512/616/616408.png", code: ":pengu:" },
+  { id: 11, name: "🍀 Luck", url: "https://cdn-icons-png.flaticon.com/512/616/616524.png", code: ":luck:" },
+  { id: 12, name: "🚀 Rocket", url: "https://cdn-icons-png.flaticon.com/512/616/616424.png", code: ":rocket:" },
+  // ... bạn thêm nhiều sticker tùy thích
 ];
+
 // Sticker style: square, size 56x56
 
 interface LocationData {
@@ -99,21 +110,146 @@ const initialPosts: Post[] = [
   }
 ];
 
-// -- PostForm inline để tránh tạo file mới
+// === Helper để detect và render hashtag ===
+const parseHashtags = (content: string, onHashtagClick: (tag: string) => void) => {
+  if (!content) return null;
+  const regex = /[#＃][\w\u00C0-\u1EF9\-]+/gu;
+  const arr = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(content))) {
+    const start = match.index;
+    const end = regex.lastIndex;
+    if (start > lastIndex) {
+      arr.push(content.slice(lastIndex, start));
+    }
+    arr.push(
+      <span
+        key={start}
+        className="text-blue-600 font-semibold cursor-pointer hover:underline"
+        onClick={() => onHashtagClick(match[0].slice(1))}
+      >
+        {content.slice(start, end)}
+      </span>
+    );
+    lastIndex = end;
+  }
+  if (lastIndex < content.length) {
+    arr.push(content.slice(lastIndex));
+  }
+  return arr;
+};
+
+import { useTimelinePosts } from "@/hooks/useTimelinePosts";
+import { useTimelineComments } from "@/hooks/useTimelineComments";
+import { usePostLikes } from "@/hooks/usePostLikes";
+
+const Timeline: React.FC<{ user: any }> = ({ user }) => {
+  const userId = user?.id;
+  const { posts, isLoading, createPost, creating, refetch } = useTimelinePosts(userId);
+  const [hashtag, setHashtag] = React.useState<string | null>(null);
+
+  // Xử lý đăng post mới (dùng Supabase)
+  const handlePostSubmit = async (
+    data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">
+  ) => {
+    await createPost({
+      content: data.content,
+      user_id: userId,
+      media_url: data.media?.url,
+      media_type: data.media?.type,
+      sticker: data.sticker,
+      location: data.location,
+    });
+    refetch();
+  };
+
+  return (
+    <div className="max-w-lg mx-auto py-6 h-full flex flex-col animate-fade-in">
+      <PostForm user={user} onCreate={handlePostSubmit} posting={creating} />
+      <div className="flex-1 overflow-y-auto space-y-6">
+        {isLoading && (
+          <div className="text-center text-gray-500 pt-14">Đang tải timeline...</div>
+        )}
+        {!isLoading && posts?.map((post: any) => (
+          <PostItem key={post.id} post={post} user={user} onHashtagClick={setHashtag} />
+        ))}
+        {posts?.length === 0 && !isLoading && (
+          <div className="text-center text-gray-400 pt-14">Chưa có bài viết nào.</div>
+        )}
+      </div>
+      {/* Modal hashtag */}
+      {hashtag && (
+        <HashtagPostsModal
+          hashtag={hashtag}
+          open={!!hashtag}
+          user={user}
+          onClose={() => setHashtag(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+// ---------- Sửa PostForm ----------
+// Thay đổi truyền locationName, sticker insert vào position cursor
 const PostForm: React.FC<{
   user: any;
   onCreate: (data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">) => Promise<void>;
   posting: boolean;
 }> = ({ user, onCreate, posting }) => {
-  const [content, setContent] = useState("");
-  const [locationEnabled, setLocationEnabled] = useState(false);
-  const [media, setMedia] = useState<MediaFile | null>(null);
-  const [sticker, setSticker] = useState<typeof STICKERS[number] | null>(null);
-  const [location, setLocation] = useState<LocationData | null>(null);
-  const [loadingLocation, setLoadingLocation] = useState(false);
+  const [content, setContent] = React.useState("");
+  const [media, setMedia] = React.useState<MediaFile | null>(null);
+  const [sticker, setSticker] = React.useState<typeof STICKERS[number] | null>(null);
+
+  // Tỉnh/thành phố
+  const [locationName, setLocationName] = React.useState<string | null>(null);
+  const [suggestedProvince, setSuggestedProvince] = React.useState<string | null>(null);
 
   // NEW: loading state cho upload ảnh/video
   const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  // Lấy tỉnh từ GPS
+  React.useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      // Fake API get city name by GPS, bạn có thể dùng api khác nếu muốn
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi`);
+        const json = await res.json();
+        let province: string | null = null;
+        // Tìm tên tỉnh/thành phù hợp nhất với VN_PROVINCES
+        for (let name of VN_PROVINCES) {
+          if (json.address.state && json.address.state.includes(name)) province = name;
+          if (json.address.city && json.address.city.includes(name)) province = name;
+        }
+        setSuggestedProvince(province);
+        setLocationName(province);
+      } catch {
+        setSuggestedProvince(null);
+      }
+    });
+  }, []);
+
+  // --- Chèn sticker vào đúng vị trí con trỏ soạn thảo
+  const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+  const handleStickerInsert = (code: string) => {
+    const el = textAreaRef.current;
+    if (!el) return;
+    const [start, end] = [el.selectionStart, el.selectionEnd];
+    const before = content.slice(0, start);
+    const after = content.slice(end);
+    const next = before + " " + code + " " + after;
+    setContent(next);
+    setTimeout(() => {
+      el.focus();
+      el.selectionStart = el.selectionEnd = start + code.length + 2;
+    }, 0);
+  };
 
   // Chọn media và upload lên Supabase Storage (đã thay thế anh.moe)
   const handleMediaChange = async (e: ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
@@ -135,56 +271,24 @@ const PostForm: React.FC<{
   // Remove media
   const handleRemoveMedia = () => setMedia(null);
 
-  // Get current location
-  const getCurrentLocation = () => {
-    setLoadingLocation(true);
-    if (!navigator.geolocation) {
-      setLoadingLocation(false);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocation({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          formatted: `(${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)})`
-        });
-        setLoadingLocation(false);
-      },
-      () => {
-        setLoadingLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 3000 }
-    );
-  };
-
-  // Khi enable location checkbox thay đổi
-  React.useEffect(() => {
-    if (locationEnabled) getCurrentLocation();
-    else setLocation(null);
-    // eslint-disable-next-line
-  }, [locationEnabled]);
-
   // Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!content.trim() && !media) || uploadingMedia) return; // phải có text hoặc media, không được submit khi đang upload file
+    if ((!content.trim() && !media) || uploadingMedia) return;
     await onCreate({
       user: {
         name: user?.name ?? demoUser.name,
         avatar: user?.avatar ?? demoUser.avatar
       },
       content: content.trim(),
-      location: locationEnabled ? location : undefined,
-      locationEnabled,
+      location: locationName ? { formatted: locationName } : undefined,
       media: media ?? undefined,
-      sticker
+      sticker,
     });
     setContent("");
-    setLocationEnabled(false);
     setMedia(null);
     setSticker(null);
-    setLocation(null);
+    setLocationName(suggestedProvince || "");
   };
 
   return (
@@ -192,13 +296,33 @@ const PostForm: React.FC<{
       <form onSubmit={handleSubmit} className="flex gap-3 flex-col sm:flex-row items-start">
         <img src={user?.avatar || demoUser.avatar} alt={user?.name || demoUser.name} className="w-10 h-10 rounded-full object-cover" />
         <div className="flex-1 w-full flex flex-col gap-2">
-          <Textarea
-            className="flex-1"
-            placeholder="Bạn đang nghĩ gì?"
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            disabled={posting || uploadingMedia}
-          />
+          <div className="relative">
+            <Textarea
+              ref={textAreaRef}
+              className="flex-1 pr-24"
+              placeholder="Bạn đang nghĩ gì?"
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              disabled={posting || uploadingMedia}
+            />
+            {/* Sticker Selector (small inline) */}
+            <div className="absolute right-2 top-2 flex flex-nowrap gap-1 z-20">
+              {STICKERS.slice(0, 6).map(s => (
+                <button
+                  key={s.id}
+                  type="button"
+                  tabIndex={-1}
+                  className="w-7 h-7 hover:scale-110 transition"
+                  title={s.name}
+                  disabled={posting || uploadingMedia}
+                  onClick={() => handleStickerInsert(s.code)}
+                >
+                  <img src={s.url} alt={s.name} className="w-full h-full" />
+                </button>
+              ))}
+              <PopoverStickerSelect onSticker={s => handleStickerInsert(s.code)} disabled={posting || uploadingMedia} />
+            </div>
+          </div>
           <div className="flex gap-2 flex-wrap items-center">
             {/* Upload buttons */}
             <label className="cursor-pointer flex gap-1 items-center text-sm px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200">
@@ -223,8 +347,6 @@ const PostForm: React.FC<{
               />
               <span>Video</span>
             </label>
-            {/* Sticker chooser */}
-            <PopoverStickerSelect sticker={sticker} setSticker={setSticker} disabled={posting || uploadingMedia} />
           </div>
           {/* Media preview */}
           {media && (
@@ -262,19 +384,22 @@ const PostForm: React.FC<{
               <span className="text-sm text-gray-500">{sticker.name}</span>
             </div>
           )}
+          {/* ĐỊA ĐIỂM: chọn tỉnh/thành */}
           <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer mt-1.5">
-            <input
-              type="checkbox"
-              checked={locationEnabled}
-              onChange={e => setLocationEnabled(e.target.checked)}
-              className="accent-pink-500 w-4 h-4"
-              disabled={posting || loadingLocation || uploadingMedia}
-            />
-            Cho phép hiển thị địa điểm của tôi
-            <MapPin size={16} className="text-pink-500" />
-            {locationEnabled && loadingLocation && <span className="text-xs text-gray-400 px-2">Đang lấy vị trí...</span>}
-            {location && location.formatted && !loadingLocation && (
-              <span className="text-xs text-green-500 pl-2">{location.formatted}</span>
+            Địa điểm:
+            <select
+              className="ml-2 border rounded px-2 py-1 text-sm"
+              value={locationName || ""}
+              onChange={e => setLocationName(e.target.value)}
+              disabled={posting || uploadingMedia}
+            >
+              <option value="">-- Chọn tỉnh thành --</option>
+              {VN_PROVINCES.map(pro => (
+                <option key={pro} value={pro}>{pro}{pro === suggestedProvince ? " (Gợi ý)" : ""}</option>
+              ))}
+            </select>
+            {suggestedProvince && (
+              <span className="text-green-500 ml-2 text-xs">Gợi ý: {suggestedProvince}</span>
             )}
           </label>
         </div>
@@ -290,13 +415,9 @@ const PostForm: React.FC<{
   );
 };
 
-// Sticker chọn với Popover (inline)
-const PopoverStickerSelect: React.FC<{
-  sticker: typeof STICKERS[number] | null;
-  setSticker: (sticker: typeof STICKERS[number] | null) => void;
-  disabled?: boolean;
-}> = ({ sticker, setSticker, disabled }) => {
-  const [open, setOpen] = useState(false);
+// ---------- Sửa PopoverStickerSelect
+const PopoverStickerSelect: React.FC<{ onSticker: (s: typeof STICKERS[number]) => void, disabled?: boolean }> = ({ onSticker, disabled }) => {
+  const [open, setOpen] = React.useState(false);
   return (
     <div className="relative">
       <Button
@@ -308,88 +429,61 @@ const PopoverStickerSelect: React.FC<{
         disabled={disabled}
       >
         <Smile size={17} />
-        <span className="text-xs hidden sm:inline">Sticker</span>
-        {sticker && <img src={sticker.url} alt="" className="w-5 h-5 mx-1 inline" />}
       </Button>
       {open && (
-        <div className="absolute left-0 top-10 z-30 grid grid-cols-3 gap-2 p-2 bg-white shadow-xl rounded-xl border border-gray-200 min-w-[160px] animate-fade-in" tabIndex={0}>
+        <div className="absolute left-0 top-10 z-30 grid grid-cols-5 gap-2 p-2 bg-white shadow-xl rounded-xl border border-gray-200 min-w-[220px] animate-fade-in">
           {STICKERS.map((s) => (
             <button
               key={s.id}
               type="button"
               className={cn(
-                "hover:bg-pink-50 p-1 rounded-md transition",
-                sticker?.id === s.id ? "ring-2 ring-pink-400 ring-offset-2" : ""
+                "hover:bg-pink-50 p-1 rounded-md transition"
               )}
-              onClick={() => {
-                setSticker(s);
-                setOpen(false);
-              }}
+              onClick={() => { onSticker(s); setOpen(false); }}
               tabIndex={0}
+              disabled={disabled}
             >
               <img src={s.url} alt={s.name} className="w-8 h-8 mx-auto" />
             </button>
           ))}
-          <button
-            type="button"
-            className="text-gray-500 col-span-3 border-t pt-1 mt-1 text-xs hover:text-red-400"
-            onClick={() => {
-              setSticker(null);
-              setOpen(false);
-            }}
-          >Bỏ sticker</button>
         </div>
       )}
     </div>
-  );
+  )
 };
 
-import { useTimelinePosts } from "@/hooks/useTimelinePosts";
-import { useTimelineComments } from "@/hooks/useTimelineComments";
-import { usePostLikes } from "@/hooks/usePostLikes";
+// ---------- Sửa PostItem ----------
+// parse hashtag, sticker từ text
+const stickerCodeToImg: Record<string, string> = Object.fromEntries(STICKERS.map(x => [x.code, x.url]));
 
-const Timeline: React.FC<{ user: any }> = ({ user }) => {
-  const userId = user?.id;
-  const { posts, isLoading, createPost, creating, refetch } = useTimelinePosts(userId);
-
-  // Xử lý đăng post mới (dùng Supabase)
-  const handlePostSubmit = async (
-    data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">
-  ) => {
-    await createPost({
-      content: data.content,
-      user_id: userId,
-      media_url: data.media?.url,
-      media_type: data.media?.type,
-      sticker: data.sticker,
-      location: data.location,
-    });
-    refetch();
-  };
-
-  return (
-    <div className="max-w-lg mx-auto py-6 h-full flex flex-col animate-fade-in">
-      {/* Đăng bài mới */}
-      <PostForm user={user} onCreate={handlePostSubmit} posting={creating} />
-
-      {/* Danh sách bài viết */}
-      <div className="flex-1 overflow-y-auto space-y-6">
-        {isLoading && (
-          <div className="text-center text-gray-500 pt-14">Đang tải timeline...</div>
-        )}
-        {!isLoading && posts?.map((post: any) => (
-          <PostItem key={post.id} post={post} user={user} />
-        ))}
-        {posts?.length === 0 && !isLoading && (
-          <div className="text-center text-gray-400 pt-14">Chưa có bài viết nào.</div>
-        )}
-      </div>
-    </div>
-  );
+// mình cần render sticker trong nội dung text nếu có mã sticker như ":fire:"
+// Ta sẽ parse và convert sang icon sticker
+const renderContent = (content: string, onHashtagClick: (tag: string) => void) => {
+  if (!content) return null;
+  // Replace stickerCode in content
+  let parts: Array<string | { sticker: string } > = [];
+  const regex = /(:\w+:)/g;
+  let last = 0;
+  let m;
+  while ((m = regex.exec(content))) {
+    if (m.index > last) parts.push(content.slice(last, m.index));
+    parts.push({ sticker: m[1] });
+    last = m.index + m[0].length;
+  }
+  if (last < content.length) parts.push(content.slice(last));
+  // Render部分
+  return parts.map((p, i) => {
+    if (typeof p === "string") {
+      return <React.Fragment key={i}>{parseHashtags(p, onHashtagClick)}</React.Fragment>;
+    }
+    // Sticker
+    const url = stickerCodeToImg[p.sticker];
+    if (url) return <img key={i} src={url} alt={p.sticker} className="inline w-6 h-6 mx-0.5 align-text-bottom" />;
+    return p.sticker;
+  });
 };
 
-// Tách nhỏ PostItem để dễ kiểm soát
-const PostItem: React.FC<{ post: any; user: any }> = ({ post, user }) => {
+const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) => void }> = ({ post, user, onHashtagClick }) => {
   const [commentInput, setCommentInput] = React.useState("");
   const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
   const { likeCount, liked, like, unlike, isToggling } = usePostLikes(post.id, user?.id);
@@ -421,7 +515,9 @@ const PostItem: React.FC<{ post: any; user: any }> = ({ post, user }) => {
           <div className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</div>
         </div>
       </div>
-      <div className="text-base text-gray-800 mb-2 whitespace-pre-line">{post.content}</div>
+      <div className="text-base text-gray-800 mb-2 whitespace-pre-line">
+        {renderContent(post.content, onHashtagClick)}
+      </div>
       {/* Media */}
       {post.media_url && post.media_type === "image" && (
         <div className="mb-2 ml-12 relative w-72 max-w-full">
@@ -506,7 +602,6 @@ const PostItem: React.FC<{ post: any; user: any }> = ({ post, user }) => {
     </Card>
   );
 };
-
 export default Timeline;
 
 // Lưu ý: File này quá dài, bạn nên tách PostForm, PopoverStickerSelect, PostCard ra file riêng cho dễ maintain!

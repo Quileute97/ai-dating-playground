@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { MapPin, Heart, MessageCircle, Star } from 'lucide-react';
+
+import React, { useState, useEffect } from 'react';
+import { MapPin, Heart, MessageCircle, Star, Navigation } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -79,6 +80,39 @@ const mockNearbyUsers: NearbyUser[] = [
 
 const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
+  const [locationPermission, setLocationPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    requestLocationPermission();
+  }, []);
+
+  const requestLocationPermission = async () => {
+    if (!navigator.geolocation) {
+      setLocationPermission('denied');
+      return;
+    }
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        });
+      });
+
+      setUserLocation({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      });
+      setLocationPermission('granted');
+      console.log('GPS location granted:', position.coords);
+    } catch (error) {
+      console.error('GPS permission denied:', error);
+      setLocationPermission('denied');
+    }
+  };
 
   const handleViewProfile = (user: NearbyUser) => {
     setSelectedUser(user);
@@ -87,6 +121,47 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const handleCloseProfile = () => {
     setSelectedUser(null);
   };
+
+  // Show GPS permission request screen
+  if (locationPermission === 'pending') {
+    return (
+      <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4 flex items-center justify-center">
+        <Card className="max-w-md p-6 text-center">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Navigation className="w-8 h-8 text-white animate-pulse" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Đang yêu cầu truy cập GPS</h3>
+          <p className="text-gray-600 mb-4">
+            Chúng tôi cần truy cập vị trí của bạn để tìm những người xung quanh
+          </p>
+          <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show GPS denied screen
+  if (locationPermission === 'denied') {
+    return (
+      <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4 flex items-center justify-center">
+        <Card className="max-w-md p-6 text-center">
+          <div className="bg-gradient-to-r from-red-500 to-orange-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MapPin className="w-8 h-8 text-white" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Cần quyền truy cập vị trí</h3>
+          <p className="text-gray-600 mb-4">
+            Để sử dụng tính năng "Quanh đây", vui lòng cho phép truy cập vị trí trong cài đặt trình duyệt
+          </p>
+          <Button 
+            onClick={requestLocationPermission}
+            className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+          >
+            Thử lại
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   if (selectedUser) {
     return (
@@ -188,7 +263,15 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
       <div className="max-w-md mx-auto h-full flex flex-col">
         {/* Header */}
         <div className="mb-4">
-          <h1 className="text-xl font-bold text-gray-800 mb-2">Quanh đây</h1>
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-xl font-bold text-gray-800">Quanh đây</h1>
+            {userLocation && (
+              <div className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                GPS
+              </div>
+            )}
+          </div>
           <p className="text-gray-600 text-sm">
             {mockNearbyUsers.length} người trong phạm vi 5km
           </p>

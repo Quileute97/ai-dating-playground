@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, Mail, Lock, User, Calendar, MapPin } from 'lucide-react';
+import { Heart, Mail, Lock, User, Calendar } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -22,7 +22,6 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
     password: '',
     age: '',
     gender: 'male',
-    location: '',
     interests: ''
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +39,6 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
         avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
         age: 25,
         gender: 'male',
-        location: 'TP.HCM',
         interests: ['Music', 'Travel', 'Photography']
       };
       onLogin(userData);
@@ -62,7 +60,6 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
         avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
         age: parseInt(registerData.age),
         gender: registerData.gender,
-        location: registerData.location,
         interests: registerData.interests.split(',').map(i => i.trim())
       };
       onLogin(userData);
@@ -194,20 +191,6 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
                         <option value="female">Nữ</option>
                         <option value="other">Khác</option>
                       </select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Địa điểm</Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        id="location"
-                        placeholder="TP. Hồ Chí Minh"
-                        className="pl-10"
-                        value={registerData.location}
-                        onChange={(e) => setRegisterData({ ...registerData, location: e.target.value })}
-                        required
-                      />
                     </div>
                   </div>
                   <div className="space-y-2">

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,8 @@ interface FakeUser {
   gender: 'male' | 'female';
   age: number;
   bio: string;
-  aiPrompt: string;
+  aiPrompt: string;      // cũ, dùng cho UI, không lưu vào DB nữa
+  aiPromptId?: string;   // thêm trường này cho form, dùng để lưu DB
   isActive: boolean;
 }
 
@@ -42,6 +42,7 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
     age: 20,
     bio: '',
     aiPrompt: aiPrompts.length > 0 ? aiPrompts[0].prompt : '',
+    aiPromptId: aiPrompts.length > 0 ? aiPrompts[0].id : '',
     isActive: true
   });
 
@@ -49,15 +50,26 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
   React.useEffect(() => {
     setFormData(prev => ({
       ...prev,
-      aiPrompt: aiPrompts.length > 0 ? aiPrompts[0].prompt : ''
+      aiPrompt: aiPrompts.length > 0 ? aiPrompts[0].prompt : '',
+      aiPromptId: aiPrompts.length > 0 ? aiPrompts[0].id : '',
     }));
   }, [aiPrompts]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.bio || !formData.aiPrompt) return;
+    if (!formData.name || !formData.bio || !formData.aiPromptId) return;
 
-    onAdd(formData);
+    // Lưu ý: Không truyền aiPrompt content vào DB, chỉ truyền aiPromptId
+    onAdd({
+      name: formData.name,
+      avatar: formData.avatar,
+      gender: formData.gender,
+      age: formData.age,
+      bio: formData.bio,
+      aiPrompt: '',          // không cần giữ prompt text ở đây
+      aiPromptId: formData.aiPromptId,
+      isActive: formData.isActive
+    });
     setFormData({
       name: '',
       avatar: '/placeholder.svg',
@@ -65,6 +77,7 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
       age: 20,
       bio: '',
       aiPrompt: aiPrompts.length > 0 ? aiPrompts[0].prompt : '',
+      aiPromptId: aiPrompts.length > 0 ? aiPrompts[0].id : '',
       isActive: true
     });
     onClose();
@@ -76,7 +89,6 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
         <DialogHeader>
           <DialogTitle>Thêm người dùng ảo mới</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Tên</Label>
@@ -130,17 +142,22 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
           <div>
             <Label htmlFor="prompt">AI Prompt</Label>
             <Select
-              value={formData.aiPrompt}
-              onValueChange={(value: string) =>
-                setFormData(prev => ({ ...prev, aiPrompt: value }))
-              }
+              value={formData.aiPromptId}
+              onValueChange={(id: string) => {
+                const promptObj = aiPrompts.find(p => p.id === id);
+                setFormData(prev => ({
+                  ...prev,
+                  aiPromptId: id,
+                  aiPrompt: promptObj?.prompt ?? ''
+                }));
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Chọn AI prompt..." />
               </SelectTrigger>
               <SelectContent>
                 {aiPrompts.map(prompt => (
-                  <SelectItem key={prompt.id} value={prompt.prompt}>
+                  <SelectItem key={prompt.id} value={prompt.id}>
                     <span className="font-medium">{prompt.name}</span>
                     <span className="block text-xs text-gray-500">{prompt.description?.slice(0, 50)}...</span>
                   </SelectItem>

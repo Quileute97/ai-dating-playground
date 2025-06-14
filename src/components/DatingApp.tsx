@@ -84,12 +84,36 @@ const DatingApp = () => {
     }
   }, [user]);
 
+  // Tab info: không khóa tab nào, tất cả đều visible
   const tabs = [
-    { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500', locked: false },
-    { id: 'dating', label: 'Hẹn hò', icon: Heart, color: 'from-pink-500 to-red-500', locked: !user },
-    { id: 'nearby', label: 'Quanh đây', icon: MapPin, color: 'from-blue-500 to-purple-500', locked: !user },
-    { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500', locked: false }
+    { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500' },
+    { id: 'dating', label: 'Hẹn hò', icon: Heart, color: 'from-pink-500 to-red-500' },
+    { id: 'nearby', label: 'Quanh đây', icon: MapPin, color: 'from-blue-500 to-purple-500' },
+    { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500' }
   ];
+
+  // Component thông báo đăng nhập
+  const RequireLogin = () => (
+    <div className="flex flex-col items-center justify-center h-full py-24">
+      <Card className="max-w-xs w-full p-6 flex flex-col items-center bg-white/90 shadow-lg">
+        <div className="mb-4">
+          <Heart className="w-10 h-10 text-pink-500" />
+        </div>
+        <div className="text-lg font-semibold mb-2 text-center">
+          Đăng nhập để sử dụng tính năng này!
+        </div>
+        <div className="text-gray-600 text-center mb-6">
+          Vui lòng đăng nhập để trải nghiệm Hẹn hò hoặc Quanh đây.
+        </div>
+        <Button
+          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white w-full"
+          onClick={() => setShowAuth(true)}
+        >
+          Đăng nhập
+        </Button>
+      </Card>
+    </div>
+  );
 
   const handleLogin = (userData: any) => {
     setUser(userData);
@@ -117,14 +141,9 @@ const DatingApp = () => {
     // TODO: Apply filters logic
   };
 
-  // Điều chỉnh: Nếu tab bị khoá (locked) -> show modal đăng nhập, ngược lại chuyển tab
+  // Đổi handleTabChange: không check locked nữa 
   const handleTabChange = (tabId: string) => {
-    const tab = tabs.find(t => t.id === tabId);
-    if (tab?.locked) {
-      setShowAuth(true);
-    } else {
-      setActiveTab(tabId);
-    }
+    setActiveTab(tabId);
   };
 
   const handleAdminToggle = () => {
@@ -158,10 +177,10 @@ const DatingApp = () => {
           matchmaking={matchmaking}
         />;
       case 'dating':
-        // Nếu chưa login thì tab này không bao giờ tới được (chặn handleTabChange)
-        return user ? <SwipeInterface user={user} /> : null;
+        // Nếu chưa login thì hiện RequireLogin
+        return user ? <SwipeInterface user={user} /> : <RequireLogin />;
       case 'nearby':
-        return user ? <NearbyInterface user={user} /> : null;
+        return user ? <NearbyInterface user={user} /> : <RequireLogin />;
       case 'timeline':
         return <Timeline user={user} />;
       default:

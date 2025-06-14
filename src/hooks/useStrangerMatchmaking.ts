@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { 
   joinStrangerQueue, 
@@ -94,10 +93,9 @@ export function useStrangerMatchmaking() {
           setIsMatched(true);
           setIsInQueue(false);
 
-          // Remove both users from queue
+          // Chỉ gọi leaveStrangerQueue với userId local (KHÔNG gọi với partner)
           await leaveStrangerQueue(userId);
-          await leaveStrangerQueue(partner);
-          
+
           // Stop polling
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
@@ -138,7 +136,6 @@ export function useStrangerMatchmaking() {
     
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
-      pollingRef.current = null;
     }
 
     setIsInQueue(false);

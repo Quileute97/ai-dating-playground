@@ -188,9 +188,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking }: ChatInterface
     setInputValue('');
 
     if (isAIMode) {
-      // Show typing indicator
       setIsTyping(true);
-      
       try {
         await aiService.simulateTyping();
         const aiResponse = await aiService.generateResponse(
@@ -207,16 +205,12 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking }: ChatInterface
         };
 
         setMessages(prev => [...prev, response]);
-        
-        // Add AI response to conversation history
         setConversationHistory(prev => [...prev, userMessage, {
           role: 'assistant',
           content: aiResponse.message
         }]);
-        
       } catch (error) {
         console.error('AI response error:', error);
-        // Fallback response
         const fallbackResponse: Message = {
           id: (Date.now() + 1).toString(),
           text: 'Xin lỗi, mình đang gặp chút vấn đề. Bạn có thể thử lại không? 😅',
@@ -228,29 +222,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking }: ChatInterface
       } finally {
         setIsTyping(false);
       }
-    } else {
-      // Simulate stranger response (for demo)
-      setTimeout(() => {
-        const responses = [
-          "Hey! Nice to meet you 😊",
-          "What's your favorite thing to do on weekends?",
-          "I love your energy! Tell me about yourself",
-          "That's interesting! I've never thought about it that way",
-          "Haha, you seem fun to talk to! 😄"
-        ];
-        
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-        
-        const response: Message = {
-          id: (Date.now() + 1).toString(),
-          text: randomResponse,
-          sender: 'stranger',
-          timestamp: new Date(),
-          isAI: false
-        };
-
-        setMessages(prev => [...prev, response]);
-      }, 1000 + Math.random() * 2000);
     }
   };
 

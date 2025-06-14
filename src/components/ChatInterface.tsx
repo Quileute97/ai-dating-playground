@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { aiService, AIMessage } from '@/services/aiService';
+import StrangerSettingsModal from './StrangerSettingsModal';
 
 interface Message {
   id: string;
@@ -19,6 +21,11 @@ interface ChatInterfaceProps {
   isAdminMode?: boolean;
 }
 
+interface StrangerSettings {
+  gender: string;
+  ageGroup: string;
+}
+
 const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -29,7 +36,13 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
   const [isAIMode, setIsAIMode] = useState(false);
   const [aiPersonality, setAiPersonality] = useState('friendly');
   const [conversationHistory, setConversationHistory] = useState<AIMessage[]>([]);
+  const [showStrangerSettings, setShowStrangerSettings] = useState(false);
+  const [strangerSettings, setStrangerSettings] = useState<StrangerSettings>({
+    gender: 'all',
+    ageGroup: 'all'
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -38,6 +51,44 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const generateStrangerProfile = (settings: StrangerSettings) => {
+    const profiles = {
+      male: {
+        gen_z: [
+          { name: "Minh", age: 22, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face" },
+          { name: "Tuấn", age: 24, avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" }
+        ],
+        millennial: [
+          { name: "Hoàng", age: 28, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face" },
+          { name: "Nam", age: 32, avatar: "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?w=150&h=150&fit=crop&crop=face" }
+        ]
+      },
+      female: {
+        gen_z: [
+          { name: "Linh", age: 21, avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face" },
+          { name: "Mai", age: 23, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face" }
+        ],
+        millennial: [
+          { name: "Hương", age: 29, avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face" },
+          { name: "Thảo", age: 31, avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=150&h=150&fit=crop&crop=face" }
+        ]
+      }
+    };
+
+    if (settings.gender === 'all') {
+      const allProfiles = [...(profiles.male[settings.ageGroup] || []), ...(profiles.female[settings.ageGroup] || [])];
+      return allProfiles[Math.floor(Math.random() * allProfiles.length)];
+    }
+
+    const genderProfiles = profiles[settings.gender as keyof typeof profiles];
+    if (!genderProfiles) return profiles.female.gen_z[0]; // fallback
+
+    const ageProfiles = genderProfiles[settings.ageGroup as keyof typeof genderProfiles];
+    if (!ageProfiles) return profiles.female.gen_z[0]; // fallback
+
+    return ageProfiles[Math.floor(Math.random() * ageProfiles.length)];
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -136,16 +187,16 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
       setIsSearching(false);
       setIsConnected(true);
       setIsAIMode(true);
+      
+      const strangerProfile = generateStrangerProfile(strangerSettings);
       setStranger({
-        name: "Minh",
-        age: 22,
-        gender: "female",
-        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face"
+        ...strangerProfile,
+        gender: strangerSettings.gender === 'all' ? 'unknown' : strangerSettings.gender
       });
 
       const welcomeMessage: Message = {
         id: Date.now().toString(),
-        text: "Chào bạn! Tôi là Minh, 22 tuổi. Rất vui được chat với bạn! 😊",
+        text: `Chào bạn! Tôi là ${strangerProfile.name}, ${strangerProfile.age} tuổi. Rất vui được chat với bạn! 😊`,
         sender: 'stranger',
         timestamp: new Date(),
         isAI: true
@@ -168,6 +219,14 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
     setIsTyping(false);
   };
 
+  const handleApplyStrangerSettings = (settings: StrangerSettings) => {
+    setStrangerSettings(settings);
+    toast({
+      title: "Cài đặt đã lưu",
+      description: `Sẽ tìm kiếm ${settings.gender === 'all' ? 'tất cả giới tính' : settings.gender === 'male' ? 'nam' : settings.gender === 'female' ? 'nữ' : 'khác'}, ${settings.ageGroup === 'all' ? 'mọi độ tuổi' : settings.ageGroup === 'gen-z' ? 'Gen Z' : settings.ageGroup === 'millennial' ? '9x' : 'trên 35'}`,
+    });
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {/* Header */}
@@ -182,7 +241,11 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
               <p className="text-sm text-gray-500">Kết nối và trò chuyện ngẫu nhiên</p>
             </div>
           </div>
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setShowStrangerSettings(true)}
+          >
             <Settings className="w-4 h-4" />
           </Button>
         </div>
@@ -324,6 +387,13 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
           </div>
         </>
       )}
+      
+      <StrangerSettingsModal
+        isOpen={showStrangerSettings}
+        onClose={() => setShowStrangerSettings(false)}
+        onApply={handleApplyStrangerSettings}
+        currentSettings={strangerSettings}
+      />
     </div>
   );
 };

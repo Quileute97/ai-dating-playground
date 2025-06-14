@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Heart, MessageCircle, Star, Navigation } from 'lucide-react';
+import { MapPin, Heart, MessageCircle, Star, Navigation, ArrowLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 interface NearbyUser {
   id: string;
@@ -14,6 +16,7 @@ interface NearbyUser {
   lastSeen: string;
   interests: string[];
   rating: number;
+  isLiked?: boolean;
 }
 
 interface NearbyInterfaceProps {
@@ -30,7 +33,8 @@ const mockNearbyUsers: NearbyUser[] = [
     isOnline: true,
     lastSeen: 'Đang online',
     interests: ['Yoga', 'Cafe'],
-    rating: 4.8
+    rating: 4.8,
+    isLiked: false
   },
   {
     id: '2',
@@ -41,7 +45,8 @@ const mockNearbyUsers: NearbyUser[] = [
     isOnline: false,
     lastSeen: '5 phút trước',
     interests: ['Gaming', 'Công nghệ'],
-    rating: 4.5
+    rating: 4.5,
+    isLiked: false
   },
   {
     id: '3',
@@ -52,7 +57,8 @@ const mockNearbyUsers: NearbyUser[] = [
     isOnline: true,
     lastSeen: 'Đang online',
     interests: ['Du lịch', 'Nhiếp ảnh'],
-    rating: 4.9
+    rating: 4.9,
+    isLiked: false
   },
   {
     id: '4',
@@ -63,7 +69,8 @@ const mockNearbyUsers: NearbyUser[] = [
     isOnline: false,
     lastSeen: '1 giờ trước',
     interests: ['Thể thao', 'Âm nhạc'],
-    rating: 4.3
+    rating: 4.3,
+    isLiked: false
   },
   {
     id: '5',
@@ -74,7 +81,8 @@ const mockNearbyUsers: NearbyUser[] = [
     isOnline: true,
     lastSeen: 'Đang online',
     interests: ['Sách', 'Phim'],
-    rating: 4.7
+    rating: 4.7,
+    isLiked: false
   }
 ];
 
@@ -82,6 +90,8 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
   const [locationPermission, setLocationPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>(mockNearbyUsers);
+  const { toast } = useToast();
 
   useEffect(() => {
     requestLocationPermission();
@@ -120,6 +130,63 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
 
   const handleCloseProfile = () => {
     setSelectedUser(null);
+  };
+
+  const handleLikeUser = (userId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    const updatedUsers = nearbyUsers.map(u => 
+      u.id === userId ? { ...u, isLiked: !u.isLiked } : u
+    );
+    setNearbyUsers(updatedUsers);
+
+    const user = updatedUsers.find(u => u.id === userId);
+    if (user) {
+      toast({
+        title: user.isLiked ? "Đã thích!" : "Đã bỏ thích!",
+        description: user.isLiked 
+          ? `Bạn đã thích ${user.name}` 
+          : `Bạn đã bỏ thích ${user.name}`,
+      });
+      
+      if (user.isLiked && Math.random() > 0.5) {
+        // Simulate match sometimes
+        setTimeout(() => {
+          toast({
+            title: "🎉 Có match mới!",
+            description: `${user.name} cũng đã thích bạn! Hãy bắt đầu trò chuyện.`,
+          });
+        }, 1000);
+      }
+    }
+
+    console.log('Like user:', userId);
+  };
+
+  const handleMessageUser = (userId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    const user = nearbyUsers.find(u => u.id === userId);
+    if (user) {
+      toast({
+        title: "Mở cuộc trò chuyện",
+        description: `Đang mở chat với ${user.name}...`,
+      });
+      
+      // TODO: Implement actual messaging functionality
+      setTimeout(() => {
+        toast({
+          title: "Thông báo",
+          description: "Tính năng chat sẽ được triển khai trong phiên bản tiếp theo!",
+        });
+      }, 500);
+    }
+
+    console.log('Message user:', userId);
   };
 
   // Show GPS permission request screen
@@ -165,94 +232,128 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
 
   if (selectedUser) {
     return (
-      <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4">
+      <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="max-w-md mx-auto h-full flex flex-col">
           {/* Header */}
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 p-4 bg-white/90 backdrop-blur-sm">
             <Button 
               variant="outline" 
               size="sm"
               onClick={handleCloseProfile}
-              className="rounded-full"
+              className="rounded-full p-2"
             >
-              ← Quay lại
+              <ArrowLeft className="w-4 h-4" />
             </Button>
             <h1 className="text-lg font-semibold">Hồ sơ cá nhân</h1>
           </div>
 
-          {/* Profile Details */}
-          <Card className="flex-1 overflow-hidden">
-            <div className="relative h-64">
-              <img 
-                src={selectedUser.avatar} 
-                alt={selectedUser.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              
-              {/* Online Status */}
-              {selectedUser.isOnline && (
-                <div className="absolute top-4 right-4 flex items-center gap-1 bg-green-500 text-white px-2 py-1 rounded-full text-xs">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                  Online
-                </div>
-              )}
-
-              {/* Name and Age */}
-              <div className="absolute bottom-4 left-4 right-4 text-white">
-                <h2 className="text-2xl font-bold">
-                  {selectedUser.name}, {selectedUser.age}
-                </h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>{selectedUser.distance}km từ bạn</span>
-                </div>
-              </div>
-            </div>
-
+          {/* Scrollable Profile Content */}
+          <ScrollArea className="flex-1">
             <div className="p-4">
-              {/* Rating */}
-              <div className="flex items-center gap-2 mb-4">
-                <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                <span className="font-medium">{selectedUser.rating}</span>
-                <span className="text-gray-500 text-sm">({Math.floor(Math.random() * 50) + 10} đánh giá)</span>
-              </div>
+              <Card className="overflow-hidden mb-4">
+                <div className="relative h-64">
+                  <img 
+                    src={selectedUser.avatar} 
+                    alt={selectedUser.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  
+                  {/* Online Status */}
+                  {selectedUser.isOnline && (
+                    <div className="absolute top-4 right-4 flex items-center gap-1 bg-green-500 text-white px-2 py-1 rounded-full text-xs">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                      Online
+                    </div>
+                  )}
 
-              {/* Last Seen */}
-              <div className="mb-4">
-                <p className="text-sm text-gray-600">
-                  Hoạt động: {selectedUser.lastSeen}
-                </p>
-              </div>
-
-              {/* Interests */}
-              <div className="mb-6">
-                <h3 className="font-medium mb-2">Sở thích</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedUser.interests.map((interest, index) => (
-                    <span 
-                      key={index}
-                      className="px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-gray-700 rounded-full text-sm"
-                    >
-                      {interest}
-                    </span>
-                  ))}
+                  {/* Name and Age */}
+                  <div className="absolute bottom-4 left-4 right-4 text-white">
+                    <h2 className="text-2xl font-bold">
+                      {selectedUser.name}, {selectedUser.age}
+                    </h2>
+                    <div className="flex items-center gap-2 mt-1">
+                      <MapPin className="w-4 h-4" />
+                      <span>{selectedUser.distance}km từ bạn</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <Button className="flex-1 bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600">
-                  <Heart className="w-4 h-4 mr-2" />
-                  Thích
-                </Button>
-                <Button variant="outline" className="flex-1">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Nhắn tin
-                </Button>
-              </div>
+                <div className="p-4">
+                  {/* Rating */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <Star className="w-5 h-5 text-yellow-500 fill-current" />
+                    <span className="font-medium">{selectedUser.rating}</span>
+                    <span className="text-gray-500 text-sm">({Math.floor(Math.random() * 50) + 10} đánh giá)</span>
+                  </div>
+
+                  {/* Last Seen */}
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600">
+                      Hoạt động: {selectedUser.lastSeen}
+                    </p>
+                  </div>
+
+                  {/* Interests */}
+                  <div className="mb-6">
+                    <h3 className="font-medium mb-2">Sở thích</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedUser.interests.map((interest, index) => (
+                        <span 
+                          key={index}
+                          className="px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-gray-700 rounded-full text-sm"
+                        >
+                          {interest}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Additional Profile Info */}
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <h3 className="font-medium mb-2">Giới thiệu</h3>
+                      <p className="text-gray-600 text-sm">
+                        Xin chào! Tôi là {selectedUser.name}, rất vui được gặp bạn. 
+                        Tôi thích {selectedUser.interests.join(', ').toLowerCase()} và luôn sẵn sàng khám phá những điều mới mẻ.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-medium mb-2">Tìm kiếm</h3>
+                      <p className="text-gray-600 text-sm">
+                        Tìm kiếm những mối quan hệ chân thành và có ý nghĩa. 
+                        Hy vọng có thể gặp được người phù hợp để cùng chia sẻ những trải nghiệm thú vị.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <Button 
+                      className={`flex-1 transition-all duration-200 ${
+                        selectedUser.isLiked
+                          ? 'bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 shadow-lg'
+                          : 'bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600'
+                      }`}
+                      onClick={() => handleLikeUser(selectedUser.id)}
+                    >
+                      <Heart className={`w-4 h-4 mr-2 ${selectedUser.isLiked ? 'fill-current' : ''}`} />
+                      {selectedUser.isLiked ? 'Đã thích' : 'Thích'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 hover:bg-blue-50 hover:border-blue-300"
+                      onClick={() => handleMessageUser(selectedUser.id)}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Nhắn tin
+                    </Button>
+                  </div>
+                </div>
+              </Card>
             </div>
-          </Card>
+          </ScrollArea>
         </div>
       </div>
     );
@@ -273,96 +374,96 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
             )}
           </div>
           <p className="text-gray-600 text-sm">
-            {mockNearbyUsers.length} người trong phạm vi 5km
+            {nearbyUsers.length} người trong phạm vi 5km
           </p>
         </div>
 
         {/* Users List */}
-        <div className="flex-1 overflow-y-auto space-y-3">
-          {mockNearbyUsers.map((user) => (
-            <Card 
-              key={user.id} 
-              className="p-4 hover:shadow-md transition-all cursor-pointer hover:scale-[1.02]"
-              onClick={() => handleViewProfile(user)}
-            >
-              <div className="flex items-center gap-3">
-                {/* Avatar */}
-                <div className="relative">
-                  <img 
-                    src={user.avatar} 
-                    alt={user.name}
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                  {user.isOnline && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
-                  )}
-                </div>
-
-                {/* User Info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-gray-800">
-                      {user.name}, {user.age}
-                    </h3>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                      <span className="text-xs text-gray-600">{user.rating}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                    <MapPin className="w-4 h-4" />
-                    <span>{user.distance}km</span>
-                    <span>•</span>
-                    <span>{user.lastSeen}</span>
-                  </div>
-
-                  <div className="flex gap-1">
-                    {user.interests.slice(0, 2).map((interest, index) => (
-                      <span 
-                        key={index}
-                        className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs"
-                      >
-                        {interest}
-                      </span>
-                    ))}
-                    {user.interests.length > 2 && (
-                      <span className="px-2 py-1 bg-gray-50 text-gray-600 rounded text-xs">
-                        +{user.interests.length - 2}
-                      </span>
+        <ScrollArea className="flex-1">
+          <div className="space-y-3 pb-4">
+            {nearbyUsers.map((user) => (
+              <Card 
+                key={user.id} 
+                className="p-4 hover:shadow-md transition-all cursor-pointer hover:scale-[1.02]"
+                onClick={() => handleViewProfile(user)}
+              >
+                <div className="flex items-center gap-3">
+                  {/* Avatar */}
+                  <div className="relative">
+                    <img 
+                      src={user.avatar} 
+                      alt={user.name}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                    {user.isOnline && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
                     )}
                   </div>
-                </div>
 
-                {/* Quick Actions */}
-                <div className="flex flex-col gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="w-8 h-8 p-0 rounded-full"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('Like user:', user.id);
-                    }}
-                  >
-                    <Heart className="w-4 h-4 text-pink-500" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="w-8 h-8 p-0 rounded-full"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('Message user:', user.id);
-                    }}
-                  >
-                    <MessageCircle className="w-4 h-4 text-blue-500" />
-                  </Button>
+                  {/* User Info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-gray-800">
+                        {user.name}, {user.age}
+                      </h3>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                        <span className="text-xs text-gray-600">{user.rating}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                      <MapPin className="w-4 h-4" />
+                      <span>{user.distance}km</span>
+                      <span>•</span>
+                      <span>{user.lastSeen}</span>
+                    </div>
+
+                    <div className="flex gap-1">
+                      {user.interests.slice(0, 2).map((interest, index) => (
+                        <span 
+                          key={index}
+                          className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs"
+                        >
+                          {interest}
+                        </span>
+                      ))}
+                      {user.interests.length > 2 && (
+                        <span className="px-2 py-1 bg-gray-50 text-gray-600 rounded text-xs">
+                          +{user.interests.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="flex flex-col gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className={`w-8 h-8 p-0 rounded-full transition-all duration-200 ${
+                        user.isLiked 
+                          ? 'border-pink-300 bg-pink-50 hover:bg-pink-100' 
+                          : 'hover:border-pink-300 hover:bg-pink-50'
+                      }`}
+                      onClick={(e) => handleLikeUser(user.id, e)}
+                    >
+                      <Heart className={`w-4 h-4 text-pink-500 ${user.isLiked ? 'fill-current' : ''}`} />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="w-8 h-8 p-0 rounded-full hover:border-blue-300 hover:bg-blue-50"
+                      onClick={(e) => handleMessageUser(user.id, e)}
+                    >
+                      <MessageCircle className="w-4 h-4 text-blue-500" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
 
         {/* Upgrade Banner */}
         <Card className="mt-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">

@@ -3,7 +3,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Bot, MessageSquare, Settings, TrendingUp, Eye, Plus, Edit, Trash2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AddFakeUserModal from './AddFakeUserModal';
 import AddAIPromptModal from './AddAIPromptModal';
 import EditFakeUserModal from './EditFakeUserModal';
@@ -367,25 +366,6 @@ const AdminDashboard = () => {
       </div>
     </div>
   );
-};
-
-export type FakeUser = {
-  id: string;
-  name: string;
-  avatar: string;
-  gender: 'male' | 'female';
-  age: number;
-  bio: string;
-  aiPrompt: string;
-  isActive: boolean;
-};
-
-export type AIPrompt = {
-  id: string;
-  name: string;
-  description: string;
-  prompt: string;
-  category: string;
 };
 
 export default AdminDashboard;

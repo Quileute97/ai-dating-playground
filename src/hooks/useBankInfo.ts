@@ -1,5 +1,6 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface BankInfo {
   bankName: string;
@@ -8,41 +9,56 @@ export interface BankInfo {
   qrUrl: string;
 }
 
-function readBankInfo(): BankInfo {
-  try {
-    const raw = window.localStorage.getItem("bankInfo");
-    if (raw) {
-      const data = JSON.parse(raw);
-      return {
-        bankName: data.bankName || "",
-        accountNumber: data.accountNumber || "",
-        accountHolder: data.accountHolder || "",
-        qrUrl: data.qrUrl || ""
-      };
-    }
-  } catch {}
-  return { bankName: "", accountNumber: "", accountHolder: "", qrUrl: "" };
-}
-
 export function useBankInfo() {
-  const [bankInfo, setBankInfo] = useState<BankInfo>(() => readBankInfo());
+  const [bankInfo, setBankInfo] = useState<BankInfo>({
+    bankName: "",
+    accountNumber: "",
+    accountHolder: "",
+    qrUrl: "",
+  });
+  const [loading, setLoading] = useState(true);
+
+  const fetchBankInfo = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("bank_info")
+      .select("*")
+      .order("updated_at", { ascending: false })
+      .limit(1);
+    if (!error && data && data.length > 0) {
+      setBankInfo({
+        bankName: data[0].bank_name || "",
+        accountNumber: data[0].account_number || "",
+        accountHolder: data[0].account_holder || "",
+        qrUrl: data[0].qr_url || "",
+      });
+    } else {
+      setBankInfo({
+        bankName: "",
+        accountNumber: "",
+        accountHolder: "",
+        qrUrl: "",
+      });
+    }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    const handle = (e: StorageEvent) => {
-      if (e.key === "bankInfo") {
-        setBankInfo(readBankInfo());
-      }
+    fetchBankInfo();
+    // Lắng nghe realtime khi có update ở bank_info
+    const channel = supabase
+      .channel("bank_info_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bank_info" },
+        fetchBankInfo
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-    window.addEventListener("storage", handle);
-    return () => window.removeEventListener("storage", handle);
-  }, []);
+  }, [fetchBankInfo]);
 
-  // Ngoài ra, cập nhật khi window focus lại (tránh vấn đề khi ở cùng tab)
-  useEffect(() => {
-    const update = () => setBankInfo(readBankInfo());
-    window.addEventListener("focus", update);
-    return () => window.removeEventListener("focus", update);
-  }, []);
-
-  return bankInfo;
+  return { bankInfo, loading, refetch: fetchBankInfo };
 }

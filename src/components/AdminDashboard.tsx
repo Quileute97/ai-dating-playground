@@ -11,6 +11,7 @@ import { aiService } from '@/services/aiService';
 import FakeUserChatModal from './FakeUserChatModal';
 import PostAsFakeUserModal from './PostAsFakeUserModal';
 import { supabase } from "@/integrations/supabase/client";
+import { useBankInfo } from "@/hooks/useBankInfo";
 
 import HeaderAdManager from "./HeaderAdManager";
 import BankInfoManager from "./BankInfoManager";
@@ -93,24 +94,8 @@ const AdminDashboard = () => {
   );
 
   // Banking info & QR for upgrade
-  const [bankInfo, setBankInfo] = useState(() => {
-    try {
-      const data = JSON.parse(localStorage.getItem('bankInfo') ?? '{}');
-      return {
-        bankName: data.bankName || '',
-        accountNumber: data.accountNumber || '',
-        accountHolder: data.accountHolder || '',
-        qrUrl: data.qrUrl || ''
-      };
-    } catch {
-      return {
-        bankName: '',
-        accountNumber: '',
-        accountHolder: '',
-        qrUrl: ''
-      };
-    }
-  });
+  const { bankInfo, refetch: refetchBankInfo } = useBankInfo();
+  const [bankInfoDraft, setBankInfoDraft] = useState(bankInfo);
   const [qrImgUploading, setQrImgUploading] = useState(false);
 
   // NEW: Đếm số yêu cầu upgrade pending để hiện thông báo cho admin
@@ -212,17 +197,35 @@ const AdminDashboard = () => {
   };
 
   // Save bank info
-  const handleSaveBankInfo = () => {
-    localStorage.setItem('bankInfo', JSON.stringify(bankInfo));
-    // Đảm bảo cập nhật lại state bankInfo từ localStorage
-    const newInfo = JSON.parse(localStorage.getItem('bankInfo') ?? '{}');
-    setBankInfo({
-      bankName: newInfo.bankName || '',
-      accountNumber: newInfo.accountNumber || '',
-      accountHolder: newInfo.accountHolder || '',
-      qrUrl: newInfo.qrUrl || ''
-    });
-    toast.success('Đã lưu thông tin tài khoản ngân hàng & QR!');
+  const handleSaveBankInfo = async () => {
+    const { data, error } = await supabase
+      .from("bank_info")
+      .upsert(
+        [
+          {
+            bank_name: bankInfoDraft.bankName,
+            account_number: bankInfoDraft.accountNumber,
+            account_holder: bankInfoDraft.accountHolder,
+            qr_url: bankInfoDraft.qrUrl,
+            updated_at: new Date().toISOString(),
+          }
+        ],
+        { onConflict: "id" }
+      );
+    if (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không lưu được thông tin ngân hàng.",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Đã lưu thông tin ngân hàng & QR!",
+        description: "",
+        variant: "default"
+      });
+      refetchBankInfo();
+    }
   };
 
   // Handle QR upload
@@ -231,9 +234,21 @@ const AdminDashboard = () => {
     if (!file) return;
     setQrImgUploading(true);
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setBankInfo(bi => ({ ...bi, qrUrl: reader.result as string }));
+    reader.onloadend = async () => {
+      const newQrUrl = reader.result as string;
+      setBankInfoDraft((bi) => ({ ...bi, qrUrl: newQrUrl }));
+      // Lưu luôn vào Supabase
+      await supabase.from("bank_info").upsert([
+        {
+          bank_name: bankInfoDraft.bankName,
+          account_number: bankInfoDraft.accountNumber,
+          account_holder: bankInfoDraft.accountHolder,
+          qr_url: newQrUrl,
+          updated_at: new Date().toISOString(),
+        }
+      ], { onConflict: "id" });
       setQrImgUploading(false);
+      refetchBankInfo();
     };
     reader.readAsDataURL(file);
   };
@@ -302,8 +317,8 @@ const AdminDashboard = () => {
               headerAdCode={headerAdCode}
               setHeaderAdCode={setHeaderAdCode}
               onSaveHeaderAd={handleSaveHeaderAdCode}
-              bankInfo={bankInfo}
-              setBankInfo={setBankInfo}
+              bankInfo={bankInfoDraft}
+              setBankInfo={setBankInfoDraft}
               onSaveBankInfo={handleSaveBankInfo}
               qrImgUploading={qrImgUploading}
               onQrUpload={handleQrUpload}

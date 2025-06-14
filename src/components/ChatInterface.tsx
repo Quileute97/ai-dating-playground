@@ -99,14 +99,24 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
   // startSearching: chỉ gọi matchmaking.startQueue() với userId hoặc anonId
   const startSearching = () => {
+    const realUserId = user?.id || anonId;
+    console.log("[CHAT] Bấm Bắt đầu chat - user?.id:", user?.id, "| anonId:", anonId, "| realUserId:", realUserId);
     setMessages([]);
     setConversationHistory([]);
     setIsAIMode(false);
-    const realUserId = user?.id || anonId;
     if (matchmaking?.startQueue && realUserId) {
+      console.log("[CHAT] Gọi matchmaking.startQueue với realUserId", realUserId);
       matchmaking.startQueue(realUserId);
+    } else {
+      console.log("[CHAT] Không thể startQueue vì thiếu userId/anonId");
     }
   };
+
+  // Trước khi render, log trạng thái disable button để debug
+  const disableStartBtn = !(user?.id || anonId);
+  useEffect(() => {
+    console.log("[CHAT] Trạng thái disable nút Bắt đầu chat:", disableStartBtn, "| user?.id:", user?.id, "| anonId:", anonId);
+  }, [user?.id, anonId]);
 
   // Khi bấm ngắt kết nối
   const disconnect = async () => {
@@ -278,7 +288,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
             <Button 
               onClick={startSearching}
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
-              disabled={!(user?.id || anonId)}
+              disabled={disableStartBtn}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               Bắt đầu chat

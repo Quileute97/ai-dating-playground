@@ -20,6 +20,26 @@ const removeAllAnonymousFromQueue = async () => {
 };
 
 /**
+ * Removes old entries from queue (older than 30 seconds) to keep only active users
+ */
+const removeOldEntriesFromQueue = async () => {
+  const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
+  
+  const { data: oldEntries } = await supabase
+    .from("stranger_queue")
+    .select("user_id")
+    .lt("created_at", thirtySecondsAgo);
+
+  if (oldEntries && oldEntries.length > 0) {
+    console.log("[StrangerService] Removing old entries from queue:", oldEntries.map(e => e.user_id));
+    await supabase
+      .from("stranger_queue")
+      .delete()
+      .lt("created_at", thirtySecondsAgo);
+  }
+};
+
+/**
  * Adds a user to the stranger queue if they are not already in it.
  * @param userId The user's ID.
  */
@@ -31,8 +51,9 @@ export const joinStrangerQueue = async (userId: string) => {
     throw new Error("No user ID provided");
   }
 
-  // Don't filter by UUID for anonymous users - let them join the queue
+  // Clean up queue before joining
   await removeAllAnonymousFromQueue();
+  await removeOldEntriesFromQueue();
 
   const { data: existing } = await supabase
     .from("stranger_queue")
@@ -54,7 +75,17 @@ export const joinStrangerQueue = async (userId: string) => {
     }
     console.log("[StrangerService] Successfully joined queue:", inserted);
   } else {
-    console.log("[StrangerService] User already in queue.");
+    // Update timestamp for existing entry to mark as active
+    const { error } = await supabase
+      .from("stranger_queue")
+      .update({ created_at: new Date().toISOString() })
+      .eq("user_id", userId);
+    
+    if (error) {
+      console.error("[StrangerService] Error updating queue timestamp:", error);
+    } else {
+      console.log("[StrangerService] Updated queue timestamp for existing user");
+    }
   }
 };
 
@@ -74,17 +105,24 @@ export const leaveStrangerQueue = async (userId: string) => {
 
 /**
  * Looks for another user in the queue to match with.
+ * Only considers users that joined in the last 30 seconds (active users)
  * @param userId The current user's ID.
  * @returns The partner's ID if found, otherwise null.
  */
 export const findMatch = async (userId: string) => {
   console.log("[StrangerService] Looking for match for user:", userId);
   
+  // Clean up old entries before matching
+  await removeOldEntriesFromQueue();
   await removeAllAnonymousFromQueue();
 
+  // Only get recent entries (last 30 seconds) to ensure we match with active users
+  const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
+  
   const { data: queueList, error } = await supabase
     .from("stranger_queue")
     .select("user_id, created_at")
+    .gte("created_at", thirtySecondsAgo)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -92,13 +130,15 @@ export const findMatch = async (userId: string) => {
     throw error;
   }
   
-  console.log("[StrangerService] Current queue:", queueList);
+  console.log("[StrangerService] Active queue (last 30s):", queueList);
   
   if (!queueList) return null;
 
-  // Find someone else in the queue (not myself)
-  const others = queueList.filter((item) => item.user_id !== userId);
-  console.log("[StrangerService] Others in queue:", others);
+  // Find someone else in the queue (not myself) and only UUID users
+  const others = queueList.filter((item) => 
+    item.user_id !== userId && isUUIDv4(item.user_id)
+  );
+  console.log("[StrangerService] Active others in queue:", others);
   
   return others.length > 0 ? others[0].user_id : null;
 };

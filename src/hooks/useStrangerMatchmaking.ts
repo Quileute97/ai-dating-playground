@@ -1,123 +1,157 @@
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import {
-  joinStrangerQueue,
-  leaveStrangerQueue,
-  findMatch,
-  createConversation,
-  checkForExistingMatch,
+import { useState, useEffect, useRef } from "react";
+import { 
+  joinStrangerQueue, 
+  leaveStrangerQueue, 
+  findMatch, 
+  checkForExistingMatch, 
+  createConversation 
 } from "@/services/strangerMatchmakingService";
 
-interface MatchResult {
-  partnerId: string | null;
-  conversationId: string | null;
-}
+export function useStrangerMatchmaking() {
+  const [isInQueue, setIsInQueue] = useState(false);
+  const [isMatched, setIsMatched] = useState(false);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-type Status = "idle" | "searching" | "matched" | "error";
+  const pollingRef = useRef<number | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
-export function useStrangerMatchmaking(userId: string | null) {
-  const [status, setStatus] = useState<Status>("idle");
-  const [matchResult, setMatchResult] = useState<MatchResult>({ partnerId: null, conversationId: null });
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const joinQueue = useCallback(async () => {
-    console.log("[STRANGER] [joinQueue] userId =", userId, "Type:", typeof userId);
+  const startQueue = async (userId: string) => {
+    console.log("[STRANGER] [startQueue] userId =", userId, "Type:", typeof userId);
     
     if (!userId) {
-      console.error("[STRANGER] [joinQueue] No user ID provided. Aborting.");
-      setStatus("error");
-      return;
-    }
-    
-    try {
-      setStatus("searching");
-      await joinStrangerQueue(userId);
-      console.log("[STRANGER] [joinQueue] Successfully joined queue");
-    } catch (err) {
-      console.error("[STRANGER] [joinQueue] Exception error:", err);
-      setStatus("error");
-    }
-  }, [userId]);
-
-  const tryMatch = useCallback(async () => {
-    if (!userId) {
-      console.log("[STRANGER] [tryMatch] No userId, skipping");
+      setError("No user ID provided");
       return;
     }
 
-    console.log("[STRANGER] [tryMatch] Attempting to find match for:", userId);
-
     try {
-      // Case 1: I am the matcher. Look for someone in the queue.
-      const partnerId = await findMatch(userId);
-      console.log("[STRANGER] [tryMatch] Found partner in queue:", partnerId);
+      setError(null);
+      userIdRef.current = userId;
       
-      if (partnerId) {
-        console.log("[STRANGER] [tryMatch] Found partner, attempting to create conversation:", partnerId);
-        const conversation = await createConversation(userId, partnerId);
-        if (conversation) {
-          console.log("[STRANGER] [tryMatch] Conversation created:", conversation);
-          await leaveStrangerQueue(userId);
-          setMatchResult({ partnerId, conversationId: conversation.conversationId });
-          setStatus("matched");
-        }
+      // Check for existing recent match first
+      const existingMatch = await checkForExistingMatch(userId);
+      if (existingMatch) {
+        console.log("[STRANGER] Found existing recent match:", existingMatch);
+        setPartnerId(existingMatch.partnerId);
+        setConversationId(existingMatch.conversationId);
+        setIsMatched(true);
         return;
       }
 
-      // Case 2: No one found. Check if someone else matched with me.
+      // Join queue
+      await joinStrangerQueue(userId);
+      console.log("[STRANGER] [startQueue] Successfully joined queue");
+      setIsInQueue(true);
+
+      // Start polling for matches with shorter interval for better responsiveness
+      console.log("[STRANGER] Starting polling for matches");
+      pollingRef.current = window.setInterval(async () => {
+        await tryMatch(userId);
+      }, 1500); // Check every 1.5 seconds
+
+    } catch (err) {
+      console.error("[STRANGER] [startQueue] Error:", err);
+      setError(err instanceof Error ? err.message : "Failed to join queue");
+    }
+  };
+
+  const tryMatch = async (userId: string) => {
+    try {
+      console.log("[STRANGER] [tryMatch] Attempting to find match for:", userId);
+      
+      // First check if someone already created a conversation with us
       const existingMatch = await checkForExistingMatch(userId);
       if (existingMatch) {
-        console.log('[STRANGER] [tryMatch] Found recent conversation, assuming I was matched.', existingMatch);
+        console.log("[STRANGER] [tryMatch] Found existing match:", existingMatch);
+        setPartnerId(existingMatch.partnerId);
+        setConversationId(existingMatch.conversationId);
+        setIsMatched(true);
+        setIsInQueue(false);
+        
+        // Remove from queue and stop polling
         await leaveStrangerQueue(userId);
-        setMatchResult(existingMatch);
-        setStatus("matched");
-      } else {
-        console.log('[STRANGER] [tryMatch] No match found, continuing to search...');
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+        console.log("[STRANGER] Stopping polling - found existing match");
+        return;
+      }
+
+      // Look for a partner in queue
+      const partner = await findMatch(userId);
+      if (partner) {
+        console.log("[STRANGER] [tryMatch] Found partner in queue:", partner);
+        
+        // Create conversation
+        const result = await createConversation(userId, partner);
+        if (result) {
+          console.log("[STRANGER] [tryMatch] Conversation created:", result);
+          setPartnerId(partner);
+          setConversationId(result.conversationId);
+          setIsMatched(true);
+          setIsInQueue(false);
+
+          // Remove both users from queue
+          await leaveStrangerQueue(userId);
+          await leaveStrangerQueue(partner);
+          
+          // Stop polling
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+          console.log("[STRANGER] Stopping polling - match created");
+        }
       }
     } catch (err) {
-      console.error('[STRANGER] [tryMatch] General exception:', err);
-      setStatus("error");
+      console.error("[STRANGER] [tryMatch] Error:", err);
+      setError(err instanceof Error ? err.message : "Matching failed");
     }
-  }, [userId]);
+  };
 
-  // Polling for a match
-  useEffect(() => {
-    if (status === "searching" && userId) {
-      console.log("[STRANGER] Starting polling for matches");
-      intervalRef.current = setInterval(tryMatch, 2000); // Slightly longer interval
-      return () => {
-        if (intervalRef.current) {
-          console.log("[STRANGER] Stopping polling");
-          clearInterval(intervalRef.current);
-        }
-      };
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+  const stopQueue = async () => {
+    console.log("[STRANGER] [stopQueue] Stopping queue");
+    
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+      console.log("[STRANGER] Stopping polling");
     }
-  }, [status, userId, tryMatch]);
 
-  // Cleanup on unmount or user change
+    if (userIdRef.current) {
+      await leaveStrangerQueue(userIdRef.current);
+    }
+
+    setIsInQueue(false);
+    setIsMatched(false);
+    setPartnerId(null);
+    setConversationId(null);
+    setError(null);
+    userIdRef.current = null;
+  };
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (userId) {
-        console.log("[STRANGER] Cleanup: leaving queue for user:", userId);
-        leaveStrangerQueue(userId);
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
       }
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+      if (userIdRef.current) {
+        leaveStrangerQueue(userIdRef.current);
       }
     };
-  }, [userId]);
+  }, []);
 
-  const reset = useCallback(async () => {
-    console.log("[STRANGER] Resetting matchmaking state");
-    setStatus("idle");
-    setMatchResult({ partnerId: null, conversationId: null });
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (userId) {
-      await leaveStrangerQueue(userId);
-    }
-  }, [userId]);
-
-  return { status, matchResult, joinQueue, reset };
+  return {
+    isInQueue,
+    isMatched,
+    partnerId,
+    conversationId,
+    error,
+    startQueue,
+    stopQueue,
+  };
 }

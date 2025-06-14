@@ -11,7 +11,7 @@ export function useUserLike(currentUserId?: string) {
     }
     setIsProcessing(true);
 
-    // Insert like (không cần kiểm tra duplicate, cho demo)
+    // Insert like
     await supabase.from("user_likes").insert({
       liker_id: currentUserId,
       liked_id: likedId,

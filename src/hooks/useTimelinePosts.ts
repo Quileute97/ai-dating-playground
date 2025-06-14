@@ -27,7 +27,7 @@ export function useTimelinePosts(userId?: string) {
   const createPostMutation = useMutation({
     mutationFn: async (values: {
       content: string;
-      user_id: string;
+      user_id: string; // uuid
       media_url?: string;
       media_type?: string;
       sticker?: any;
@@ -51,3 +51,4 @@ export function useTimelinePosts(userId?: string) {
     creating: createPostMutation.isPending,
   };
 }
+

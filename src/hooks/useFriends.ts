@@ -73,6 +73,7 @@ export function useSendFriendRequest() {
       user_id,
       friend_id,
     }: { user_id: string; friend_id: string }) => {
+      // UUID mới: truyền nguyên chuỗi uuid (không ép kiểu nữa)
       const { data, error } = await supabase
         .from("friends")
         .insert([{ user_id, friend_id }])
@@ -120,3 +121,4 @@ export function useDeleteFriend() {
     },
   });
 }
+

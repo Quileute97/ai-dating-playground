@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -16,7 +15,7 @@ const UserProfilePage: React.FC = () => {
     supabase
       .from("profiles")
       .select("*")
-      .eq("id", userId)
+      .eq("id", userId) // id đã là uuid
       .single()
       .then(({ data }) => {
         setProfile(data);

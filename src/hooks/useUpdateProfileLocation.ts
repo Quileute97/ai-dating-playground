@@ -12,7 +12,7 @@ export function useUpdateProfileLocation(userId: string | undefined, position: {
     async function updateLocation() {
       // Upsert profile (add nếu chưa có, update nếu đã có)
       await supabase.from("profiles").upsert({
-        id: userId,
+        id: userId, // uuid
         lat: position.lat,
         lng: position.lng,
       });

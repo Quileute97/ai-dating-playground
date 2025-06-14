@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { Heart, X, Zap, ArrowLeft, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,57 +8,18 @@ import PayOSModal from './PayOSModal';
 import { useBankInfo } from "@/hooks/useBankInfo";
 import { useUpgradeStatus } from './hooks/useUpgradeStatus';
 import { useUserLike } from "@/hooks/useUserLike";
-
-interface UserProfile {
-  id: string;
-  name: string;
-  age: number;
-  bio: string;
-  images: string[];
-  distance: number;
-  interests: string[];
-}
+import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 
 interface SwipeInterfaceProps {
   user?: any;
 }
-
-const mockProfiles: UserProfile[] = [
-  {
-    id: '1',
-    name: 'Minh Anh',
-    age: 23,
-    bio: 'Yêu thích du lịch, cafe và những cuộc phiêu lưu mới 🌟',
-    images: ['/placeholder.svg'],
-    distance: 2,
-    interests: ['Du lịch', 'Cafe', 'Nhiếp ảnh']
-  },
-  {
-    id: '2', 
-    name: 'Hoàng Nam',
-    age: 25,
-    bio: 'Developer, gym rat, và fan của pizza 🍕',
-    images: ['/placeholder.svg'],
-    distance: 5,
-    interests: ['Công nghệ', 'Gym', 'Ẩm thực']
-  },
-  {
-    id: '3',
-    name: 'Thu Hà',
-    age: 22,
-    bio: 'Sinh viên nghệ thuật, mê cats và indie music 🎨',
-    images: ['/placeholder.svg'],
-    distance: 1,
-    interests: ['Nghệ thuật', 'Âm nhạc', 'Mèo']
-  }
-];
 
 const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [matches, setMatches] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
-  const [dailyMatches, setDailyMatches] = useState(7); // User has used 7 out of 10 free matches
+  const [dailyMatches, setDailyMatches] = useState(0); // số lượt match thật sự đã sử dụng
   const [isGoldActive, setIsGoldActive] = useState(false);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
@@ -65,13 +27,29 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const { data: goldUpgrade, isLoading: goldLoading } = useUpgradeStatus(user?.id, 'gold');
   const { likeUser, isProcessing } = useUserLike(user?.id);
 
-  const currentProfile = mockProfiles[currentProfileIndex];
+  // Lấy profile thật từ Supabase, trừ user hiện tại
+  const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, null, 1000);
+  // Xử lý để loại bỏ user hiện tại, và profile chưa đủ thông tin cơ bản, cũng kiêm tra bản ghi bị null
+  const availableProfiles = useMemo(() =>
+    profiles
+      .filter(p => p.id !== user?.id && p.name && p.avatar)
+      .map(p => ({
+        ...p,
+        images: [p.avatar!],
+        bio: "Người dùng thật trên hệ thống.",
+        distance: p.lat && p.lng ? 0 : null, // có thể bổ sung nếu có vị trí, tạm fix 0,
+        interests: [],
+      })), [profiles, user?.id]
+  );
+
   const maxFreeMatches = 10;
   const remainingMatches = maxFreeMatches - dailyMatches;
 
+  const currentProfile = availableProfiles[currentProfileIndex];
+
   const handleSwipe = async (direction: 'left' | 'right' | 'super') => {
     if (!currentProfile) return;
-    // Limit (giữ nguyên code cũ)
+    // Giới hạn lượt swipe nếu chưa phải Gold
     if (!isGoldActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
       toast({
         title: "Đã hết lượt match miễn phí!",
@@ -113,8 +91,8 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     }
 
     setTimeout(() => {
-      setCurrentProfileIndex(prev => 
-        prev + 1 >= mockProfiles.length ? 0 : prev + 1
+      setCurrentProfileIndex(prev =>
+        prev + 1 >= availableProfiles.length ? 0 : prev + 1
       );
       setSwipeDirection(null);
     }, 300);
@@ -128,13 +106,26 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     });
   };
 
+  if (profilesLoading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50">
+        <Card className="p-8 text-center bg-white/70 backdrop-blur-sm">
+          <div className="w-16 h-16 rounded-full mx-auto bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center mb-4">
+            <Heart className="w-8 h-8 text-white animate-pulse" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tải danh sách người dùng thật...</h2>
+        </Card>
+      </div>
+    );
+  }
+
   if (!currentProfile) {
     return (
       <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50">
         <Card className="p-8 text-center bg-white/70 backdrop-blur-sm">
           <Heart className="w-16 h-16 text-pink-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-800 mb-2">Hết người rồi!</h2>
-          <p className="text-gray-600">Hãy quay lại sau để gặp thêm nhiều người mới</p>
+          <p className="text-gray-600">Hãy quay lại sau để gặp thêm người dùng thật</p>
         </Card>
       </div>
     );
@@ -191,13 +182,13 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             
             {/* Distance Badge */}
             <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium">
-              {currentProfile.distance}km
+              {currentProfile.distance ?? 0}km
             </div>
 
             {/* Profile Info Overlay */}
             <div className="absolute bottom-4 left-4 right-4 text-white">
               <h2 className="text-2xl font-bold">
-                {currentProfile.name}, {currentProfile.age}
+                {currentProfile.name}
               </h2>
             </div>
           </div>
@@ -207,7 +198,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             <p className="text-gray-700 mb-3">{currentProfile.bio}</p>
             
             <div className="flex flex-wrap gap-2">
-              {currentProfile.interests.map((interest, index) => (
+              {currentProfile.interests && currentProfile.interests.length > 0 && currentProfile.interests.map((interest: string, index: number) => (
                 <span 
                   key={index}
                   className="px-3 py-1 bg-gradient-to-r from-pink-100 to-purple-100 text-gray-700 rounded-full text-sm"
@@ -276,7 +267,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
 
         {/* Stats */}
         <div className="text-center text-sm text-gray-600 mt-2">
-          {matches} matches • {mockProfiles.length - currentProfileIndex - 1} còn lại
+          {matches} matches • {availableProfiles.length - currentProfileIndex - 1} còn lại
         </div>
       </div>
 

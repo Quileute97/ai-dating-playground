@@ -18,6 +18,7 @@ import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
 import MainTabs from './MainTabs';
 import SidePanelToggle from './SidePanelToggle';
 import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from "uuid";
 
 const DatingApp = () => {
   const [activeTab, setActiveTab] = useState('chat');
@@ -45,7 +46,7 @@ const DatingApp = () => {
       // Chỉ tạo 1 lần duy nhất cho mỗi session (bằng localStorage)
       let storedAnonId = localStorage.getItem('anon_stranger_id');
       if (!storedAnonId) {
-        storedAnonId = 'anon-' + Math.random().toString(36).substring(2, 15);
+        storedAnonId = uuidv4();
         localStorage.setItem('anon_stranger_id', storedAnonId);
       }
       setAnonId(storedAnonId);

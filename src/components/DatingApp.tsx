@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from 'lucide-react';
+import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import ChatInterface from './ChatInterface';
@@ -28,13 +29,15 @@ const DatingApp = () => {
   const [isFirstTime, setIsFirstTime] = useState(true);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
+  // State quản lý thu gọn/hiện 2 panel
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+
   // ====== NEW: Matchmaking logic nâng lên DatingApp =======
   const userId = user?.id ?? null;
   const matchmaking = useStrangerMatchmaking(userId);
-  // state: matchmaking.status, matchmaking.matchResult, matchmaking.joinQueue, matchmaking.reset
 
   useEffect(() => {
-    // Check if user has visited before
     const hasVisited = localStorage.getItem('hasVisited');
     if (!hasVisited) {
       setShowAuth(true);
@@ -54,7 +57,6 @@ const DatingApp = () => {
   const handleLogin = (userData: any) => {
     setUser(userData);
     setShowAuth(false);
-    // Show AI config for first-time users
     if (isFirstTime) {
       setTimeout(() => setShowAIConfig(true), 500);
     }
@@ -65,7 +67,7 @@ const DatingApp = () => {
     setIsAdminMode(false);
     setIsAdminAuthenticated(false);
     setActiveTab('chat');
-    matchmaking.reset?.(); // logout thì reset luôn matchmaking
+    matchmaking.reset?.();
   };
 
   const handleUpdateProfile = (updatedUser: any) => {
@@ -84,14 +86,12 @@ const DatingApp = () => {
 
   const handleAdminToggle = () => {
     if (!isAdminMode) {
-      // Trying to enter admin mode - require authentication
       if (!isAdminAuthenticated) {
         setShowAdminLogin(true);
       } else {
         setIsAdminMode(true);
       }
     } else {
-      // Exiting admin mode
       setIsAdminMode(false);
     }
   };
@@ -101,12 +101,10 @@ const DatingApp = () => {
     setIsAdminMode(true);
   };
 
-  // ========== NEW: truyền matchmaking props xuống ChatInterface ==========
   const renderTabContent = () => {
     if (isAdminMode) {
       return <AdminDashboard />;
     }
-
     switch (activeTab) {
       case 'chat':
         return <ChatInterface
@@ -144,7 +142,6 @@ const DatingApp = () => {
             </Button>
           </Card>
         </div>
-
         <AuthModal
           isOpen={showAuth}
           onClose={() => setShowAuth(false)}
@@ -164,7 +161,6 @@ const DatingApp = () => {
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
-                
                 return (
                   <button
                     key={tab.id}
@@ -204,7 +200,6 @@ const DatingApp = () => {
             <User className="w-4 h-4 sm:hidden" />
           </Button>
         </div>
-
         {/* Action Buttons */}
         <div className="flex gap-2">
           {/* Admin Mode Toggle */}
@@ -220,7 +215,6 @@ const DatingApp = () => {
           >
             <Shield className="w-4 h-4" />
           </Button>
-
           {/* Settings Button */}
           {!isAdminMode && activeTab === 'chat' && (
             <Button
@@ -232,7 +226,6 @@ const DatingApp = () => {
               <Settings className="w-4 h-4" />
             </Button>
           )}
-
           {/* Logout Button */}
           <Button
             variant="outline"
@@ -248,16 +241,64 @@ const DatingApp = () => {
       {/* Tab Content + Side Panels */}
       <div className="flex-1 overflow-hidden relative">
         <div className="h-full flex flex-row">
-          {/* LEFT: RealTimeActivityPanel (hidden on mobile) */}
-          <RealTimeActivityPanel />
+          {/* LEFT: RealTimeActivityPanel (hidden on mobile, có thể collapse) */}
+          {isLeftPanelOpen ? (
+            <div className="relative">
+              <RealTimeActivityPanel />
+              <button
+                className="absolute right-[-12px] top-1/2 -translate-y-1/2 z-30 bg-white border border-gray-200 rounded-full shadow hover:bg-purple-50 hover:scale-105 p-1 transition"
+                title="Thu gọn panel"
+                onClick={() => setIsLeftPanelOpen(false)}
+                type="button"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+          ) : (
+            <div className="hidden lg:flex flex-col justify-center min-h-full">
+              <button
+                className="ml-[-6px] bg-purple-100 border border-purple-200 text-purple-700 rounded-full p-1 shadow-md hover:bg-purple-200 transition"
+                style={{ marginRight: "-14px" }}
+                onClick={() => setIsLeftPanelOpen(true)}
+                title="Hiện panel"
+                type="button"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
           {/* CENTER: main tab content */}
           <div className="flex-1 min-w-0 flex flex-col">
             <div key={activeTab} className="h-full animate-fade-in">
               {renderTabContent()}
             </div>
           </div>
-          {/* RIGHT: ActiveFriendsWithChatPanel (hidden on mobile) */}
-          <ActiveFriendsWithChatPanel />
+          {/* RIGHT: ActiveFriendsWithChatPanel (hidden on mobile, có thể collapse) */}
+          {isRightPanelOpen ? (
+            <div className="relative">
+              <ActiveFriendsWithChatPanel />
+              <button
+                className="absolute left-[-12px] top-1/2 -translate-y-1/2 z-30 bg-white border border-gray-200 rounded-full shadow hover:bg-purple-50 hover:scale-105 p-1 transition"
+                title="Thu gọn panel"
+                onClick={() => setIsRightPanelOpen(false)}
+                type="button"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+          ) : (
+            <div className="hidden lg:flex flex-col justify-center min-h-full">
+              <button
+                className="mr-[-6px] bg-purple-100 border border-purple-200 text-purple-700 rounded-full p-1 shadow-md hover:bg-purple-200 transition"
+                style={{ marginLeft: "-14px" }}
+                onClick={() => setIsRightPanelOpen(true)}
+                title="Hiện panel"
+                type="button"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -287,3 +328,4 @@ const DatingApp = () => {
 };
 
 export default DatingApp;
+

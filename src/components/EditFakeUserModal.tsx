@@ -17,13 +17,24 @@ interface FakeUser {
   aiPrompt: string;
   isActive: boolean;
 }
+
+interface AIPrompt {
+  id: string;
+  name: string;
+  prompt: string;
+  description?: string;
+  category?: string;
+}
+
 interface EditFakeUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: FakeUser) => void;
   user: FakeUser | null;
+  aiPrompts: AIPrompt[];
 }
-const EditFakeUserModal = ({ isOpen, onClose, onSave, user }: EditFakeUserModalProps) => {
+
+const EditFakeUserModal = ({ isOpen, onClose, onSave, user, aiPrompts }: EditFakeUserModalProps) => {
   const [form, setForm] = useState<FakeUser | null>(user);
 
   useEffect(() => {
@@ -74,7 +85,22 @@ const EditFakeUserModal = ({ isOpen, onClose, onSave, user }: EditFakeUserModalP
           </div>
           <div>
             <Label>AI Prompt</Label>
-            <Textarea value={form.aiPrompt} onChange={e => setForm(f => f && { ...f, aiPrompt: e.target.value })} minLength={10} />
+            <Select
+              value={form.aiPrompt}
+              onValueChange={promptValue => setForm(f => f && { ...f, aiPrompt: promptValue })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn AI prompt..." />
+              </SelectTrigger>
+              <SelectContent>
+                {aiPrompts.map(prompt => (
+                  <SelectItem key={prompt.id} value={prompt.prompt}>
+                    <span className="font-medium">{prompt.name}</span>
+                    <span className="block text-xs text-gray-500">{prompt.description?.slice(0, 50)}...</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Trạng thái</Label>

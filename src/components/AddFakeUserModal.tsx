@@ -19,22 +19,39 @@ interface FakeUser {
   isActive: boolean;
 }
 
+interface AIPrompt {
+  id: string;
+  name: string;
+  prompt: string;
+  description?: string;
+  category?: string;
+}
+
 interface AddFakeUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (user: Omit<FakeUser, 'id'>) => void;
+  aiPrompts: AIPrompt[];
 }
 
-const AddFakeUserModal = ({ isOpen, onClose, onAdd }: AddFakeUserModalProps) => {
+const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModalProps) => {
   const [formData, setFormData] = useState({
     name: '',
     avatar: '/placeholder.svg',
     gender: 'female' as 'male' | 'female',
     age: 20,
     bio: '',
-    aiPrompt: '',
+    aiPrompt: aiPrompts.length > 0 ? aiPrompts[0].prompt : '',
     isActive: true
   });
+
+  // Khi danh sách prompt thay đổi (hoặc lần đầu render) đặt prompt đầu tiên làm mặc định
+  React.useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      aiPrompt: aiPrompts.length > 0 ? aiPrompts[0].prompt : ''
+    }));
+  }, [aiPrompts]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +64,7 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd }: AddFakeUserModalProps) => 
       gender: 'female',
       age: 20,
       bio: '',
-      aiPrompt: '',
+      aiPrompt: aiPrompts.length > 0 ? aiPrompts[0].prompt : '',
       isActive: true
     });
     onClose();
@@ -112,13 +129,24 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd }: AddFakeUserModalProps) => 
 
           <div>
             <Label htmlFor="prompt">AI Prompt</Label>
-            <Textarea
-              id="prompt"
+            <Select
               value={formData.aiPrompt}
-              onChange={(e) => setFormData(prev => ({ ...prev, aiPrompt: e.target.value }))}
-              placeholder="Hướng dẫn cách AI trả lời khi chat..."
-              required
-            />
+              onValueChange={(value: string) =>
+                setFormData(prev => ({ ...prev, aiPrompt: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn AI prompt..." />
+              </SelectTrigger>
+              <SelectContent>
+                {aiPrompts.map(prompt => (
+                  <SelectItem key={prompt.id} value={prompt.prompt}>
+                    <span className="font-medium">{prompt.name}</span>
+                    <span className="block text-xs text-gray-500">{prompt.description?.slice(0, 50)}...</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex items-center space-x-2">

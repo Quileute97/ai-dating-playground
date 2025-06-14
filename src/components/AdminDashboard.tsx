@@ -426,6 +426,7 @@ const AdminDashboard = () => {
           isOpen={showAddUserModal}
           onClose={() => setShowAddUserModal(false)}
           onAdd={handleAddFakeUser}
+          aiPrompts={aiPrompts}
         />
 
         <AddAIPromptModal
@@ -440,6 +441,7 @@ const AdminDashboard = () => {
           user={editingFakeUser}
           onClose={() => setEditingFakeUser(null)}
           onSave={handleUpdateFakeUser}
+          aiPrompts={aiPrompts}
         />
 
         {/* Thêm modal chỉnh sửa AI Prompt */}

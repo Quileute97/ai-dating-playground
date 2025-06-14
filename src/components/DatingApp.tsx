@@ -69,21 +69,11 @@ const DatingApp = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    const hasVisited = localStorage.getItem('hasVisited');
-    if (!hasVisited) {
-      setShowAuth(true);
-      localStorage.setItem('hasVisited', 'true');
-    } else {
-      setIsFirstTime(false);
-    }
-  }, []);
-
   const tabs = [
-    { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500' },
-    { id: 'dating', label: 'Hẹn hò', icon: Heart, color: 'from-pink-500 to-red-500' },
-    { id: 'nearby', label: 'Quanh đây', icon: MapPin, color: 'from-blue-500 to-purple-500' },
-    { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500' }
+    { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500', locked: false },
+    { id: 'dating', label: 'Hẹn hò', icon: Heart, color: 'from-pink-500 to-red-500', locked: !user },
+    { id: 'nearby', label: 'Quanh đây', icon: MapPin, color: 'from-blue-500 to-purple-500', locked: !user },
+    { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500', locked: false }
   ];
 
   const handleLogin = (userData: any) => {
@@ -112,9 +102,14 @@ const DatingApp = () => {
     // TODO: Apply filters logic
   };
 
+  // Điều chỉnh: Nếu tab bị khoá (locked) -> show modal đăng nhập, ngược lại chuyển tab
   const handleTabChange = (tabId: string) => {
-    console.log('Switching to tab:', tabId);
-    setActiveTab(tabId);
+    const tab = tabs.find(t => t.id === tabId);
+    if (tab?.locked) {
+      setShowAuth(true);
+    } else {
+      setActiveTab(tabId);
+    }
   };
 
   const handleAdminToggle = () => {
@@ -148,9 +143,10 @@ const DatingApp = () => {
           matchmaking={matchmaking}
         />;
       case 'dating':
-        return <SwipeInterface user={user} />;
+        // Nếu chưa login thì tab này không bao giờ tới được (chặn handleTabChange)
+        return user ? <SwipeInterface user={user} /> : null;
       case 'nearby':
-        return <NearbyInterface user={user} />;
+        return user ? <NearbyInterface user={user} /> : null;
       case 'timeline':
         return <Timeline user={user} />;
       default:
@@ -158,61 +154,47 @@ const DatingApp = () => {
     }
   };
 
-  // Show welcome screen if no user
-  if (!user) {
-    return (
-      <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-        <div className="flex-1 flex items-center justify-center p-6">
-          <Card className="w-full max-w-md p-8 text-center bg-white/70 backdrop-blur-sm border-purple-200 animate-fade-in">
-            <div className="bg-gradient-to-r from-purple-500 to-pink-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Heart className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-3">Chào mừng đến Love App</h1>
-            <p className="text-gray-600 mb-6">Kết nối, trò chuyện và tìm kiếm tình yêu cùng AI thông minh</p>
-            <Button 
-              onClick={() => setShowAuth(true)}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
-            >
-              Bắt đầu ngay
-            </Button>
-          </Card>
-        </div>
-        <AuthModal
-          isOpen={showAuth}
-          onClose={() => setShowAuth(false)}
-          onLogin={handleLogin}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      {/* Tab Navigation (refactored) */}
+      {/* Tab Navigation */}
       <MainTabs
         activeTab={activeTab}
         onTabChange={handleTabChange}
         isAdminMode={isAdminMode}
+        tabs={tabs}
+        showLoginButton={!user}
+        onLoginClick={() => setShowAuth(true)}
       />
 
       {/* Top Action Bar */}
       <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
         {/* User Info */}
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowProfile(true)}
-            className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
-          >
-            <img 
-              src={user.avatar} 
-              alt={user.name}
-              className="w-6 h-6 rounded-full object-cover mr-2"
-            />
-            <span className="hidden sm:inline">{user.name}</span>
-            <User className="w-4 h-4 sm:hidden" />
-          </Button>
+          {user ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowProfile(true)}
+              className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
+            >
+              <img 
+                src={user.avatar} 
+                alt={user.name}
+                className="w-6 h-6 rounded-full object-cover mr-2"
+              />
+              <span className="hidden sm:inline">{user.name}</span>
+              <User className="w-4 h-4 sm:hidden" />
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAuth(true)}
+              className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
+            >
+              Đăng nhập
+            </Button>
+          )}
         </div>
         {/* Action Buttons */}
         <div className="flex gap-2">
@@ -241,22 +223,24 @@ const DatingApp = () => {
             </Button>
           )}
           {/* Logout Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 shadow-sm"
-          >
-            <LogOut className="w-4 h-4" />
-          </Button>
+          {user && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 shadow-sm"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Tab Content + Side Panels */}
       <div className="flex-1 overflow-hidden relative">
         <div className="h-full flex flex-row">
-          {/* LEFT: RealTimeActivityPanel (can collapse, refactored) */}
-          {!isAdminMode && ( // Ẩn panel khi là admin
+          {/* LEFT: RealTimeActivityPanel (only nếu đã đăng nhập) */}
+          {!isAdminMode && user && (
             isLeftPanelOpen ? (
               <div className="relative">
                 <RealTimeActivityPanel userId={user?.id} />
@@ -280,8 +264,8 @@ const DatingApp = () => {
               {renderTabContent()}
             </div>
           </div>
-          {/* RIGHT: ActiveFriendsWithChatPanel (can collapse, refactored) */}
-          {!isAdminMode && ( // Ẩn panel khi là admin
+          {/* RIGHT: ActiveFriendsWithChatPanel (chỉ user login) */}
+          {!isAdminMode && user && (
             isRightPanelOpen ? (
               <div className="relative">
                 <ActiveFriendsWithChatPanel myId={user.id} />
@@ -322,6 +306,11 @@ const DatingApp = () => {
         isOpen={showAdminLogin}
         onClose={() => setShowAdminLogin(false)}
         onLogin={handleAdminLogin}
+      />
+      <AuthModal
+        isOpen={showAuth}
+        onClose={() => setShowAuth(false)}
+        onLogin={handleLogin}
       />
     </div>
   );

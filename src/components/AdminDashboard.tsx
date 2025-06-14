@@ -156,15 +156,38 @@ const AdminDashboard = () => {
   };
 
   // Thêm Fake User
-  const handleAddFakeUser = async (userData: Omit<FakeUser, 'id'>) => {
-    const { aiPrompt, ...rest } = userData;
-    // Lấy AI Prompt id ứng với value được chọn
-    const selectedPrompt = aiPrompts.find(p => p.prompt === aiPrompt);
-    await supabase.from('fake_users').insert({
-      ...rest,
-      ai_prompt_id: selectedPrompt ? selectedPrompt.id : null,
+  const handleAddFakeUser = async (userData: Omit<FakeUser, 'id'> & { aiPromptId?: string }) => {
+    if (!userData.aiPromptId) {
+      toast({
+        title: "Vui lòng chọn AI Prompt",
+        description: "",
+        variant: "destructive"
+      });
+      return;
+    }
+    const fakeUserData: any = {
+      name: userData.name,
+      avatar: userData.avatar,
+      gender: userData.gender,
+      age: userData.age,
+      bio: userData.bio,
+      ai_prompt_id: userData.aiPromptId,
       is_active: userData.isActive,
-    });
+    };
+    const { error } = await supabase.from('fake_users').insert(fakeUserData);
+    if (error) {
+      toast({
+        title: "Lỗi thêm user ảo",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Đã thêm người dùng ảo",
+        description: "",
+        variant: "default"
+      });
+    }
     refetchFakeUsers();
   };
 

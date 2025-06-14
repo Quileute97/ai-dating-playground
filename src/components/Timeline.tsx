@@ -1,4 +1,3 @@
-
 import React, { useState, ChangeEvent } from "react";
 import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -335,165 +334,43 @@ const PopoverStickerSelect: React.FC<{
   );
 };
 
+import { useTimelinePosts } from "@/hooks/useTimelinePosts";
+import { useTimelineComments } from "@/hooks/useTimelineComments";
+import { usePostLikes } from "@/hooks/usePostLikes";
+
 const Timeline: React.FC<{ user: any }> = ({ user }) => {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
-  const [commentContent, setCommentContent] = useState<{ [key: number]: string }>({});
-  const [posting, setPosting] = useState(false);
+  const userId = user?.id;
+  const { posts, isLoading, createPost, creating, refetch } = useTimelinePosts(userId);
 
-  // Đăng bài viết mới
-  const handlePostSubmit = async (data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">) => {
-    setPosting(true);
-    const newPost: Post = {
-      id: posts.length + 10 + Math.floor(Math.random()*1000), // unique mock ID
-      ...data,
-      createdAt: "Vừa xong",
-      likes: 0,
-      liked: false,
-      comments: [],
-    };
-    setPosts([newPost, ...posts]);
-    setPosting(false);
-  };
-
-  // Gửi comment cho bài viết
-  const handleCommentSubmit = (e: React.FormEvent, postId: number) => {
-    e.preventDefault();
-    const content = commentContent[postId];
-    if (!content?.trim()) return;
-    const newComment: Comment = {
-      id: Date.now(),
-      user: {
-        name: user?.name || demoUser.name,
-        avatar: user?.avatar || demoUser.avatar
-      },
-      content,
-      createdAt: "Vừa xong"
-    };
-    setPosts(
-      posts.map(post =>
-        post.id === postId
-          ? { ...post, comments: [...post.comments, newComment] }
-          : post
-      )
-    );
-    setCommentContent({ ...commentContent, [postId]: "" });
-  };
-
-  // Like/Unlike
-  const handleLike = (postId: number) => {
-    setPosts(posts =>
-      posts.map(post =>
-        post.id === postId
-          ? {
-              ...post,
-              likes: post.liked ? post.likes - 1 : post.likes + 1,
-              liked: !post.liked
-            }
-          : post
-      )
-    );
+  // Xử lý đăng post mới (dùng Supabase)
+  const handlePostSubmit = async (
+    data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">
+  ) => {
+    await createPost({
+      content: data.content,
+      user_id: userId,
+      media_url: data.media?.url,
+      media_type: data.media?.type,
+      sticker: data.sticker,
+      location: data.location,
+    });
+    refetch();
   };
 
   return (
     <div className="max-w-lg mx-auto py-6 h-full flex flex-col animate-fade-in">
       {/* Đăng bài mới */}
-      <PostForm user={user} onCreate={handlePostSubmit} posting={posting} />
+      <PostForm user={user} onCreate={handlePostSubmit} posting={creating} />
 
       {/* Danh sách bài viết */}
       <div className="flex-1 overflow-y-auto space-y-6">
-        {posts.map(post => (
-          <Card key={post.id} className="p-4">
-            <div className="flex gap-3 items-center mb-2">
-              <img src={post.user.avatar} alt={post.user.name} className="w-9 h-9 rounded-full object-cover" />
-              <div>
-                <div className="font-bold text-gray-800">{post.user.name}</div>
-                <div className="text-xs text-gray-400">{post.createdAt}</div>
-              </div>
-            </div>
-            <div className="text-base text-gray-800 mb-2 whitespace-pre-line">{post.content}</div>
-            {/* Media */}
-            {post.media && (
-              <div className="mb-2 ml-12 relative w-72 max-w-full">
-                {post.media.type === "image" ? (
-                  <img src={post.media.url} alt="media" className="rounded-xl shadow-sm max-h-60 w-full object-cover" />
-                ) : (
-                  <video src={post.media.url} controls className="rounded-xl shadow-sm max-h-64 w-full" />
-                )}
-                {/* Sticker overlay nếu có */}
-                {post.sticker && (
-                  <img
-                    src={post.sticker.url}
-                    alt={post.sticker.name}
-                    className="absolute left-4 bottom-2 w-10 h-10 z-20 drop-shadow"
-                    style={{ filter: "drop-shadow(0 2px 8px #ffcfef)" }}
-                  />
-                )}
-              </div>
-            )}
-            {/* Sticker nếu có media/video thì hiển thị trên overlay, còn không thì hiện thôi */}
-            {!post.media && post.sticker && (
-              <div className="mb-2 ml-12 flex items-center gap-2">
-                <img src={post.sticker.url} alt={post.sticker.name} className="w-9 h-9" />
-                <span className="text-xs text-gray-500">{post.sticker.name}</span>
-              </div>
-            )}
-            {/* Location */}
-            {post.locationEnabled && post.location && (
-              <div className="flex items-center gap-1 text-xs text-gray-500 mb-2 ml-12">
-                <MapPin size={13} className="text-pink-400" />
-                <span>
-                  Vị trí: {post.location.formatted || `${post.location.lat}, ${post.location.lng}`}
-                </span>
-              </div>
-            )}
-            {/* Actions */}
-            <div className="flex items-center gap-4 mb-2">
-              <Button
-                size="sm"
-                variant={post.liked ? "secondary" : "ghost"}
-                className={`transition-all ${post.liked ? "text-pink-500" : ""}`}
-                onClick={() => handleLike(post.id)}
-              >
-                <Heart className={post.liked ? "fill-pink-500 text-pink-500" : ""} size={18} />
-                <span>{post.likes > 0 ? post.likes : ""}</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-blue-500"
-              >
-                <MessageCircle size={18} />
-                <span> {post.comments.length} </span>
-              </Button>
-            </div>
-            {/* Comment list */}
-            <div className="space-y-2">
-              {post.comments.map(cmt => (
-                <div key={cmt.id} className="flex items-center gap-2 ml-4">
-                  <img src={cmt.user.avatar} alt={cmt.user.name} className="w-7 h-7 rounded-full object-cover" />
-                  <div className="bg-gray-100 px-3 py-2 rounded-lg">
-                    <span className="font-bold text-xs mr-2">{cmt.user.name}</span>
-                    <span>{cmt.content}</span>
-                  </div>
-                  <span className="text-xs text-gray-400">{cmt.createdAt}</span>
-                </div>
-              ))}
-            </div>
-            {/* Comment input */}
-            <form className="flex items-center gap-2 mt-2 ml-2" onSubmit={e => handleCommentSubmit(e, post.id)}>
-              <Input
-                className="h-8 text-sm"
-                value={commentContent[post.id] || ""}
-                placeholder="Viết bình luận..."
-                onChange={e => setCommentContent({ ...commentContent, [post.id]: e.target.value })}
-              />
-              <Button type="submit" size="sm" variant="secondary" className="aspect-square h-8 w-8 p-0">
-                <SendHorizonal size={16} />
-              </Button>
-            </form>
-          </Card>
+        {isLoading && (
+          <div className="text-center text-gray-500 pt-14">Đang tải timeline...</div>
+        )}
+        {!isLoading && posts?.map((post: any) => (
+          <PostItem key={post.id} post={post} user={user} />
         ))}
-        {posts.length === 0 && (
+        {posts?.length === 0 && !isLoading && (
           <div className="text-center text-gray-400 pt-14">Chưa có bài viết nào.</div>
         )}
       </div>
@@ -501,7 +378,125 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
   );
 };
 
+// Tách nhỏ PostItem để dễ kiểm soát
+const PostItem: React.FC<{ post: any; user: any }> = ({ post, user }) => {
+  const [commentInput, setCommentInput] = React.useState("");
+  const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
+  const { likeCount, liked, like, unlike, isToggling } = usePostLikes(post.id, user?.id);
+
+  // Gửi bình luận cho bài viết
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentInput.trim()) return;
+    await createComment({
+      post_id: post.id,
+      user_id: user?.id,
+      content: commentInput,
+    });
+    setCommentInput("");
+  };
+
+  // Like / Unlike
+  const handleLike = async () => {
+    if (liked) await unlike();
+    else await like();
+  };
+
+  return (
+    <Card className="p-4">
+      <div className="flex gap-3 items-center mb-2">
+        <img src={post.profiles?.avatar || demoUser.avatar} alt={post.profiles?.name || "User"} className="w-9 h-9 rounded-full object-cover" />
+        <div>
+          <div className="font-bold text-gray-800">{post.profiles?.name || "Ẩn danh"}</div>
+          <div className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</div>
+        </div>
+      </div>
+      <div className="text-base text-gray-800 mb-2 whitespace-pre-line">{post.content}</div>
+      {/* Media */}
+      {post.media_url && post.media_type === "image" && (
+        <div className="mb-2 ml-12 relative w-72 max-w-full">
+          <img src={post.media_url} alt="media" className="rounded-xl shadow-sm max-h-60 w-full object-cover" />
+          {post.sticker && (
+            <img
+              src={post.sticker.url}
+              alt={post.sticker.name}
+              className="absolute left-4 bottom-2 w-10 h-10 z-20 drop-shadow"
+              style={{ filter: "drop-shadow(0 2px 8px #ffcfef)" }}
+            />
+          )}
+        </div>
+      )}
+      {post.media_url && post.media_type === "video" && (
+        <div className="mb-2 ml-12 relative w-72 max-w-full">
+          <video src={post.media_url} controls className="rounded-xl shadow-sm max-h-64 w-full" />
+          {post.sticker && (
+            <img src={post.sticker.url} alt={post.sticker.name} className="absolute left-4 bottom-2 w-10 h-10 z-20 drop-shadow" style={{ filter: "drop-shadow(0 2px 8px #ffcfef)" }} />
+          )}
+        </div>
+      )}
+      {!post.media_url && post.sticker && (
+        <div className="mb-2 ml-12 flex items-center gap-2">
+          <img src={post.sticker.url} alt={post.sticker.name} className="w-9 h-9" />
+          <span className="text-xs text-gray-500">{post.sticker.name}</span>
+        </div>
+      )}
+      {/* Location */}
+      {post.location && (
+        <div className="flex items-center gap-1 text-xs text-gray-500 mb-2 ml-12">
+          <MapPin size={13} className="text-pink-400" />
+          <span>
+            Vị trí: {post.location.formatted ? post.location.formatted : `${post.location.lat}, ${post.location.lng}`}
+          </span>
+        </div>
+      )}
+      {/* Actions */}
+      <div className="flex items-center gap-4 mb-2">
+        <Button
+          size="sm"
+          variant={liked ? "secondary" : "ghost"}
+          className={`transition-all ${liked ? "text-pink-500" : ""}`}
+          onClick={handleLike}
+          disabled={isToggling}
+        >
+          <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={18} />
+          <span>{likeCount > 0 ? likeCount : ""}</span>
+        </Button>
+        <Button size="sm" variant="ghost" className="text-blue-500">
+          <MessageCircle size={18} />
+          <span> {comments?.length ?? 0} </span>
+        </Button>
+      </div>
+      {/* Comment list */}
+      <div className="space-y-2">
+        {commentsLoading && <div className="text-xs text-gray-400 px-2">Đang tải bình luận...</div>}
+        {comments && comments.map((cmt: any) => (
+          <div key={cmt.id} className="flex items-center gap-2 ml-4">
+            <img src={cmt.profiles?.avatar || demoUser.avatar} alt={cmt.profiles?.name || "User"} className="w-7 h-7 rounded-full object-cover" />
+            <div className="bg-gray-100 px-3 py-2 rounded-lg">
+              <span className="font-bold text-xs mr-2">{cmt.profiles?.name ?? "Ẩn danh"}</span>
+              <span>{cmt.content}</span>
+            </div>
+            <span className="text-xs text-gray-400">{new Date(cmt.created_at).toLocaleTimeString("vi-VN")}</span>
+          </div>
+        ))}
+      </div>
+      {/* Comment input */}
+      <form className="flex items-center gap-2 mt-2 ml-2" onSubmit={handleCommentSubmit}>
+        <Input
+          className="h-8 text-sm"
+          value={commentInput}
+          placeholder="Viết bình luận..."
+          onChange={e => setCommentInput(e.target.value)}
+          disabled={creating}
+        />
+        <Button type="submit" size="sm" variant="secondary" className="aspect-square h-8 w-8 p-0" disabled={creating}>
+          <SendHorizonal size={16} />
+        </Button>
+      </form>
+    </Card>
+  );
+};
+
 export default Timeline;
 
 // Lưu ý: File này quá dài, bạn nên tách PostForm, PopoverStickerSelect, PostCard ra file riêng cho dễ maintain!
-

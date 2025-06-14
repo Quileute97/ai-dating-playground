@@ -168,15 +168,15 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
   return (
     <div className="max-w-lg mx-auto py-6 h-full flex flex-col animate-fade-in">
       <PostForm user={user} onCreate={handlePostSubmit} posting={creating} />
-      <div className="flex-1 overflow-y-auto space-y-6">
+      <div className="flex-1 overflow-y-auto space-y-3 mt-2">
         {isLoading && (
-          <div className="text-center text-gray-500 pt-14">Đang tải timeline...</div>
+          <div className="text-center text-gray-500 pt-12">Đang tải timeline...</div>
         )}
         {!isLoading && posts?.map((post: any) => (
           <PostItem key={post.id} post={post} user={user} onHashtagClick={setHashtag} />
         ))}
         {posts?.length === 0 && !isLoading && (
-          <div className="text-center text-gray-400 pt-14">Chưa có bài viết nào.</div>
+          <div className="text-center text-gray-400 pt-16">Chưa có bài viết nào.</div>
         )}
       </div>
       {/* Modal hashtag */}
@@ -484,55 +484,53 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
   };
 
   return (
-    <Card className="px-5 py-4 rounded-xl shadow-sm mb-3">
-      <div className="flex items-center mb-1.5">
+    <Card className="rounded-2xl shadow-md border border-gray-200 mb-4 p-5 bg-white transition hover:shadow-lg">
+      <div className="flex items-center gap-3 mb-2">
         <img
           src={post.profiles?.avatar || demoUser.avatar}
           alt={post.profiles?.name || "User"}
-          className="w-10 h-10 rounded-full object-cover border mr-3"
+          className="w-11 h-11 rounded-full object-cover border shadow"
         />
-        <div>
-          <div className="font-semibold text-gray-800 text-sm">
-            {post.profiles?.name || "Ẩn danh"}
-          </div>
-          <div className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</div>
+        <div className="flex flex-col">
+          <span className="font-semibold text-gray-800">{post.profiles?.name || "Ẩn danh"}</span>
+          <span className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</span>
         </div>
       </div>
-      <div className="text-base text-gray-900 mb-2 whitespace-pre-line leading-relaxed min-h-[18px]" style={{wordBreak:'break-word'}}>
+      <div className="text-base text-gray-900 mb-2 whitespace-pre-line leading-relaxed min-h-[18px]" style={{ wordBreak: 'break-word' }}>
         {renderContent(post.content, onHashtagClick)}
       </div>
       {/* Media và sticker */}
       {post.media_url && post.media_type === "image" && (
-        <div className="mt-1 mb-2 relative w-full flex justify-center">
+        <div className="relative flex items-center justify-center mt-2 mb-3">
           <img
             src={post.media_url}
             alt="media"
-            className="rounded-lg object-cover max-h-72 border"
-            style={{maxWidth:'98%'}}
+            className="rounded-lg object-cover border max-h-72 w-full"
+            style={{ maxWidth: '98%' }}
           />
           {post.sticker && (
             <img
               src={post.sticker.url}
               alt={post.sticker.name}
-              className="absolute left-5 bottom-2 w-12 h-12 z-10"
+              className="absolute left-4 bottom-3 w-11 h-11 z-10"
               style={{ filter: "drop-shadow(0 3px 12px #ffcfef)" }}
             />
           )}
         </div>
       )}
       {post.media_url && post.media_type === "video" && (
-        <div className="mt-1 mb-2 relative w-full flex justify-center">
+        <div className="relative flex items-center justify-center mt-2 mb-3">
           <video
             src={post.media_url}
             controls
-            className="rounded-lg object-contain max-h-72 border"
-            style={{maxWidth:'98%'}}
+            className="rounded-lg object-contain border max-h-72 w-full"
+            style={{ maxWidth: '98%' }}
           />
           {post.sticker && (
             <img
               src={post.sticker.url}
               alt={post.sticker.name}
-              className="absolute left-5 bottom-2 w-12 h-12 z-10"
+              className="absolute left-4 bottom-3 w-11 h-11 z-10"
               style={{ filter: "drop-shadow(0 3px 12px #ffcfef)" }}
             />
           )}
@@ -540,13 +538,13 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
       )}
       {!post.media_url && post.sticker && (
         <div className="mb-2 flex items-center gap-2">
-          <img src={post.sticker.url} alt={post.sticker.name} className="w-8 h-8" />
+          <img src={post.sticker.url} alt={post.sticker.name} className="w-7 h-7" />
           <span className="text-xs text-gray-500">{post.sticker.name}</span>
         </div>
       )}
       {/* Địa điểm */}
       {post.location?.formatted && (
-        <div className="flex items-center gap-1 text-xs text-gray-500 mb-1 mt-2">
+        <div className="flex items-center gap-1 text-xs text-gray-500 mb-1 mt-1">
           <MapPin size={14} className="text-pink-400" />
           <span>
             {post.location.formatted}
@@ -554,31 +552,31 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
         </div>
       )}
       {/* Actions */}
-      <div className="flex items-center gap-3 mt-1 mb-1">
+      <div className="flex items-center gap-4 mt-2 mb-2">
         <Button
           size="sm"
-          variant={liked ? "secondary" : "ghost"}
-          className={`transition-all !rounded-full px-3 ${liked ? "text-pink-500" : ""}`}
+          variant={liked ? "secondary" : "outline"}
+          className={`transition-all rounded-full px-3 py-1 ${liked ? "text-pink-500 border-pink-400" : "border-gray-200"}`}
           onClick={handleLike}
           disabled={isToggling}
         >
-          <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={18} />
+          <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={17} />
           <span className="ml-1">{likeCount > 0 ? likeCount : ""}</span>
         </Button>
         <Button
           size="sm"
-          variant="ghost"
-          className="!rounded-full px-3 text-blue-500"
+          variant="outline"
+          className="rounded-full px-3 py-1 text-blue-500 border-gray-200"
           tabIndex={-1}
           disabled
         >
-          <MessageCircle size={18} />
+          <MessageCircle size={17} />
           <span className="ml-1">{comments?.length ?? 0}</span>
         </Button>
       </div>
       {/* Danh sách bình luận */}
       {comments && comments.length > 0 && (
-        <div className="space-y-2 border-t pt-3 mt-2">
+        <div className="space-y-1.5 border-t pt-3 mt-2">
           {commentsLoading && <div className="text-sm text-gray-400 px-2">Đang tải bình luận...</div>}
           {comments.map((cmt: any) => (
             <div key={cmt.id} className="flex items-start gap-2">
@@ -597,7 +595,7 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
       {/* Input bình luận */}
       <form className="flex items-center gap-2 mt-1" onSubmit={handleCommentSubmit}>
         <Input
-          className="h-8 text-sm"
+          className="h-8 text-sm bg-gray-50 border border-gray-200"
           value={commentInput}
           placeholder="Viết bình luận..."
           onChange={e => setCommentInput(e.target.value)}

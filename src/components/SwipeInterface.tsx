@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Heart, X, Zap, ArrowLeft, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { useBankInfo } from "@/hooks/useBankInfo";
 import { useUpgradeStatus } from './hooks/useUpgradeStatus';
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
+import NearbyFeatureBanner from "@/components/NearbyFeatureBanner";
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -25,6 +25,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
   const { data: goldUpgrade, isLoading: goldLoading } = useUpgradeStatus(user?.id, 'gold');
+  const { data: nearbyUpgrade, isLoading: nearbyLoading } = useUpgradeStatus(user?.id, 'nearby');
   const { likeUser, isProcessing } = useUserLike(user?.id);
 
   // Lấy profile thật từ Supabase, trừ user hiện tại
@@ -104,6 +105,10 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       title: "Chào mừng thành viên GOLD! 👑",
       description: "Bạn đã có quyền truy cập không giới hạn!",
     });
+  };
+
+  const handleNearbyUpgrade = () => {
+    setShowPayOSModal(true);
   };
 
   if (profilesLoading) {
@@ -265,20 +270,52 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           )
         )}
 
+        {/* Nearby Upgrade tracker: chỉ hiện nếu chưa có nearby hoặc bị rejected/pending */}
+        {
+          !isGoldActive && !nearbyLoading && (
+            <NearbyFeatureBanner
+              upgradeStatus={nearbyUpgrade?.status}
+              nearbyLoading={nearbyLoading}
+              hasExpandedRange={nearbyUpgrade?.status === "approved"}
+              onClickUpgrade={handleNearbyUpgrade}
+              onClickExpand={handleNearbyUpgrade}
+              disableExpand={!!nearbyUpgrade && nearbyUpgrade.status === "approved"}
+            />
+          )
+        }
+
         {/* Stats */}
         <div className="text-center text-sm text-gray-600 mt-2">
           {matches} matches • {availableProfiles.length - currentProfileIndex - 1} còn lại
         </div>
       </div>
 
-      {/* PayOS Modal */}
+      {/* PayOS Modal chung: Chọn loại package dựa trên mở modal từ đâu */}
       <PayOSModal
         isOpen={showPayOSModal}
         onClose={() => setShowPayOSModal(false)}
-        onSuccess={handleGoldUpgrade}
-        packageType="gold"
-        packageName="Gói GOLD"
-        price={99000}
+        onSuccess={
+          // Nếu đang nâng cấp Nearby thì chỉ close, nếu Gold thì chạy handleGoldUpgrade
+          nearbyUpgrade?.status !== "approved"
+            ? () => setShowPayOSModal(false)
+            : handleGoldUpgrade
+        }
+        packageType={
+          // Xác định packageType: Nếu mở từ NearbyFeatureBanner thì là "nearby", mặc định là "gold" nếu chưa có nearbyUpgrade hoặc đang là gold modal
+          (!nearbyUpgrade || (nearbyUpgrade.status && nearbyUpgrade.status !== "approved" && nearbyUpgrade.status !== "pending"))
+            ? "nearby"
+            : "gold"
+        }
+        packageName={
+          (!nearbyUpgrade || (nearbyUpgrade.status && nearbyUpgrade.status !== "approved" && nearbyUpgrade.status !== "pending"))
+            ? "Gói Mở Rộng Quanh đây"
+            : "Gói GOLD"
+        }
+        price={
+          (!nearbyUpgrade || (nearbyUpgrade.status && nearbyUpgrade.status !== "approved" && nearbyUpgrade.status !== "pending"))
+            ? 49000
+            : 99000
+        }
         bankInfo={
           !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 
           ? bankInfoHook.bankInfo 

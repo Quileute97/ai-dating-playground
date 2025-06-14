@@ -28,6 +28,8 @@ interface StrangerSettings {
 
 import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
 
+const PING_SOUND_URL = "/ping.mp3"; // Dùng file ở public thư mục, nếu chưa có thì dùng URL gốc ngoài
+
 const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -45,6 +47,8 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [hasNotified, setHasNotified] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -140,6 +144,34 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
     setIsTyping(false);
     reset();
   };
+
+  // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)
+  useEffect(() => {
+    if (
+      matchmakingStatus === "matched" &&
+      matchResult.conversationId &&
+      matchResult.partnerId &&
+      !hasNotified
+    ) {
+      // Hiện Toast
+      toast({
+        title: "🔔 Đã kết nối với người lạ!",
+        description: "Bạn đã được ghép nối thành công. Quay lại Tab Chat để bắt đầu trò chuyện!",
+      });
+
+      // Phát âm thanh
+      if (!audioRef.current) {
+        audioRef.current = new window.Audio(PING_SOUND_URL);
+      }
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {}); // Ignore play error (browser lock)
+      setHasNotified(true);
+    }
+    // Nếu reset về trạng thái idle/searching thì lại cho phép notify lần nữa
+    if (matchmakingStatus !== "matched" && hasNotified) {
+      setHasNotified(false);
+    }
+  }, [matchmakingStatus, matchResult, hasNotified, toast]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -238,6 +270,8 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+      {/* Optionally preload the sound */}
+      <audio ref={audioRef} src={PING_SOUND_URL} preload="auto" style={{display:'none'}} />
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 p-4 shadow-sm animate-fade-in">
         <div className="flex items-center justify-between">

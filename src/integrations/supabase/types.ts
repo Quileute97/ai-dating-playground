@@ -221,6 +221,7 @@ export type Database = {
           lat: number | null
           lng: number | null
           name: string | null
+          tai_khoan_hoat_dong: boolean | null
         }
         Insert: {
           age?: number | null
@@ -231,6 +232,7 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           name?: string | null
+          tai_khoan_hoat_dong?: boolean | null
         }
         Update: {
           age?: number | null
@@ -241,6 +243,7 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           name?: string | null
+          tai_khoan_hoat_dong?: boolean | null
         }
         Relationships: []
       }

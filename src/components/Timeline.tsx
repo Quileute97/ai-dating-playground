@@ -461,8 +461,157 @@ const PopoverStickerSelect: React.FC<{ onSticker: (s: typeof STICKERS[number]) =
   )
 };
 
-// ---------- Sửa PostItem ----------
-// parse hashtag, sticker từ text
+// ---------- Sửa lại giao diện PostItem (gọn đẹp như cũ, tối giản, spacing ổn) ---
+const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) => void }> = ({ post, user, onHashtagClick }) => {
+  const [commentInput, setCommentInput] = React.useState("");
+  const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
+  const { likeCount, liked, like, unlike, isToggling } = usePostLikes(post.id, user?.id);
+
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentInput.trim()) return;
+    await createComment({
+      post_id: post.id,
+      user_id: user?.id,
+      content: commentInput,
+    });
+    setCommentInput("");
+  };
+
+  const handleLike = async () => {
+    if (liked) await unlike();
+    else await like();
+  };
+
+  return (
+    <Card className="px-5 py-4 rounded-xl shadow-sm mb-3">
+      <div className="flex items-center mb-1.5">
+        <img
+          src={post.profiles?.avatar || demoUser.avatar}
+          alt={post.profiles?.name || "User"}
+          className="w-10 h-10 rounded-full object-cover border mr-3"
+        />
+        <div>
+          <div className="font-semibold text-gray-800 text-sm">
+            {post.profiles?.name || "Ẩn danh"}
+          </div>
+          <div className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</div>
+        </div>
+      </div>
+      <div className="text-base text-gray-900 mb-2 whitespace-pre-line leading-relaxed min-h-[18px]" style={{wordBreak:'break-word'}}>
+        {renderContent(post.content, onHashtagClick)}
+      </div>
+      {/* Media và sticker */}
+      {post.media_url && post.media_type === "image" && (
+        <div className="mt-1 mb-2 relative w-full flex justify-center">
+          <img
+            src={post.media_url}
+            alt="media"
+            className="rounded-lg object-cover max-h-72 border"
+            style={{maxWidth:'98%'}}
+          />
+          {post.sticker && (
+            <img
+              src={post.sticker.url}
+              alt={post.sticker.name}
+              className="absolute left-5 bottom-2 w-12 h-12 z-10"
+              style={{ filter: "drop-shadow(0 3px 12px #ffcfef)" }}
+            />
+          )}
+        </div>
+      )}
+      {post.media_url && post.media_type === "video" && (
+        <div className="mt-1 mb-2 relative w-full flex justify-center">
+          <video
+            src={post.media_url}
+            controls
+            className="rounded-lg object-contain max-h-72 border"
+            style={{maxWidth:'98%'}}
+          />
+          {post.sticker && (
+            <img
+              src={post.sticker.url}
+              alt={post.sticker.name}
+              className="absolute left-5 bottom-2 w-12 h-12 z-10"
+              style={{ filter: "drop-shadow(0 3px 12px #ffcfef)" }}
+            />
+          )}
+        </div>
+      )}
+      {!post.media_url && post.sticker && (
+        <div className="mb-2 flex items-center gap-2">
+          <img src={post.sticker.url} alt={post.sticker.name} className="w-8 h-8" />
+          <span className="text-xs text-gray-500">{post.sticker.name}</span>
+        </div>
+      )}
+      {/* Địa điểm */}
+      {post.location?.formatted && (
+        <div className="flex items-center gap-1 text-xs text-gray-500 mb-1 mt-2">
+          <MapPin size={14} className="text-pink-400" />
+          <span>
+            {post.location.formatted}
+          </span>
+        </div>
+      )}
+      {/* Actions */}
+      <div className="flex items-center gap-3 mt-1 mb-1">
+        <Button
+          size="sm"
+          variant={liked ? "secondary" : "ghost"}
+          className={`transition-all !rounded-full px-3 ${liked ? "text-pink-500" : ""}`}
+          onClick={handleLike}
+          disabled={isToggling}
+        >
+          <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={18} />
+          <span className="ml-1">{likeCount > 0 ? likeCount : ""}</span>
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="!rounded-full px-3 text-blue-500"
+          tabIndex={-1}
+          disabled
+        >
+          <MessageCircle size={18} />
+          <span className="ml-1">{comments?.length ?? 0}</span>
+        </Button>
+      </div>
+      {/* Danh sách bình luận */}
+      {comments && comments.length > 0 && (
+        <div className="space-y-2 border-t pt-3 mt-2">
+          {commentsLoading && <div className="text-sm text-gray-400 px-2">Đang tải bình luận...</div>}
+          {comments.map((cmt: any) => (
+            <div key={cmt.id} className="flex items-start gap-2">
+              <img src={cmt.profiles?.avatar || demoUser.avatar} alt={cmt.profiles?.name || "User"} className="w-7 h-7 rounded-full object-cover border" />
+              <div>
+                <div className="flex items-center gap-2 leading-none">
+                  <span className="font-semibold text-xs">{cmt.profiles?.name ?? "Ẩn danh"}</span>
+                  <span className="text-[11px] text-gray-400">{new Date(cmt.created_at).toLocaleTimeString("vi-VN")}</span>
+                </div>
+                <div className="text-xs text-gray-800 pl-1">{cmt.content}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Input bình luận */}
+      <form className="flex items-center gap-2 mt-1" onSubmit={handleCommentSubmit}>
+        <Input
+          className="h-8 text-sm"
+          value={commentInput}
+          placeholder="Viết bình luận..."
+          onChange={e => setCommentInput(e.target.value)}
+          disabled={creating}
+        />
+        <Button type="submit" size="sm" variant="secondary" className="aspect-square h-8 w-8 p-0" disabled={creating}>
+          <SendHorizonal size={16} />
+        </Button>
+      </form>
+    </Card>
+  );
+};
+
+// ---------- Sửa renderContent ----------
 const stickerCodeToImg: Record<string, string> = Object.fromEntries(STICKERS.map(x => [x.code, x.url]));
 
 // mình cần render sticker trong nội dung text nếu có mã sticker như ":fire:"
@@ -492,125 +641,6 @@ const renderContent = (content: string, onHashtagClick: (tag: string) => void) =
   });
 };
 
-const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) => void }> = ({ post, user, onHashtagClick }) => {
-  const [commentInput, setCommentInput] = React.useState("");
-  const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
-  const { likeCount, liked, like, unlike, isToggling } = usePostLikes(post.id, user?.id);
-
-  // Gửi bình luận cho bài viết
-  const handleCommentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentInput.trim()) return;
-    await createComment({
-      post_id: post.id,
-      user_id: user?.id,
-      content: commentInput,
-    });
-    setCommentInput("");
-  };
-
-  // Like / Unlike
-  const handleLike = async () => {
-    if (liked) await unlike();
-    else await like();
-  };
-
-  return (
-    <Card className="p-4">
-      <div className="flex gap-3 items-center mb-2">
-        <img src={post.profiles?.avatar || demoUser.avatar} alt={post.profiles?.name || "User"} className="w-9 h-9 rounded-full object-cover" />
-        <div>
-          <div className="font-bold text-gray-800">{post.profiles?.name || "Ẩn danh"}</div>
-          <div className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</div>
-        </div>
-      </div>
-      <div className="text-base text-gray-800 mb-2 whitespace-pre-line">
-        {renderContent(post.content, onHashtagClick)}
-      </div>
-      {/* Media */}
-      {post.media_url && post.media_type === "image" && (
-        <div className="mb-2 ml-12 relative w-72 max-w-full">
-          <img src={post.media_url} alt="media" className="rounded-xl shadow-sm max-h-60 w-full object-cover" />
-          {post.sticker && (
-            <img
-              src={post.sticker.url}
-              alt={post.sticker.name}
-              className="absolute left-4 bottom-2 w-10 h-10 z-20 drop-shadow"
-              style={{ filter: "drop-shadow(0 2px 8px #ffcfef)" }}
-            />
-          )}
-        </div>
-      )}
-      {post.media_url && post.media_type === "video" && (
-        <div className="mb-2 ml-12 relative w-72 max-w-full">
-          <video src={post.media_url} controls className="rounded-xl shadow-sm max-h-64 w-full" />
-          {post.sticker && (
-            <img src={post.sticker.url} alt={post.sticker.name} className="absolute left-4 bottom-2 w-10 h-10 z-20 drop-shadow" style={{ filter: "drop-shadow(0 2px 8px #ffcfef)" }} />
-          )}
-        </div>
-      )}
-      {!post.media_url && post.sticker && (
-        <div className="mb-2 ml-12 flex items-center gap-2">
-          <img src={post.sticker.url} alt={post.sticker.name} className="w-9 h-9" />
-          <span className="text-xs text-gray-500">{post.sticker.name}</span>
-        </div>
-      )}
-      {/* Location */}
-      {post.location && (
-        <div className="flex items-center gap-1 text-xs text-gray-500 mb-2 ml-12">
-          <MapPin size={13} className="text-pink-400" />
-          <span>
-            Vị trí: {post.location.formatted ? post.location.formatted : `${post.location.lat}, ${post.location.lng}`}
-          </span>
-        </div>
-      )}
-      {/* Actions */}
-      <div className="flex items-center gap-4 mb-2">
-        <Button
-          size="sm"
-          variant={liked ? "secondary" : "ghost"}
-          className={`transition-all ${liked ? "text-pink-500" : ""}`}
-          onClick={handleLike}
-          disabled={isToggling}
-        >
-          <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={18} />
-          <span>{likeCount > 0 ? likeCount : ""}</span>
-        </Button>
-        <Button size="sm" variant="ghost" className="text-blue-500">
-          <MessageCircle size={18} />
-          <span> {comments?.length ?? 0} </span>
-        </Button>
-      </div>
-      {/* Comment list */}
-      <div className="space-y-2">
-        {commentsLoading && <div className="text-xs text-gray-400 px-2">Đang tải bình luận...</div>}
-        {comments && comments.map((cmt: any) => (
-          <div key={cmt.id} className="flex items-center gap-2 ml-4">
-            <img src={cmt.profiles?.avatar || demoUser.avatar} alt={cmt.profiles?.name || "User"} className="w-7 h-7 rounded-full object-cover" />
-            <div className="bg-gray-100 px-3 py-2 rounded-lg">
-              <span className="font-bold text-xs mr-2">{cmt.profiles?.name ?? "Ẩn danh"}</span>
-              <span>{cmt.content}</span>
-            </div>
-            <span className="text-xs text-gray-400">{new Date(cmt.created_at).toLocaleTimeString("vi-VN")}</span>
-          </div>
-        ))}
-      </div>
-      {/* Comment input */}
-      <form className="flex items-center gap-2 mt-2 ml-2" onSubmit={handleCommentSubmit}>
-        <Input
-          className="h-8 text-sm"
-          value={commentInput}
-          placeholder="Viết bình luận..."
-          onChange={e => setCommentInput(e.target.value)}
-          disabled={creating}
-        />
-        <Button type="submit" size="sm" variant="secondary" className="aspect-square h-8 w-8 p-0" disabled={creating}>
-          <SendHorizonal size={16} />
-        </Button>
-      </form>
-    </Card>
-  );
-};
 export default Timeline;
 
 // Lưu ý: File này quá dài, bạn nên tách PostForm, PopoverStickerSelect, PostCard ra file riêng cho dễ maintain!

@@ -11,7 +11,7 @@ import HashtagPostsModal from "./HashtagPostsModal";
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
-  { id: 1, name: "🔥 Fire", url: "https://cdn-icons-png.flaticon.com/512/833/833314.png", code: ":fire:" },
+  { id: 1, name: "🔥 Fire", url: "https://cdn-icons-png.flaticon.com/512/833/83314.png", code: ":fire:" },
   { id: 2, name: "🤣 Haha", url: "https://cdn-icons-png.flaticon.com/512/742/742751.png", code: ":haha:" },
   { id: 3, name: "💖 Heart", url: "https://cdn-icons-png.flaticon.com/512/833/833472.png", code: ":heart:" },
   { id: 4, name: "🥺 UwU", url: "https://cdn-icons-png.flaticon.com/512/742/742920.png", code: ":uwu:" },
@@ -275,13 +275,22 @@ const PostForm: React.FC<{
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!content.trim() && !media) || uploadingMedia) return;
+    // Defensive: ensure lat/lng for type compatibility
+    let location = undefined;
+    if (locationName) {
+      location = {
+        formatted: locationName,
+        lat: 0, // Unknown, set as 0 (or optionally: null if allowed in your schema)
+        lng: 0,
+      };
+    }
     await onCreate({
       user: {
         name: user?.name ?? demoUser.name,
         avatar: user?.avatar ?? demoUser.avatar
       },
       content: content.trim(),
-      location: locationName ? { formatted: locationName } : undefined,
+      location,
       media: media ?? undefined,
       sticker,
     });

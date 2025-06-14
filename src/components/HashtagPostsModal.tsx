@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { useTimelinePosts } from "@/hooks/useTimelinePosts";
 
@@ -20,10 +20,10 @@ export default function HashtagPostsModal({ hashtag, open, onClose, user }: Hash
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <Dialog.Content className="max-w-lg w-full">
-        <Dialog.Title>
+      <DialogContent className="max-w-lg w-full">
+        <DialogTitle>
           Bài viết với #{hashtag}
-        </Dialog.Title>
+        </DialogTitle>
         <div className="space-y-4 mt-2 max-h-[60vh] overflow-y-auto">
           {isLoading && <div className="text-center py-6">Đang tải...</div>}
           {!isLoading && hashtagPosts.length === 0 && <div className="text-center py-6 text-gray-400">Không có bài viết nào.</div>}
@@ -40,7 +40,7 @@ export default function HashtagPostsModal({ hashtag, open, onClose, user }: Hash
             </Card>
           ))}
         </div>
-      </Dialog.Content>
+      </DialogContent>
     </Dialog>
   )
 }

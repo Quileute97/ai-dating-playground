@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -16,6 +15,8 @@ import Timeline from './Timeline';
 import RealTimeActivityPanel from './RealTimeActivityPanel';
 import ActiveFriendsWithChatPanel from './ActiveFriendsWithChatPanel';
 import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
+import MainTabs from './MainTabs';
+import SidePanelToggle from './SidePanelToggle';
 
 const DatingApp = () => {
   const [activeTab, setActiveTab] = useState('chat');
@@ -153,33 +154,12 @@ const DatingApp = () => {
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      {/* Tab Navigation */}
-      {!isAdminMode && (
-        <div className="bg-white/90 backdrop-blur-sm border-b border-purple-100 px-4 py-3 shadow-sm">
-          <div className="flex justify-center items-center max-w-lg mx-auto">
-            <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabChange(tab.id)}
-                    className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl transition-all duration-300 ease-in-out transform min-w-[80px] ${
-                      isActive 
-                        ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-lg scale-105 -translate-y-0.5' 
-                        : 'text-gray-600 hover:bg-white hover:text-gray-800 hover:scale-102 hover:shadow-sm'
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 transition-all duration-200 ${isActive ? 'scale-110' : ''}`} />
-                    <span className="text-xs font-medium leading-tight">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Tab Navigation (refactored) */}
+      <MainTabs
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        isAdminMode={isAdminMode}
+      />
 
       {/* Top Action Bar */}
       <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
@@ -241,31 +221,22 @@ const DatingApp = () => {
       {/* Tab Content + Side Panels */}
       <div className="flex-1 overflow-hidden relative">
         <div className="h-full flex flex-row">
-          {/* LEFT: RealTimeActivityPanel (hidden on mobile, có thể collapse) */}
+          {/* LEFT: RealTimeActivityPanel (can collapse, refactored) */}
           {isLeftPanelOpen ? (
             <div className="relative">
               <RealTimeActivityPanel />
-              <button
-                className="absolute right-[-12px] top-1/2 -translate-y-1/2 z-30 bg-white border border-gray-200 rounded-full shadow hover:bg-purple-50 hover:scale-105 p-1 transition"
-                title="Thu gọn panel"
-                onClick={() => setIsLeftPanelOpen(false)}
-                type="button"
-              >
-                <ChevronLeft className="w-5 h-5 text-gray-500" />
-              </button>
+              <SidePanelToggle
+                isOpen={isLeftPanelOpen}
+                side="left"
+                onToggle={setIsLeftPanelOpen}
+              />
             </div>
           ) : (
-            <div className="hidden lg:flex flex-col justify-center min-h-full">
-              <button
-                className="ml-[-6px] bg-purple-100 border border-purple-200 text-purple-700 rounded-full p-1 shadow-md hover:bg-purple-200 transition"
-                style={{ marginRight: "-14px" }}
-                onClick={() => setIsLeftPanelOpen(true)}
-                title="Hiện panel"
-                type="button"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+            <SidePanelToggle
+              isOpen={isLeftPanelOpen}
+              side="left"
+              onToggle={setIsLeftPanelOpen}
+            />
           )}
           {/* CENTER: main tab content */}
           <div className="flex-1 min-w-0 flex flex-col">
@@ -273,31 +244,22 @@ const DatingApp = () => {
               {renderTabContent()}
             </div>
           </div>
-          {/* RIGHT: ActiveFriendsWithChatPanel (hidden on mobile, có thể collapse) */}
+          {/* RIGHT: ActiveFriendsWithChatPanel (can collapse, refactored) */}
           {isRightPanelOpen ? (
             <div className="relative">
               <ActiveFriendsWithChatPanel />
-              <button
-                className="absolute left-[-12px] top-1/2 -translate-y-1/2 z-30 bg-white border border-gray-200 rounded-full shadow hover:bg-purple-50 hover:scale-105 p-1 transition"
-                title="Thu gọn panel"
-                onClick={() => setIsRightPanelOpen(false)}
-                type="button"
-              >
-                <ChevronRight className="w-5 h-5 text-gray-500" />
-              </button>
+              <SidePanelToggle
+                isOpen={isRightPanelOpen}
+                side="right"
+                onToggle={setIsRightPanelOpen}
+              />
             </div>
           ) : (
-            <div className="hidden lg:flex flex-col justify-center min-h-full">
-              <button
-                className="mr-[-6px] bg-purple-100 border border-purple-200 text-purple-700 rounded-full p-1 shadow-md hover:bg-purple-200 transition"
-                style={{ marginLeft: "-14px" }}
-                onClick={() => setIsRightPanelOpen(true)}
-                title="Hiện panel"
-                type="button"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-            </div>
+            <SidePanelToggle
+              isOpen={isRightPanelOpen}
+              side="right"
+              onToggle={setIsRightPanelOpen}
+            />
           )}
         </div>
       </div>
@@ -328,4 +290,3 @@ const DatingApp = () => {
 };
 
 export default DatingApp;
-

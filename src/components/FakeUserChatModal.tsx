@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useConversationHistory } from "@/hooks/useConversationHistory";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FakeUserChatModalProps {
   isOpen: boolean;
@@ -17,14 +19,8 @@ interface FakeUserChatModalProps {
   userRealId?: string; // Truyền user id thật vào prop này để fetch
 }
 
-interface Message {
-  id: string;
-  sender: "admin" | "ai";
-  content: string;
-  timestamp: number;
-}
-
-const AI_REPLY_DELAY = 60 * 60 * 1000; // 1 giờ (ms) - DEMO có thể giảm xuống 1 phút để test
+const AI_REPLY_DELAY = 60 * 60 * 1000; // 1 giờ (ms)
+const DEMO_AI_REPLY_DELAY = 60000; // 1 phút để demo
 
 const DummyAIReply = (prompt: string) => {
   // Đơn giản hóa: dùng prompt tạo reply
@@ -32,72 +28,145 @@ const DummyAIReply = (prompt: string) => {
 };
 
 const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatModalProps) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [lastAdminReply, setLastAdminReply] = useState<number | null>(null);
+  const [sending, setSending] = useState(false);
   const aiTimeout = useRef<NodeJS.Timeout|null>(null);
 
   // Lấy lịch sử chat từ Supabase hook
-  const { data: conversationData, isLoading } = useConversationHistory(userRealId || "", user?.id || null);
+  const { data: conversationData, isLoading, refetch } = useConversationHistory(userRealId || "", user?.id || null);
 
-  // reset khi mở modal mới
+  const [input, setInput] = useState("");
+  const [localMessages, setLocalMessages] = useState<any[]>([]);
+  const scrollEndRef = useRef<HTMLDivElement>(null);
+
+  // Reset khi mở modal hoặc user ảo mới
   useEffect(() => {
-    if (isOpen && user) {
-      setMessages([
-        {
-          id: "welcome",
-          sender: "ai",
-          content: `Xin chào Admin, bạn muốn hỏi gì với "${user.name}"?`,
-          timestamp: Date.now(),
-        }
-      ]);
-      setLastAdminReply(Date.now());
-    }
-    if (!isOpen) {
-      if (aiTimeout.current) clearTimeout(aiTimeout.current);
-    }
-    // eslint-disable-next-line
-  }, [isOpen, user]);
+    setInput("");
+    setLocalMessages([]);
+    // Nếu modal vừa đóng thì clear timeout AI
+    if (!isOpen && aiTimeout.current) clearTimeout(aiTimeout.current);
+  }, [isOpen, user?.id]);
 
-  // Kiểm tra nếu quá 1 giờ admin không trả lời thì AI sẽ trả lời
+  // Luôn scroll xuống cuối khi có tin nhắn mới
+  useEffect(() => {
+    scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [conversationData, localMessages]);
+
+  // Auto AI trả lời nếu không có reply từ admin
   useEffect(() => {
     if (!isOpen || !user) return;
     if (aiTimeout.current) clearTimeout(aiTimeout.current);
 
-    if (messages.length === 0) return;
+    const mergedMsgs = [...(conversationData?.messages || []), ...localMessages];
+    if (mergedMsgs.length === 0) return;
 
-    // chỉ auto AI nếu last msg là của admin
-    const lastMsg = messages[messages.length - 1];
+    const lastMsg = mergedMsgs[mergedMsgs.length - 1];
     if (lastMsg.sender === "admin") {
-      aiTimeout.current = setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          {
-            id: Date.now() + "_ai",
-            sender: "ai",
+      aiTimeout.current = setTimeout(async () => {
+        // AI trả lời bằng DummyAIReply
+        // Nếu đã có conversation trên DB -> insert ngược vào Supabase
+        if (conversationData?.id) {
+          await supabase.from("messages").insert({
+            conversation_id: conversationData.id,
+            sender: "fake",
             content: DummyAIReply(user.aiPrompt),
-            timestamp: Date.now()
-          }
-        ]);
-      }, 60000); // Giảm còn 1 phút để test trên UI, PROD thì AI_REPLY_DELAY
+          });
+          refetch(); // Sync lại latest messages
+        } else {
+          // Local-only
+          setLocalMessages(prev => [
+            ...prev,
+            {
+              id: Date.now() + "_ai",
+              sender: "fake",
+              content: DummyAIReply(user.aiPrompt),
+              created_at: new Date().toISOString()
+            }
+          ]);
+        }
+      }, DEMO_AI_REPLY_DELAY);
     }
     // eslint-disable-next-line
-  }, [messages, isOpen, user]);
+  }, [conversationData, localMessages, isOpen, user]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages(prev => [
-      ...prev,
-      {
-        id: Date.now() + "_admin",
+  // GỬI TIN NHẮN: tạo conversation nếu chưa có, insert message
+  const handleSend = async () => {
+    if (sending || !input.trim() || !userRealId || !user) return;
+    setSending(true);
+
+    // Đã có conversation trên db: gửi message mới
+    if (conversationData?.id) {
+      const { error } = await supabase.from("messages").insert({
+        conversation_id: conversationData.id,
         sender: "admin",
         content: input.trim(),
-        timestamp: Date.now()
+      });
+      if (!error) {
+        setInput("");
+        refetch();
+      } else {
+        // fallback: show error, vẫn append local
+        setLocalMessages(prev => [
+          ...prev,
+          {
+            id: Date.now() + "_admin_err",
+            sender: "admin",
+            content: input.trim(),
+            created_at: new Date().toISOString()
+          }
+        ]);
+        setInput("");
       }
-    ]);
-    setInput("");
-    setLastAdminReply(Date.now());
+      setSending(false);
+      return;
+    }
+
+    // Nếu chưa có conversation -> tạo mới
+    const { data: conv, error: convErr } = await supabase
+      .from("conversations")
+      .insert({
+        user_real_id: userRealId,
+        user_fake_id: user.id,
+        last_message: input.trim(),
+        last_message_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (conv?.id) {
+      // Sau khi tạo, gửi message luôn
+      await supabase.from("messages").insert({
+        conversation_id: conv.id,
+        sender: "admin",
+        content: input.trim(),
+      });
+      setInput("");
+      refetch();
+    } else {
+      // fallback: show error, vẫn append local
+      setLocalMessages(prev => [
+        ...prev,
+        {
+          id: Date.now() + "_admin_err",
+          sender: "admin",
+          content: input.trim(),
+          created_at: new Date().toISOString()
+        }
+      ]);
+      setInput("");
+    }
+    setSending(false);
   };
+
+  // Gộp tin nhắn local (gửi lỗi hoặc trước khi tạo conversation) + messages từ Supabase
+  const mergedMessages = [
+    ...(conversationData?.messages || []).map(msg => ({
+      id: msg.id,
+      sender: msg.sender === "real" ? "admin" : (msg.sender === "fake" ? "ai" : msg.sender),
+      content: msg.content,
+      created_at: msg.created_at
+    })),
+    ...localMessages, // những tin chưa lưu DB
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -110,7 +179,15 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
         <div className="flex flex-col h-[50vh]">
           <ScrollArea className="flex-1 mb-3">
             <div className="flex flex-col gap-3 pr-2">
-              {messages.map(msg => (
+              {/* Nếu chưa có lịch sử: lời chào đầu tiên */}
+              {mergedMessages.length === 0 && user && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 text-gray-800 rounded-2xl px-4 py-2 max-w-sm">
+                    Xin chào Admin, bạn muốn hỏi gì với "{user.name}"?
+                  </div>
+                </div>
+              )}
+              {mergedMessages.map(msg => (
                 <div
                   key={msg.id}
                   className={`flex ${msg.sender === "admin" ? "justify-end" : "justify-start"}`}
@@ -126,6 +203,7 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
                   </div>
                 </div>
               ))}
+              <div ref={scrollEndRef}></div>
             </div>
           </ScrollArea>
           <div className="flex gap-2 mt-auto">
@@ -134,9 +212,10 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
               onChange={e => setInput(e.target.value)}
               className="flex-1"
               placeholder="Nhập tin nhắn..."
-              onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !sending) handleSend(); }}
+              disabled={sending}
             />
-            <Button onClick={handleSend} disabled={!input.trim()}>Gửi</Button>
+            <Button onClick={handleSend} disabled={!input.trim() || sending}>Gửi</Button>
           </div>
         </div>
         <div className="text-xs text-gray-400 pt-1">
@@ -148,3 +227,4 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
 };
 
 export default FakeUserChatModal;
+

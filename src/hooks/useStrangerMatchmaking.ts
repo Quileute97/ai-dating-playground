@@ -85,7 +85,7 @@ export function useStrangerMatchmaking(userId: string | null) {
     }
   }, [userId, status, removeAllAnonymousFromQueue]);
 
-  // Poll tìm ghép đôi: chỉ match user thật với nhau (UUID v4 <-> UUID v4)
+  // Poll tìm ghép đôi: sửa lại logic để cả 2 client đều được thông báo
   const tryMatch = useCallback(async () => {
     console.log("[STRANGER] [tryMatch] POLLING userId =", userId, "status =", status);
     if (!userId || !isUUIDv4(userId)) {
@@ -107,75 +107,79 @@ export function useStrangerMatchmaking(userId: string | null) {
       }
       if (!queueList) return;
 
-      // Chỉ lấy userId là UUIDv4, bỏ hết anonymous
+      const amIInQueue = queueList.some(item => item.user_id === userId);
       const others = queueList.filter((item: any) => item.user_id !== userId && isUUIDv4(item.user_id));
-      console.log("[STRANGER] [tryMatch] Queue hiện tại (UUID v4):", others.map(u => u.user_id));
-      let partnerId: string | null = null;
+      
       if (others.length > 0) {
-        // Chỉ match với user thật khác (UUIDv4)
-        partnerId = others[0].user_id;
-        console.log("[STRANGER] [tryMatch] ONLY real user match:", partnerId);
-      } else {
-        console.log("[STRANGER] [tryMatch] Không tìm thấy ai đủ điều kiện để match (UUIDv4 only).");
-        return;
-      }
+        // CASE 1: I am the MATCHER. I found someone.
+        const partnerId = others[0].user_id;
+        console.log("[STRANGER] [tryMatch] Found partner, I am the matcher:", partnerId);
 
-      // Tìm conversation giữa userId và partnerId (check cả 2 chiều)
-      const { data: existed, error: existedError } = await supabase
-        .from("conversations")
-        .select("id")
-        .or(`and(user_real_id.eq.${userId},user_fake_id.eq.${partnerId}),and(user_real_id.eq.${partnerId},user_fake_id.eq.${userId})`)
-        .limit(1);
-
-      let conversationId = null;
-      if (existedError) {
-        setStatus("error");
-        return;
-      }
-
-      if (existed && existed.length > 0) {
-        conversationId = existed[0].id;
-      } else {
-        let cCreated = null;
-        let createConvError = null;
-        if (isUUIDv4(userId) && isUUIDv4(partnerId)) {
-          const { data: c1, error: e1 } = await supabase
-            .from("conversations")
-            .insert([{ user_real_id: userId, user_fake_id: partnerId }])
-            .select("id")
-            .single();
-          const { data: c2, error: e2 } = await supabase
-            .from("conversations")
-            .insert([{ user_real_id: partnerId, user_fake_id: userId }])
-            .select("id");
-          cCreated = c1;
-          createConvError = e1 || e2;
-          conversationId = c1?.id;
-        } else {
-          // Trường hợp này không bao giờ xảy ra nữa, do đã lọc ở trên
-          const { data: c, error: e } = await supabase
-            .from("conversations")
-            .insert([{ user_real_id: userId, user_fake_id: partnerId }])
-            .select("id")
-            .single();
-          cCreated = c;
-          createConvError = e;
-          conversationId = c?.id;
-          console.log("[STRANGER] [tryMatch] LỖI: Đã lọc rồi mà vẫn còn user ảo?");
-        }
-        if (createConvError) {
+        // Check if conversation already exists to prevent race conditions
+        const { data: existed, error: existedError } = await supabase
+          .from("conversations")
+          .select("id")
+          .or(`and(user_real_id.eq.${userId},user_fake_id.eq.${partnerId}),and(user_real_id.eq.${partnerId},user_fake_id.eq.${userId})`)
+          .limit(1);
+        
+        if (existedError) {
           setStatus("error");
           return;
         }
+
+        if (existed && existed.length > 0) {
+          console.log('[STRANGER] [tryMatch] Conversation already exists, another client was faster. Let them handle it.');
+          return;
+        }
+
+        // Create conversations for both users so RLS works
+        const { data: c1, error: e1 } = await supabase
+            .from("conversations")
+            .insert([{ user_real_id: userId, user_fake_id: partnerId }])
+            .select("id")
+            .single();
+        const { error: e2 } = await supabase
+            .from("conversations")
+            .insert([{ user_real_id: partnerId, user_fake_id: userId }]);
+
+        if (e1 || e2) {
+            console.error('[STRANGER] [tryMatch] Error creating conversations', e1, e2);
+            setStatus("error");
+            return;
+        }
+        
+        // Matched! Remove myself from queue and update state.
+        // The other user will be responsible for removing themselves.
+        await supabase.from("stranger_queue").delete().eq("user_id", userId);
+        setMatchResult({ partnerId, conversationId: c1.id });
+        setStatus("matched");
+
+      } else if (amIInQueue) {
+        // CASE 2: I am in queue, but found no one else. Maybe someone matched me?
+        const { data: conv, error: convError } = await supabase
+          .from('conversations')
+          .select('id, user_fake_id, created_at')
+          .eq('user_real_id', userId) // Check for convos where I am the "real" user
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (convError) return;
+
+        if (conv && conv.length > 0) {
+          const recentConv = conv[0];
+          const timeSinceCreation = Date.now() - new Date(recentConv.created_at).getTime();
+
+          // If created in the last 10 seconds, assume it's our match
+          if (timeSinceCreation < 10000) {
+            console.log('[STRANGER] [tryMatch] Found recent conversation, assuming I was matched by another user.', recentConv);
+            await supabase.from("stranger_queue").delete().eq("user_id", userId);
+            setMatchResult({ partnerId: recentConv.user_fake_id, conversationId: recentConv.id });
+            setStatus("matched");
+          }
+        }
       }
-
-      // Xóa 2 user khỏi queue
-      await supabase.from("stranger_queue").delete().eq("user_id", userId);
-      await supabase.from("stranger_queue").delete().eq("user_id", partnerId);
-
-      setMatchResult({ partnerId, conversationId });
-      setStatus("matched");
     } catch (err) {
+      console.error('[STRANGER] [tryMatch] General exception:', err);
       setStatus("error");
     }
   }, [userId, status, removeAllAnonymousFromQueue]);

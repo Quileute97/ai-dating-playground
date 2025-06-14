@@ -28,7 +28,7 @@ const tabs: Tab[] = [
   { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500' }
 ];
 
-export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: customTabs, showLoginButton, onLoginClick }: MainTabsProps) {
+export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: customTabs }: MainTabsProps) {
   // Mặc định dùng customTabs nếu truyền vào, fallback sang tabs cũ
   const displayTabs: CustomTab[] = customTabs || [
     { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500', locked: false },
@@ -69,14 +69,6 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
             );
           })}
         </div>
-        {showLoginButton && (
-          <button
-            onClick={onLoginClick}
-            className="ml-4 px-3 py-2 rounded-lg text-sm text-purple-600 font-semibold hover:underline"
-          >
-            Đăng nhập
-          </button>
-        )}
       </div>
     </div>
   );

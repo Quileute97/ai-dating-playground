@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,7 @@ interface AIPrompt {
 interface AddFakeUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (user: Omit<FakeUser, 'id'>) => void;
+  onAdd: (user: Omit<FakeUser, 'id'> & { aiPromptId: string }) => void;
   aiPrompts: AIPrompt[];
 }
 
@@ -46,7 +47,9 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
     isActive: true
   });
 
-  // Khi danh sách prompt thay đổi (hoặc lần đầu render) đặt prompt đầu tiên làm mặc định
+  const [loading, setLoading] = useState(false);
+
+  // Khi danh sách prompt thay đổi đặt prompt đầu tiên làm mặc định
   React.useEffect(() => {
     setFormData(prev => ({
       ...prev,
@@ -55,21 +58,46 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
     }));
   }, [aiPrompts]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.bio || !formData.aiPromptId) return;
+    if (
+      !formData.name ||
+      !formData.bio ||
+      !formData.aiPromptId ||
+      !formData.gender ||
+      !formData.age
+    ) {
+      alert('Vui lòng điền đầy đủ thông tin!');
+      return;
+    }
+    setLoading(true);
 
-    // Lưu ý: Không truyền aiPrompt content vào DB, chỉ truyền aiPromptId
-    onAdd({
+    // Log debug chi tiết:
+    console.log('== Fake user SUBMIT ==', {
       name: formData.name,
       avatar: formData.avatar,
       gender: formData.gender,
       age: formData.age,
       bio: formData.bio,
-      aiPrompt: '',          // không cần giữ prompt text ở đây
       aiPromptId: formData.aiPromptId,
+      isActive: formData.isActive,
+      // aiPrompt: formData.aiPrompt
+    });
+
+    // Gọi onAdd với đúng prop
+    await onAdd({
+      name: formData.name,
+      avatar: formData.avatar,
+      gender: formData.gender,
+      age: formData.age,
+      bio: formData.bio,
+      aiPrompt: '', // không cần giữ prompt text ở đây nữa
+      aiPromptId: formData.aiPromptId!,
       isActive: formData.isActive
     });
+
+    setLoading(false);
+    // reset form và đóng modal
     setFormData({
       name: '',
       avatar: '/placeholder.svg',
@@ -114,7 +142,6 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label htmlFor="age">Tuổi</Label>
               <Input
@@ -123,11 +150,11 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
                 min="18"
                 max="65"
                 value={formData.age}
-                onChange={(e) => setFormData(prev => ({ ...prev, age: parseInt(e.target.value) }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, age: parseInt(e.target.value) || 18 }))}
+                required
               />
             </div>
           </div>
-
           <div>
             <Label htmlFor="bio">Tiểu sử</Label>
             <Textarea
@@ -138,7 +165,6 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
               required
             />
           </div>
-
           <div>
             <Label htmlFor="prompt">AI Prompt</Label>
             <Select
@@ -151,6 +177,7 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
                   aiPrompt: promptObj?.prompt ?? ''
                 }));
               }}
+              required
             >
               <SelectTrigger>
                 <SelectValue placeholder="Chọn AI prompt..." />
@@ -176,11 +203,11 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
               Hủy
             </Button>
-            <Button type="submit" className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500">
-              Thêm user
+            <Button type="submit" className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500" disabled={loading}>
+              {loading ? 'Đang thêm...' : 'Thêm user'}
             </Button>
           </div>
         </form>

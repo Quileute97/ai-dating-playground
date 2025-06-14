@@ -45,6 +45,42 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const { data: nearbyUpgrade, isLoading: nearbyLoading } = useUpgradeStatus(user?.id, "nearby");
   const upgradeStatus = nearbyUpgrade?.status;
 
+  // Function to request location access and update state
+  const requestLocationPermission = () => {
+    if (!navigator.geolocation) {
+      toast({
+        variant: "destructive",
+        title: "Thiết bị không hỗ trợ GPS",
+        description: "Trình duyệt của bạn không hỗ trợ lấy vị trí.",
+      });
+      setLocationPermission("denied");
+      return;
+    }
+    setLocationPermission("pending");
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocationPermission("granted");
+        setUserLocation({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+      },
+      (err) => {
+        setLocationPermission("denied");
+        toast({
+          variant: "destructive",
+          title: "Không thể lấy vị trí",
+          description: "Bạn cần cho phép truy cập vị trí để sử dụng tính năng này.",
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+      }
+    );
+  };
+
   // Bước 1: Lấy vị trí & cập nhật lên profiles
   useEffect(() => {
     requestLocationPermission();
@@ -198,3 +234,4 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
 };
 
 export default NearbyInterface;
+

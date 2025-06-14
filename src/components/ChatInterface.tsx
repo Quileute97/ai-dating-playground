@@ -26,6 +26,8 @@ interface StrangerSettings {
   ageGroup: string;
 }
 
+import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
+
 const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -88,6 +90,55 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
     if (!ageProfiles) return profiles.female.gen_z[0]; // fallback
 
     return ageProfiles[Math.floor(Math.random() * ageProfiles.length)];
+  };
+
+  // NẾU ĐÃ ĐĂNG NHẬP MỚI DÙNG MATCHMAKING
+  const userId = user?.id ?? null;
+  const { status: matchmakingStatus, matchResult, joinQueue, reset } = useStrangerMatchmaking(userId);
+
+  // Sửa lại startSearching: đưa user vào queue, trạng thái chờ ghép
+  const startSearching = () => {
+    setIsSearching(true);
+    setMessages([]);
+    setConversationHistory([]);
+    setIsAIMode(false);
+    setIsConnected(false);
+    joinQueue();
+  };
+
+  // Theo dõi trạng thái ghép đôi thành công
+  useEffect(() => {
+    if (matchmakingStatus === "matched" && matchResult.conversationId && matchResult.partnerId) {
+      setIsSearching(false);
+      setIsConnected(true);
+
+      // Sử dụng minimal stranger info: ẩn danh (vì chưa có profile)
+      setStranger({
+        name: "Người lạ",
+        age: "?",
+        avatar: null,
+      });
+
+      // Tin nhắn chào mừng
+      setMessages([
+        {
+          id: Date.now().toString(),
+          text: `Bạn đã được kết nối với 1 người lạ. Hãy bắt đầu trò chuyện!`,
+          sender: "stranger",
+          timestamp: new Date(),
+        }
+      ]);
+    }
+  }, [matchmakingStatus, matchResult]);
+
+  // Nếu rời, reset
+  const disconnect = async () => {
+    setIsConnected(false);
+    setStranger(null);
+    setMessages([]);
+    setConversationHistory([]);
+    setIsTyping(false);
+    reset();
   };
 
   const handleSendMessage = async () => {
@@ -177,48 +228,6 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
     }
   };
 
-  const startSearching = () => {
-    setIsSearching(true);
-    setMessages([]);
-    setConversationHistory([]);
-    
-    // Simulate searching for 3 seconds, then connect to AI
-    setTimeout(() => {
-      setIsSearching(false);
-      setIsConnected(true);
-      setIsAIMode(true);
-      
-      const strangerProfile = generateStrangerProfile(strangerSettings);
-      setStranger({
-        ...strangerProfile,
-        gender: strangerSettings.gender === 'all' ? 'unknown' : strangerSettings.gender
-      });
-
-      const welcomeMessage: Message = {
-        id: Date.now().toString(),
-        text: `Chào bạn! Tôi là ${strangerProfile.name}, ${strangerProfile.age} tuổi. Rất vui được chat với bạn! 😊`,
-        sender: 'stranger',
-        timestamp: new Date(),
-        isAI: true
-      };
-
-      setMessages([welcomeMessage]);
-      setConversationHistory([{
-        role: 'assistant',
-        content: welcomeMessage.text
-      }]);
-    }, 3000);
-  };
-
-  const disconnect = () => {
-    setIsConnected(false);
-    setIsAIMode(false);
-    setStranger(null);
-    setMessages([]);
-    setConversationHistory([]);
-    setIsTyping(false);
-  };
-
   const handleApplyStrangerSettings = (settings: StrangerSettings) => {
     setStrangerSettings(settings);
     toast({
@@ -252,7 +261,7 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
       </div>
 
       {/* Connection Status */}
-      {!isConnected && !isSearching && (
+      {!isConnected && matchmakingStatus !== "searching" && (
         <div className="flex-1 flex items-center justify-center p-6">
           <Card className="w-full max-w-md p-6 text-center bg-white/70 backdrop-blur-sm border-purple-200 animate-scale-in">
             <div className="bg-gradient-to-r from-purple-500 to-pink-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -272,14 +281,14 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
       )}
 
       {/* Searching */}
-      {isSearching && (
+      {matchmakingStatus === "searching" && (
         <div className="flex-1 flex items-center justify-center p-6">
           <Card className="w-full max-w-md p-6 text-center bg-white/70 backdrop-blur-sm border-purple-200">
             <div className="animate-pulse bg-gradient-to-r from-purple-500 to-pink-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tìm kiếm...</h2>
-            <p className="text-gray-600 mb-4">Đang kết nối bạn với người khác</p>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tìm kiếm người lạ...</h2>
+            <p className="text-gray-600 mb-4">Nếu chưa có ai, bạn sẽ là người đầu tiên trong hàng chờ.</p>
             <div className="flex justify-center">
               <div className="flex space-x-1">
                 <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>

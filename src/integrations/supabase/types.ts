@@ -95,6 +95,24 @@ export type Database = {
           },
         ]
       }
+      stranger_queue: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       upgrade_requests: {
         Row: {
           admin_id: string | null

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 import { VN_PROVINCES } from "@/utils/vnProvinces";
 import HashtagPostsModal from "./HashtagPostsModal";
+import { useNavigate } from "react-router-dom";
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
@@ -331,6 +332,8 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
   const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
   const { likeCount, liked, like, unlike, isToggling } = usePostLikes(post.id, user?.id);
 
+  const navigate = useNavigate();
+
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentInput.trim()) return;
@@ -353,10 +356,16 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
         <img
           src={post.profiles?.avatar || demoUser.avatar}
           alt={post.profiles?.name || "User"}
-          className="w-11 h-11 rounded-full object-cover border shadow"
+          className="w-11 h-11 rounded-full object-cover border shadow cursor-pointer"
+          onClick={() => post.profiles?.id && navigate(`/profile/${post.profiles.id}`)}
         />
         <div className="flex flex-col">
-          <span className="font-semibold text-gray-800">{post.profiles?.name || "Ẩn danh"}</span>
+          <span
+            className="font-semibold text-gray-800 cursor-pointer hover:underline"
+            onClick={() => post.profiles?.id && navigate(`/profile/${post.profiles.id}`)}
+          >
+            {post.profiles?.name || "Ẩn danh"}
+          </span>
           <span className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</span>
         </div>
       </div>

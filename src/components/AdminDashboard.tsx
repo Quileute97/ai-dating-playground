@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Users, Bot, MessageSquare, Settings, TrendingUp, Eye, Plus, Edit, Trash2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AddFakeUserModal from './AddFakeUserModal';
 import AddAIPromptModal from './AddAIPromptModal';
+import EditFakeUserModal from './EditFakeUserModal';
+import EditAIPromptModal from './EditAIPromptModal';
 import { aiService } from '@/services/aiService';
 
 interface FakeUser {
@@ -82,6 +83,9 @@ const AdminDashboard = () => {
     searchRadius: 5
   });
 
+  const [editingFakeUser, setEditingFakeUser] = useState<FakeUser | null>(null);
+  const [editingAIPrompt, setEditingAIPrompt] = useState<AIPrompt | null>(null);
+
   const handleAddFakeUser = (userData: Omit<FakeUser, 'id'>) => {
     const newUser: FakeUser = {
       ...userData,
@@ -117,6 +121,20 @@ const AdminDashboard = () => {
     
     console.log('Settings saved:', settings);
     // You could show a toast notification here
+  };
+
+  const handleEditFakeUser = (user: FakeUser) => setEditingFakeUser(user);
+  const handleUpdateFakeUser = (user: FakeUser) => {
+    setFakeUsers(prev =>
+      prev.map(fu => fu.id === user.id ? user : fu)
+    );
+  };
+
+  const handleEditAIPrompt = (prompt: AIPrompt) => setEditingAIPrompt(prompt);
+  const handleUpdateAIPrompt = (prompt: AIPrompt) => {
+    setAIPrompts(prev =>
+      prev.map(p => p.id === prompt.id ? prompt : p)
+    );
   };
 
   return (
@@ -406,6 +424,22 @@ const AdminDashboard = () => {
           isOpen={showAddPromptModal}
           onClose={() => setShowAddPromptModal(false)}
           onAdd={handleAddAIPrompt}
+        />
+
+        {/* Thêm modal chỉnh sửa người dùng ảo */}
+        <EditFakeUserModal
+          isOpen={!!editingFakeUser}
+          user={editingFakeUser}
+          onClose={() => setEditingFakeUser(null)}
+          onSave={handleUpdateFakeUser}
+        />
+
+        {/* Thêm modal chỉnh sửa AI Prompt */}
+        <EditAIPromptModal
+          isOpen={!!editingAIPrompt}
+          prompt={editingAIPrompt}
+          onClose={() => setEditingAIPrompt(null)}
+          onSave={handleUpdateAIPrompt}
         />
       </div>
     </div>

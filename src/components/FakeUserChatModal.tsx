@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useConversationHistory } from "@/hooks/useConversationHistory";
 import { supabase } from "@/integrations/supabase/client";
-// Thêm import aiService
 import { aiService } from "@/services/aiService";
+import type { AIMessage } from "@/services/aiService";
 
 interface FakeUserChatModalProps {
   isOpen: boolean;
@@ -80,16 +79,15 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
     const lastMsg = mergedMsgs[mergedMsgs.length - 1];
     if (lastMsg.sender === "admin") {
       aiTimeout.current = setTimeout(async () => {
-        // Nếu đã có API key thì gọi OpenAI, ngược lại dùng Dummy
         let aiReplyText = "";
         let usedOpenAI = false;
         try {
           // chỉ generate AI nếu có API Key đã set vào aiService
           if ((aiService as any).apiKey) {
             setIsAITyping(true);
-            const messagesForAI = mergedMsgs.map(m => ({
-              role: m.sender === 'admin' ? 'user' : 'assistant',
-              content: m.content
+            const messagesForAI: AIMessage[] = mergedMsgs.map((m) => ({
+              role: m.sender === "admin" ? "user" : "assistant",
+              content: m.content,
             }));
             const aiResp = await aiService.generateResponse(messagesForAI, user.aiPrompt || "friendly");
             aiReplyText = aiResp.message;
@@ -268,4 +266,3 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
 };
 
 export default FakeUserChatModal;
-

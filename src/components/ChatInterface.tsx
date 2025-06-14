@@ -297,14 +297,20 @@ const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
           {/* Stranger Info */}
           <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 p-3">
             <div className="flex items-center gap-3">
-              <img 
-                src={stranger.avatar} 
-                alt={stranger.name}
-                className="w-10 h-10 rounded-full object-cover border-2 border-purple-200"
-              />
+              {stranger.avatar ? (
+                <img 
+                  src={stranger.avatar} 
+                  alt={stranger.name ?? 'Stranger'}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-purple-200"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-purple-200 flex items-center justify-center text-gray-500">?</div>
+              )}
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-800">{stranger.name}, {stranger.age}</span>
+                  <span className="font-medium text-gray-800">
+                    {stranger.name ? `${stranger.name}, ${stranger.age}` : 'Người lạ'}
+                  </span>
                   {/* Only show AI badge for admin */}
                   {isAdminMode && isAIMode && (
                     <Badge variant="secondary" className="bg-purple-100 text-purple-700">

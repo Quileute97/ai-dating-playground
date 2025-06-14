@@ -223,9 +223,6 @@ const AdminDashboard = () => {
     alert('Đã lưu mã quảng cáo header!');
   };
 
-  // Sử dụng toast UI/sonner feedback thay vì alert
-  const { toast } = require("@/components/ui/sonner");
-
   // Save bank info
   const handleSaveBankInfo = () => {
     localStorage.setItem('bankInfo', JSON.stringify(bankInfo));

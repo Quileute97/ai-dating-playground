@@ -25,50 +25,17 @@ import AdminSettingsTab from "./AdminSettingsTab";
 import { toast } from "@/hooks/use-toast";
 import type { FakeUser, AIPrompt } from "@/types/admin";
 
-const mockFakeUsers: FakeUser[] = [
-  {
-    id: '1',
-    name: 'Luna',
-    avatar: '/placeholder.svg',
-    gender: 'female',
-    age: 22,
-    bio: 'Cô gái Gen Z yêu mèo và indie music',
-    aiPrompt: 'Trả lời như một cô gái Gen Z năng động, thích mèo và âm nhạc indie',
-    isActive: true
-  },
-  {
-    id: '2',
-    name: 'Alex',
-    avatar: '/placeholder.svg', 
-    gender: 'male',
-    age: 25,
-    bio: 'Trai cool ngầu, ít nói nhưng sâu sắc',
-    aiPrompt: 'Trả lời ngắn gọn, phong cách cool ngầu, đôi khi hơi lạnh lùng',
-    isActive: true
-  }
-];
-
-const mockAIPrompts: AIPrompt[] = [
-  {
-    id: '1',
-    name: 'Người yêu ghen tuông',
-    description: 'AI sẽ trả lời như một người yêu hay ghen và quan tâm',
-    prompt: 'Hãy trả lời như một người yêu hay ghen tuông, quan tâm đến từng hành động của đối phương...',
-    category: 'Romance'
-  },
-  {
-    id: '2',
-    name: 'Gen Z trendy',
-    description: 'Phong cách trẻ trung, dùng từ ngữ Gen Z',
-    prompt: 'Trả lời theo phong cách Gen Z, dùng từ ngữ trendy như "đu trend", "flex", "vibe"...',
-    category: 'Lifestyle'
-  }
-];
-
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [fakeUsers, setFakeUsers] = useState(mockFakeUsers);
-  const [aiPrompts, setAIPrompts] = useState(mockAIPrompts);
+
+  // Dùng dữ liệu thật từ Supabase
+  const [fakeUsers, setFakeUsers] = useState<any[]>([]);
+  const [aiPrompts, setAIPrompts] = useState<AIPrompt[]>([]);
+
+  // Đang tải dữ liệu?
+  const [loadingFakeUsers, setLoadingFakeUsers] = useState(false);
+  const [loadingAIPrompts, setLoadingAIPrompts] = useState(false);
+
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showAddPromptModal, setShowAddPromptModal] = useState(false);
   
@@ -80,7 +47,7 @@ const AdminDashboard = () => {
     searchRadius: 5
   });
 
-  const [editingFakeUser, setEditingFakeUser] = useState<FakeUser | null>(null);
+  const [editingFakeUser, setEditingFakeUser] = useState<any | null>(null);
   const [editingAIPrompt, setEditingAIPrompt] = useState<AIPrompt | null>(null);
 
   const [chatFakeUser, setChatFakeUser] = useState<FakeUser | null>(null);
@@ -150,59 +117,103 @@ const AdminDashboard = () => {
     };
   }, []);
 
-  const handleAddFakeUser = (userData: Omit<FakeUser, 'id'>) => {
-    const newUser: FakeUser = {
-      ...userData,
-      id: Date.now().toString()
+  // Fetch AI Prompts từ Supabase
+  useEffect(() => {
+    const fetchPrompts = async () => {
+      setLoadingAIPrompts(true);
+      const { data, error } = await supabase
+        .from('ai_prompts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) setAIPrompts(data);
+      setLoadingAIPrompts(false);
     };
-    setFakeUsers(prev => [...prev, newUser]);
-  };
+    fetchPrompts();
+  }, []);
 
-  const handleAddAIPrompt = (promptData: Omit<AIPrompt, 'id'>) => {
-    const newPrompt: AIPrompt = {
-      ...promptData,
-      id: Date.now().toString()
+  // Fetch Fake Users từ Supabase
+  useEffect(() => {
+    const fetchFakeUsers = async () => {
+      setLoadingFakeUsers(true);
+      const { data, error } = await supabase
+        .from('fake_users')
+        .select('*, ai_prompts(name, prompt, category)')
+        .order('created_at', { ascending: false });
+      if (!error && data) setFakeUsers(data || []);
+      setLoadingFakeUsers(false);
     };
-    setAIPrompts(prev => [...prev, newPrompt]);
+    fetchFakeUsers();
+  }, []);
+
+  // THÊM: Refetch hỗ trợ sau khi thêm/sửa/xóa
+  const refetchPrompts = async () => {
+    const { data } = await supabase.from('ai_prompts').select('*').order('created_at', { ascending: false });
+    setAIPrompts(data || []);
+  };
+  const refetchFakeUsers = async () => {
+    const { data } = await supabase.from('fake_users').select('*, ai_prompts(name, prompt, category)').order('created_at', { ascending: false });
+    setFakeUsers(data || []);
   };
 
-  const handleDeleteUser = (userId: string) => {
-    setFakeUsers(prev => prev.filter(user => user.id !== userId));
-  };
-
-  const handleDeletePrompt = (promptId: string) => {
-    setAIPrompts(prev => prev.filter(prompt => prompt.id !== promptId));
-  };
-
-  // Sử dụng toast khi lưu settings thành công
-  const handleSaveSettings = () => {
-    // Save OpenAI API key to AI service
-    if (settings.openaiApiKey) {
-      aiService.setApiKey(settings.openaiApiKey);
-    }
-
-    // Save other settings
-    localStorage.setItem('adminSettings', JSON.stringify(settings));
-
-    toast({
-      title: "Đã lưu cài đặt",
-      description: "Cài đặt hệ thống đã được lưu thành công!",
+  // Thêm Fake User
+  const handleAddFakeUser = async (userData: Omit<FakeUser, 'id'>) => {
+    const { aiPrompt, ...rest } = userData;
+    // Lấy AI Prompt id ứng với value được chọn
+    const selectedPrompt = aiPrompts.find(p => p.prompt === aiPrompt);
+    await supabase.from('fake_users').insert({
+      ...rest,
+      ai_prompt_id: selectedPrompt ? selectedPrompt.id : null,
+      is_active: userData.isActive,
     });
-    console.log('Settings saved:', settings);
+    refetchFakeUsers();
   };
 
-  const handleEditFakeUser = (user: FakeUser) => setEditingFakeUser(user);
-  const handleUpdateFakeUser = (user: FakeUser) => {
-    setFakeUsers(prev =>
-      prev.map(fu => fu.id === user.id ? user : fu)
-    );
+  // Thêm AI Prompt
+  const handleAddAIPrompt = async (promptData: Omit<AIPrompt, 'id'>) => {
+    await supabase.from('ai_prompts').insert({
+      ...promptData,
+    });
+    refetchPrompts();
   };
 
-  const handleEditAIPrompt = (prompt: AIPrompt) => setEditingAIPrompt(prompt);
-  const handleUpdateAIPrompt = (prompt: AIPrompt) => {
-    setAIPrompts(prev =>
-      prev.map(p => p.id === prompt.id ? prompt : p)
-    );
+  // Xóa Fake User
+  const handleDeleteUser = async (userId: string) => {
+    await supabase.from('fake_users').delete().eq('id', userId);
+    refetchFakeUsers();
+  };
+
+  // Xóa AI Prompt
+  const handleDeletePrompt = async (promptId: string) => {
+    await supabase.from('ai_prompts').delete().eq('id', promptId);
+    refetchPrompts();
+  };
+
+  // Update Fake User
+  const handleUpdateFakeUser = async (user: FakeUser) => {
+    const selectedPrompt = aiPrompts.find(p => p.prompt === user.aiPrompt);
+    await supabase.from('fake_users').update({
+      name: user.name,
+      avatar: user.avatar,
+      gender: user.gender,
+      age: user.age,
+      bio: user.bio,
+      is_active: user.isActive,
+      ai_prompt_id: selectedPrompt ? selectedPrompt.id : null,
+    }).eq('id', user.id);
+    refetchFakeUsers();
+    setEditingFakeUser(null);
+  };
+
+  // Update AI Prompt
+  const handleUpdateAIPrompt = async (prompt: AIPrompt) => {
+    await supabase.from('ai_prompts').update({
+      name: prompt.name,
+      description: prompt.description,
+      prompt: prompt.prompt,
+      category: prompt.category,
+    }).eq('id', prompt.id);
+    refetchPrompts();
+    setEditingAIPrompt(null);
   };
 
   const handlePostAsFakeUser = (content: string, user: FakeUser) => {
@@ -275,6 +286,7 @@ const AdminDashboard = () => {
     reader.readAsDataURL(file);
   };
 
+  // Tab content
   return (
     <div className="h-full bg-gradient-to-br from-gray-50 to-blue-50 p-6 overflow-y-auto">
       <div className="max-w-6xl mx-auto">
@@ -310,28 +322,47 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="fake-users" className="space-y-6">
-            <AdminFakeUsersTab
-              fakeUsers={fakeUsers}
-              setShowAddUserModal={setShowAddUserModal}
-              chatFakeUser={chatFakeUser}
-              setChatFakeUser={setChatFakeUser}
-              postFakeUser={postFakeUser}
-              setPostFakeUser={setPostFakeUser}
-              handleEditFakeUser={handleEditFakeUser}
-              handleDeleteUser={handleDeleteUser}
-              user={user}
-              aiPrompts={aiPrompts}
-              handlePostAsFakeUser={handlePostAsFakeUser}
-            />
+            {loadingFakeUsers ? (
+              <div>Đang tải danh sách người dùng ảo...</div>
+            ) : (
+              <AdminFakeUsersTab
+                fakeUsers={
+                  fakeUsers.map((user: any) => ({
+                    id: user.id,
+                    name: user.name,
+                    avatar: user.avatar,
+                    gender: user.gender,
+                    age: user.age,
+                    bio: user.bio,
+                    aiPrompt: aiPrompts.find(p => p.id === user.ai_prompt_id)?.prompt || "",
+                    isActive: user.is_active,
+                  }))
+                }
+                setShowAddUserModal={setShowAddUserModal}
+                chatFakeUser={chatFakeUser}
+                setChatFakeUser={setChatFakeUser}
+                postFakeUser={postFakeUser}
+                setPostFakeUser={setPostFakeUser}
+                handleEditFakeUser={setEditingFakeUser}
+                handleDeleteUser={handleDeleteUser}
+                user={user}
+                aiPrompts={aiPrompts}
+                handlePostAsFakeUser={handlePostAsFakeUser}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="ai-prompts" className="space-y-6">
-            <AdminAIPromptsTab
-              aiPrompts={aiPrompts}
-              setShowAddPromptModal={setShowAddPromptModal}
-              handleEditAIPrompt={handleEditAIPrompt}
-              handleDeletePrompt={handleDeletePrompt}
-            />
+            {loadingAIPrompts ? (
+              <div>Đang tải AI Prompts...</div>
+            ) : (
+              <AdminAIPromptsTab
+                aiPrompts={aiPrompts}
+                setShowAddPromptModal={setShowAddPromptModal}
+                handleEditAIPrompt={setEditingAIPrompt}
+                handleDeletePrompt={handleDeletePrompt}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
@@ -437,7 +468,15 @@ const AdminDashboard = () => {
         {/* Thêm modal chỉnh sửa người dùng ảo */}
         <EditFakeUserModal
           isOpen={!!editingFakeUser}
-          user={editingFakeUser}
+          user={
+            editingFakeUser
+              ? {
+                  ...editingFakeUser,
+                  aiPrompt: aiPrompts.find(p => p.id === editingFakeUser.ai_prompt_id)?.prompt || "",
+                  isActive: editingFakeUser.is_active,
+                }
+              : null
+          }
           onClose={() => setEditingFakeUser(null)}
           onSave={handleUpdateFakeUser}
           aiPrompts={aiPrompts}
@@ -454,5 +493,4 @@ const AdminDashboard = () => {
     </div>
   );
 };
-
 export default AdminDashboard;

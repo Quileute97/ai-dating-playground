@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_prompts: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          prompt: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          prompt: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          prompt?: string
+        }
+        Relationships: []
+      }
       bank_info: {
         Row: {
           account_holder: string
@@ -101,6 +128,50 @@ export type Database = {
           user_real_id?: string
         }
         Relationships: []
+      }
+      fake_users: {
+        Row: {
+          age: number | null
+          ai_prompt_id: string | null
+          avatar: string | null
+          bio: string | null
+          created_at: string | null
+          gender: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          age?: number | null
+          ai_prompt_id?: string | null
+          avatar?: string | null
+          bio?: string | null
+          created_at?: string | null
+          gender?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          age?: number | null
+          ai_prompt_id?: string | null
+          avatar?: string | null
+          bio?: string | null
+          created_at?: string | null
+          gender?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fake_users_ai_prompt_id_fkey"
+            columns: ["ai_prompt_id"]
+            isOneToOne: false
+            referencedRelation: "ai_prompts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {

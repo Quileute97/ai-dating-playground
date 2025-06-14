@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import PayOSModal from './PayOSModal';
+import NearbyChatWindow from './NearbyChatWindow';
 
 interface NearbyUser {
   id: string;
@@ -88,6 +89,7 @@ const mockNearbyUsers: NearbyUser[] = [
 
 const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
+  const [chatUser, setChatUser] = useState<NearbyUser | null>(null);
   const [locationPermission, setLocationPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>(mockNearbyUsers);
@@ -211,21 +213,13 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
 
     const user = nearbyUsers.find(u => u.id === userId);
     if (user) {
-      toast({
-        title: "Mở cuộc trò chuyện",
-        description: `Đang mở chat với ${user.name}...`,
-      });
-      
-      // TODO: Implement actual messaging functionality
-      setTimeout(() => {
-        toast({
-          title: "Thông báo",
-          description: "Tính năng chat sẽ được triển khai trong phiên bản tiếp theo!",
-        });
-      }, 500);
+      setChatUser(user);
+      console.log('Opening chat with user:', userId);
     }
+  };
 
-    console.log('Message user:', userId);
+  const handleCloseChat = () => {
+    setChatUser(null);
   };
 
   // Show GPS permission request screen
@@ -396,6 +390,10 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
         </div>
       </div>
     );
+  }
+
+  if (chatUser) {
+    return <NearbyChatWindow user={chatUser} onClose={handleCloseChat} />;
   }
 
   return (

@@ -134,8 +134,23 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   };
 
   const handleExpandRange = () => {
-    if (!upgradeStatus) {
-      // Create a new request for upgrade
+    // Chỉ được phép mở rộng khi đã approved
+    if (upgradeStatus !== "approved") {
+      toast({
+        variant: "destructive",
+        title: "Không thể mở rộng phạm vi",
+        description:
+          upgradeStatus === "pending"
+            ? "Yêu cầu nâng cấp của bạn đang chờ duyệt. Vui lòng đợi admin xác nhận trước khi sử dụng tính năng nâng cao."
+            : "Bạn cần nâng cấp để sử dụng tính năng mở rộng phạm vi.",
+      });
+      return;
+    }
+
+    // Tính năng mở rộng phạm vi chỉ chạy khi đã được approved
+    if (!hasExpandedRange) {
+      setHasExpandedRange(true);
+      // Simulate load more users trong phạm vi 20km (nếu chưa có)
       const extendedUsers = [
         ...nearbyUsers,
         {
@@ -164,13 +179,11 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
         }
       ];
       setNearbyUsers(extendedUsers);
+
       toast({
         title: "Đã mở rộng phạm vi! 🎉",
         description: "Tìm thấy thêm nhiều người trong phạm vi 20km",
       });
-    } else {
-      // Use the existing state from server
-      setHasExpandedRange(true);
     }
   };
 
@@ -420,7 +433,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
                 GPS
               </div>
             )}
-            {hasExpandedRange && (
+            {hasExpandedRange && upgradeStatus === "approved" && (
               <div className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs flex items-center gap-1">
                 <Crown className="w-3 h-3" />
                 Mở rộng
@@ -428,7 +441,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
             )}
           </div>
           <p className="text-gray-600 text-sm">
-            {nearbyUsers.length} người trong phạm vi {hasExpandedRange ? '20km' : '5km'}
+            {nearbyUsers.length} người trong phạm vi {hasExpandedRange && upgradeStatus === "approved" ? '20km' : '5km'}
           </p>
         </div>
 
@@ -519,8 +532,9 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
           </div>
         </ScrollArea>
 
-        {/* Upgrade Banner */}
-        {(!upgradeStatus || upgradeStatus === "rejected") && !nearbyLoading ? (
+        {/* Banner và nút mở rộng chỉ khi cần */}
+        {/* Nếu chưa có upgrade hoặc bị reject => hiện banner nâng cấp */}
+        {(!upgradeStatus || upgradeStatus === "rejected") && !nearbyLoading && (
           <Card className="mt-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
             <div className="text-center">
               <h3 className="font-semibold mb-1">Mở rộng phạm vi tìm kiếm</h3>
@@ -537,7 +551,9 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
               </Button>
             </div>
           </Card>
-        ) : upgradeStatus === "pending" && !nearbyLoading ? (
+        )}
+        {/* Nếu đã gửi yêu cầu nâng cấp (pending) => hiện banner chờ duyệt, KHÔNG render nút mở rộng phạm vi */}
+        {upgradeStatus === "pending" && !nearbyLoading && (
           <Card className="mt-4 p-4 bg-gradient-to-r from-yellow-500 to-orange-400 text-white">
             <div className="text-center">
               <Crown className="w-8 h-8 mx-auto mb-2" />
@@ -547,7 +563,9 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
               </p>
             </div>
           </Card>
-        ) : (
+        )}
+        {/* Nếu đã được approved thì có thể cho biết status, đồng thời enable nút mở rộng */}
+        {upgradeStatus === "approved" && !nearbyLoading && (
           <Card className="mt-4 p-4 bg-gradient-to-r from-green-500 to-blue-500 text-white">
             <div className="text-center">
               <Crown className="w-8 h-8 mx-auto mb-2" />
@@ -555,6 +573,15 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
               <p className="text-sm opacity-90">
                 Bạn có thể tìm kiếm trong phạm vi 20km
               </p>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="mt-3 text-green-700"
+                onClick={handleExpandRange}
+                disabled={hasExpandedRange}
+              >
+                {hasExpandedRange ? "Đã mở rộng" : "Mở rộng phạm vi"}
+              </Button>
             </div>
           </Card>
         )}
@@ -564,7 +591,10 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
       <PayOSModal
         isOpen={showPayOSModal}
         onClose={() => setShowPayOSModal(false)}
-        onSuccess={handleExpandRange}
+        onSuccess={() => {
+          // Khi thanh toán thành công chỉ set modal đóng, trạng thái "pending" sẽ load từ useUpgradeStatus ở lần render tiếp theo.
+          setShowPayOSModal(false);
+        }}
         packageType="nearby"
         packageName="Mở rộng phạm vi"
         price={49000}
@@ -579,3 +609,5 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
 };
 
 export default NearbyInterface;
+
+// Lưu ý: File này khá dài (~582 dòng). Bạn nên cân nhắc refactor thành các component nhỏ để code dễ bảo trì hơn!

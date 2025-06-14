@@ -2,6 +2,12 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from "uuid";
 
+// Hàm kiểm tra ID có đúng UUID v4 hay không
+function isUUIDv4(id: string) {
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return !!id && UUID_REGEX.test(id);
+}
+
 interface MatchResult {
   partnerId: string | null;
   conversationId: string | null;
@@ -59,7 +65,7 @@ export function useStrangerMatchmaking(userId: string | null) {
     }
   }, [userId, status]);
 
-  // Tìm ghép đôi user khác trong queue
+  // Tìm ghép đôi user khác trong queue, ƯU TIÊN user thật với nhau
   const tryMatch = useCallback(async () => {
     console.log("[STRANGER] [tryMatch] === POLLING === userId =", userId, "status =", status);
     if (!userId) {
@@ -72,80 +78,90 @@ export function useStrangerMatchmaking(userId: string | null) {
         .select("user_id, created_at")
         .order("created_at", { ascending: true });
 
-      console.log("[STRANGER] [tryMatch] Nhận queueList:", queueList, queueError);
-
       if (queueError) {
-        console.log("[STRANGER] [tryMatch] Lỗi khi lấy queueList:", queueError);
+        setStatus("error");
+        return;
+      }
+      if (!queueList) return;
+
+      // Loại bỏ chính mình khỏi queue
+      const available = queueList.filter((item: any) => item.user_id !== userId);
+      // Phân nhóm: user thật (UUID v4) và anonymous (id không phải UUID v4)
+      const realUsers = available.filter((i: any) => isUUIDv4(i.user_id));
+      const anonUsers = available.filter((i: any) => !isUUIDv4(i.user_id));
+
+      let partnerId: string | null = null;
+      if (realUsers.length > 0) {
+        // Ưu tiên ghép với user thật trước
+        partnerId = realUsers[0].user_id;
+        console.log("[STRANGER] [tryMatch] Ưu tiên match với user thật:", partnerId);
+      } else if (anonUsers.length > 0) {
+        // Nếu không có user thật, ghép với anonymous
+        partnerId = anonUsers[0].user_id;
+        console.log("[STRANGER] [tryMatch] Không có user thật, match với anonymous:", partnerId);
+      } else {
+        console.log("[STRANGER] [tryMatch] Không tìm thấy ai để match...");
+        return;
+      }
+
+      // Tìm conversation giữa userId và partnerId (check cả 2 chiều)
+      const { data: existed, error: existedError } = await supabase
+        .from("conversations")
+        .select("id")
+        .or(`and(user_real_id.eq.${userId},user_fake_id.eq.${partnerId}),and(user_real_id.eq.${partnerId},user_fake_id.eq.${userId})`)
+        .limit(1);
+
+      let conversationId = null;
+      if (existedError) {
         setStatus("error");
         return;
       }
 
-      if (!queueList) return;
-
-      const available = queueList.filter((item: any) => item.user_id !== userId);
-      console.log("[STRANGER] [tryMatch] Những người có thể match:", available);
-
-      if (available.length > 0) {
-        // Ghép đôi thành công, tạo conversation
-        const partnerId = available[0].user_id;
-        console.log(`[STRANGER] [tryMatch] Ghép với ${partnerId}. Check xem đã có conversation giữa ${userId} và ${partnerId} chưa...`);
-
-        const { data: existed, error: existedError } = await supabase
-          .from("conversations")
-          .select("id")
-          .or(`and(user_real_id.eq.${userId},user_fake_id.eq.${partnerId}),and(user_real_id.eq.${partnerId},user_fake_id.eq.${userId})`)
-          .limit(1);
-
-        let conversationId = null;
-        if (existedError) {
-          console.log("[STRANGER] [tryMatch] Lỗi kiểm tra conversation đã có chưa:", existedError);
+      if (existed && existed.length > 0) {
+        conversationId = existed[0].id;
+      } else {
+        // Khi match giữa 2 user thật, cho phép gán user_real_id, user_fake_id đều là UUID
+        // Để cả 2 đều xem được conversation, sẽ insert 2 chiều (mỗi người là real ở 1 bản ghi)
+        let cCreated = null;
+        let createConvError = null;
+        if (isUUIDv4(userId) && isUUIDv4(partnerId)) {
+          // Ghép 2 user thật -> tạo 2 conversation mirror
+          const { data: c1, error: e1 } = await supabase
+            .from("conversations")
+            .insert([{ user_real_id: userId, user_fake_id: partnerId }])
+            .select("id")
+            .single();
+          const { data: c2, error: e2 } = await supabase
+            .from("conversations")
+            .insert([{ user_real_id: partnerId, user_fake_id: userId }])
+            .select("id");
+          cCreated = c1; // chỉ trả về id của userId bản ghi đầu
+          createConvError = e1 || e2;
+          conversationId = c1?.id;
+        } else {
+          // 1 bên là user thật, 1 bên là anonymous (hoặc fake)
+          const { data: c, error: e } = await supabase
+            .from("conversations")
+            .insert([{ user_real_id: userId, user_fake_id: partnerId }])
+            .select("id")
+            .single();
+          cCreated = c;
+          createConvError = e;
+          conversationId = c?.id;
+        }
+        if (createConvError) {
           setStatus("error");
           return;
         }
-
-        if (existed && existed.length > 0) {
-          conversationId = existed[0].id;
-          console.log("[STRANGER] [tryMatch] Đã có cuộc trò chuyện cũ, dùng id:", conversationId);
-        } else {
-          const { data: cCreated, error: createConvError } = await supabase
-            .from("conversations")
-            .insert([
-              {
-                user_real_id: userId,
-                user_fake_id: partnerId,
-              }
-            ])
-            .select("id")
-            .single();
-          conversationId = cCreated?.id;
-          console.log("[STRANGER] [tryMatch] Tạo mới conversation, data:", cCreated, createConvError);
-          if (createConvError) {
-            console.log("[STRANGER] [tryMatch] Lỗi tạo conversation:", createConvError);
-            setStatus("error");
-            return;
-          }
-        }
-
-        // Xóa 2 user khỏi queue
-        const { error: delMeErr } = await supabase
-          .from("stranger_queue")
-          .delete()
-          .eq("user_id", userId);
-        const { error: delThemErr } = await supabase
-          .from("stranger_queue")
-          .delete()
-          .eq("user_id", partnerId);
-
-        console.log("[STRANGER] [tryMatch] Đã xóa khỏi queue? delMeErr:", delMeErr, "delThemErr:", delThemErr);
-
-        setMatchResult({ partnerId, conversationId });
-        setStatus("matched");
-        console.log("[STRANGER] [tryMatch] Hoàn tất MATCH! partnerId:", partnerId, "conversationId:", conversationId);
-      } else {
-        console.log("[STRANGER] [tryMatch] Chưa tìm thấy ai để match...");
       }
+
+      // Xóa 2 user khỏi queue
+      await supabase.from("stranger_queue").delete().eq("user_id", userId);
+      await supabase.from("stranger_queue").delete().eq("user_id", partnerId);
+
+      setMatchResult({ partnerId, conversationId });
+      setStatus("matched");
     } catch (err) {
-      console.log("[STRANGER] [tryMatch] Exception error:", err);
       setStatus("error");
     }
   }, [userId, status]);

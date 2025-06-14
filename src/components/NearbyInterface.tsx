@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MapPin, Heart, MessageCircle, Star, Navigation, ArrowLeft, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -213,6 +214,8 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
 
     const user = nearbyUsers.find(u => u.id === userId);
     if (user) {
+      // Close profile view if open and open chat
+      setSelectedUser(null);
       setChatUser(user);
       console.log('Opening chat with user:', userId);
     }

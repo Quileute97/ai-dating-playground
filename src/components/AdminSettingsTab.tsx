@@ -56,6 +56,29 @@ const AdminSettingsTab: React.FC<Props> = ({
         qrImgUploading={qrImgUploading}
         onQrUpload={onQrUpload}
       />
+      {/* Thêm phần hiển thị Sitemap */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Sơ đồ website (Sitemap)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div>
+            <label className="block text-sm font-medium mb-2">Link sitemap.xml</label>
+            <a
+              href="/sitemap.xml"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline break-all"
+            >
+              Xem sitemap.xml
+            </a>
+            <p className="text-xs text-muted-foreground mt-1">
+              Nếu bạn muốn cập nhật sitemap, hãy chỉnh sửa lại file <b>public/sitemap.xml</b>.<br />
+              Sitemap giúp Google hiểu cấu trúc web của bạn để index tốt hơn.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Cài đặt AI</CardTitle>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -116,7 +117,7 @@ const DatingApp = () => {
     }
     switch (activeTab) {
       case "chat":
-        return <ChatInterface user={user} isAdminMode={isAdminAuthenticated} matchmaking={matchmaking} userId={user?.id ?? anonId} />;
+        return <ChatInterface user={user} isAdminMode={isAdminAuthenticated} matchmaking={matchmaking} />;
       case "dating":
         return user ? <SwipeInterface user={user} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "nearby":

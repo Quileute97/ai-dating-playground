@@ -150,7 +150,7 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
   const { posts, isLoading, createPost, creating, refetch } = useTimelinePosts(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
 
-  // Xử lý đăng post mới (dùng Supabase)
+  // Xử lý đăng post mới (KHÔNG truyền sticker)
   const handlePostSubmit = async (
     data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">
   ) => {
@@ -159,7 +159,7 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
       user_id: userId,
       media_url: data.media?.url,
       media_type: data.media?.type,
-      sticker: data.sticker,
+      // sticker: data.sticker, // LOẠI BỎ sticker
       location: data.location,
     });
     refetch();
@@ -193,7 +193,7 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
 };
 
 // ---------- Sửa PostForm ----------
-// Thay đổi truyền locationName, sticker insert vào position cursor
+// BỎ sticker liên quan UI/state
 const PostForm: React.FC<{
   user: any;
   onCreate: (data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">) => Promise<void>;
@@ -201,29 +201,15 @@ const PostForm: React.FC<{
 }> = ({ user, onCreate, posting }) => {
   const [content, setContent] = React.useState("");
   const [media, setMedia] = React.useState<MediaFile | null>(null);
-  const [sticker, setSticker] = React.useState<typeof STICKERS[number] | null>(null);
+  // const [sticker, setSticker] = React.useState<typeof STICKERS[number] | null>(null); // BỎ sticker
 
-  // NEW: loading state cho upload ảnh/video
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
-  // --- Chèn sticker vào đúng vị trí con trỏ soạn thảo
   const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
-  const handleStickerInsert = (code: string) => {
-    const el = textAreaRef.current;
-    if (!el) return;
-    const [start, end] = [el.selectionStart, el.selectionEnd];
-    const before = content.slice(0, start);
-    const after = content.slice(end);
-    const next = before + " " + code + " " + after;
-    setContent(next);
-    setTimeout(() => {
-      el.focus();
-      el.selectionStart = el.selectionEnd = start + code.length + 2;
-    }, 0);
-  };
+  // BỎ handleStickerInsert
 
-  // Chọn media và upload lên Supabase Storage (đã thay thế anh.moe)
+  // Chọn media và upload lên Supabase Storage (giữ nguyên)
   const handleMediaChange = async (e: ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -240,10 +226,8 @@ const PostForm: React.FC<{
     setUploadingMedia(false);
   };
 
-  // Remove media
   const handleRemoveMedia = () => setMedia(null);
 
-  // Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!content.trim() && !media) || uploadingMedia) return;
@@ -253,13 +237,12 @@ const PostForm: React.FC<{
         avatar: user?.avatar ?? demoUser.avatar
       },
       content: content.trim(),
-      // bỏ location
       media: media ?? undefined,
-      sticker,
+      // sticker: sticker, // BỎ sticker không truyền nữa
     });
     setContent("");
     setMedia(null);
-    setSticker(null);
+    // setSticker(null); // BỎ
   };
 
   return (
@@ -276,26 +259,10 @@ const PostForm: React.FC<{
               onChange={e => setContent(e.target.value)}
               disabled={posting || uploadingMedia}
             />
-            {/* Sticker Selector (small inline) */}
-            <div className="absolute right-2 top-2 flex flex-nowrap gap-1 z-20">
-              {STICKERS.slice(0, 6).map(s => (
-                <button
-                  key={s.id}
-                  type="button"
-                  tabIndex={-1}
-                  className="w-7 h-7 hover:scale-110 transition"
-                  title={s.name}
-                  disabled={posting || uploadingMedia}
-                  onClick={() => handleStickerInsert(s.code)}
-                >
-                  <img src={s.url} alt={s.name} className="w-full h-full" />
-                </button>
-              ))}
-              <PopoverStickerSelect onSticker={s => handleStickerInsert(s.code)} disabled={posting || uploadingMedia} />
-            </div>
+            {/* BỎ Sticker Selector UI */}
           </div>
           <div className="flex gap-2 flex-wrap items-center">
-            {/* Upload buttons */}
+            {/* Upload buttons giữ nguyên */}
             <label className="cursor-pointer flex gap-1 items-center text-sm px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200">
               <ImageIcon size={16} />
               <input
@@ -337,24 +304,10 @@ const PostForm: React.FC<{
               >
                 ×
               </button>
-              {/* Hiển thị sticker overlay vào media preview */}
-              {sticker && (
-                <img
-                  src={sticker.url}
-                  alt={sticker.name}
-                  className="absolute left-2 bottom-2 w-10 h-10 z-10 drop-shadow"
-                  style={{ filter: "drop-shadow(0 2px 8px #ffcfef)" }}
-                />
-              )}
+              {/* KHÔNG hiển thị sticker overlay nữa */}
             </div>
           )}
-          {/* Hiển thị sticker nếu có và không có media */}
-          {sticker && !media && (
-            <div className="mt-1 mb-1 flex items-center gap-1">
-              <img src={sticker.url} alt={sticker.name} className="w-9 h-9" />
-              <span className="text-sm text-gray-500">{sticker.name}</span>
-            </div>
-          )}
+          {/* KHÔNG hiển thị sticker nếu không có media */}
           {/* Địa điểm đã bị loại bỏ */}
         </div>
         <Button
@@ -369,44 +322,10 @@ const PostForm: React.FC<{
   );
 };
 
-// ---------- Sửa PopoverStickerSelect
-const PopoverStickerSelect: React.FC<{ onSticker: (s: typeof STICKERS[number]) => void, disabled?: boolean }> = ({ onSticker, disabled }) => {
-  const [open, setOpen] = React.useState(false);
-  return (
-    <div className="relative">
-      <Button
-        size="sm"
-        variant="ghost"
-        type="button"
-        className={cn("px-2 py-0 rounded-md", open && "bg-pink-100")}
-        onClick={() => setOpen(!open)}
-        disabled={disabled}
-      >
-        <Smile size={17} />
-      </Button>
-      {open && (
-        <div className="absolute left-0 top-10 z-30 grid grid-cols-5 gap-2 p-2 bg-white shadow-xl rounded-xl border border-gray-200 min-w-[220px] animate-fade-in">
-          {STICKERS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={cn(
-                "hover:bg-pink-50 p-1 rounded-md transition"
-              )}
-              onClick={() => { onSticker(s); setOpen(false); }}
-              tabIndex={0}
-              disabled={disabled}
-            >
-              <img src={s.url} alt={s.name} className="w-8 h-8 mx-auto" />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-};
+// ---------- BỎ COMPONENT PopoverStickerSelect ----------
+// (Component này chỉ dùng cho sticker, đã bỏ hoàn toàn)
 
-// ---------- Sửa lại giao diện PostItem (gọn đẹp như cũ, tối giản, spacing ổn) ---
+// ---------- Sửa PostItem ----------
 const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) => void }> = ({ post, user, onHashtagClick }) => {
   const [commentInput, setCommentInput] = React.useState("");
   const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
@@ -444,7 +363,7 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
       <div className="text-base text-gray-900 mb-2 whitespace-pre-line leading-relaxed min-h-[18px]" style={{ wordBreak: 'break-word' }}>
         {renderContent(post.content, onHashtagClick)}
       </div>
-      {/* Media và sticker */}
+      {/* Media */}
       {post.media_url && post.media_type === "image" && (
         <div className="relative flex items-center justify-center mt-2 mb-3">
           <img
@@ -453,14 +372,7 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
             className="rounded-lg object-cover border max-h-72 w-full"
             style={{ maxWidth: '98%' }}
           />
-          {post.sticker && (
-            <img
-              src={post.sticker.url}
-              alt={post.sticker.name}
-              className="absolute left-4 bottom-3 w-11 h-11 z-10"
-              style={{ filter: "drop-shadow(0 3px 12px #ffcfef)" }}
-            />
-          )}
+          {/* KHÔNG render sticker overlay */}
         </div>
       )}
       {post.media_url && post.media_type === "video" && (
@@ -471,22 +383,10 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
             className="rounded-lg object-contain border max-h-72 w-full"
             style={{ maxWidth: '98%' }}
           />
-          {post.sticker && (
-            <img
-              src={post.sticker.url}
-              alt={post.sticker.name}
-              className="absolute left-4 bottom-3 w-11 h-11 z-10"
-              style={{ filter: "drop-shadow(0 3px 12px #ffcfef)" }}
-            />
-          )}
+          {/* KHÔNG render sticker overlay */}
         </div>
       )}
-      {!post.media_url && post.sticker && (
-        <div className="mb-2 flex items-center gap-2">
-          <img src={post.sticker.url} alt={post.sticker.name} className="w-7 h-7" />
-          <span className="text-xs text-gray-500">{post.sticker.name}</span>
-        </div>
-      )}
+      {/* KHÔNG render sticker nếu không có media */}
       {/* Địa điểm đã bị loại bỏ */}
       {/* Actions */}
       <div className="flex items-center gap-4 mt-2 mb-2">
@@ -546,36 +446,13 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
   );
 };
 
-// ---------- Sửa renderContent ----------
-const stickerCodeToImg: Record<string, string> = Object.fromEntries(STICKERS.map(x => [x.code, x.url]));
-
-// mình cần render sticker trong nội dung text nếu có mã sticker như ":fire:"
-// Ta sẽ parse và convert sang icon sticker
+// ---------- Sửa renderContent: BỎ sticker code parsing ----------
 const renderContent = (content: string, onHashtagClick: (tag: string) => void) => {
   if (!content) return null;
-  // Replace stickerCode in content
-  let parts: Array<string | { sticker: string } > = [];
-  const regex = /(:\w+:)/g;
-  let last = 0;
-  let m;
-  while ((m = regex.exec(content))) {
-    if (m.index > last) parts.push(content.slice(last, m.index));
-    parts.push({ sticker: m[1] });
-    last = m.index + m[0].length;
-  }
-  if (last < content.length) parts.push(content.slice(last));
-  // Render部分
-  return parts.map((p, i) => {
-    if (typeof p === "string") {
-      return <React.Fragment key={i}>{parseHashtags(p, onHashtagClick)}</React.Fragment>;
-    }
-    // Sticker
-    const url = stickerCodeToImg[p.sticker];
-    if (url) return <img key={i} src={url} alt={p.sticker} className="inline w-6 h-6 mx-0.5 align-text-bottom" />;
-    return p.sticker;
-  });
+  // KHÔNG replace stickerCode, chỉ parse hashtag
+  return <>{parseHashtags(content, onHashtagClick)}</>;
 };
 
 export default Timeline;
 
-// Lưu ý: File này quá dài, bạn nên tách PostForm, PopoverStickerSelect, PostCard ra file riêng cho dễ maintain!
+// ... keep existing code (cuối file, export, lưu ý refactor)

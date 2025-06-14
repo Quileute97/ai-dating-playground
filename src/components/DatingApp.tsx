@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut } from 'lucide-react';
+import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import ChatInterface from './ChatInterface';
@@ -12,6 +11,7 @@ import AuthModal from './AuthModal';
 import UserProfile from './UserProfile';
 import AIConfigModal from './AIConfigModal';
 import AdminLogin from './AdminLogin';
+import Timeline from './Timeline';
 
 const DatingApp = () => {
   const [activeTab, setActiveTab] = useState('chat');
@@ -39,7 +39,8 @@ const DatingApp = () => {
   const tabs = [
     { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500' },
     { id: 'dating', label: 'Hẹn hò', icon: Heart, color: 'from-pink-500 to-red-500' },
-    { id: 'nearby', label: 'Quanh đây', icon: MapPin, color: 'from-blue-500 to-purple-500' }
+    { id: 'nearby', label: 'Quanh đây', icon: MapPin, color: 'from-blue-500 to-purple-500' },
+    { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500' }
   ];
 
   const handleLogin = (userData: any) => {
@@ -103,6 +104,8 @@ const DatingApp = () => {
         return <SwipeInterface user={user} />;
       case 'nearby':
         return <NearbyInterface user={user} />;
+      case 'timeline':
+        return <Timeline user={user} />;
       default:
         return null;
     }

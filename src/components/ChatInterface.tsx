@@ -47,6 +47,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasNotified, setHasNotified] = useState(false);
+  const [isStartingQueue, setIsStartingQueue] = useState(false); // NEW
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -98,25 +99,32 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   };
 
   // startSearching: chỉ gọi matchmaking.startQueue() với userId hoặc anonId
-  const startSearching = () => {
+  const startSearching = async () => {
     const realUserId = user?.id || anonId;
     console.log("[CHAT] Bấm Bắt đầu chat - user?.id:", user?.id, "| anonId:", anonId, "| realUserId:", realUserId);
     setMessages([]);
     setConversationHistory([]);
     setIsAIMode(false);
     if (matchmaking?.startQueue && realUserId) {
-      console.log("[CHAT] Gọi matchmaking.startQueue với realUserId", realUserId);
-      matchmaking.startQueue(realUserId);
+      try {
+        setIsStartingQueue(true); // đánh dấu đang xử lý
+        console.log("[CHAT] Gọi matchmaking.startQueue với realUserId", realUserId);
+        await matchmaking.startQueue(realUserId);
+      } catch (err) {
+        console.log("[CHAT] Lỗi khi startQueue:", err);
+      } finally {
+        setIsStartingQueue(false); // luôn enable lại dù lỗi hay thành công
+      }
     } else {
       console.log("[CHAT] Không thể startQueue vì thiếu userId/anonId");
     }
   };
 
   // Trước khi render, log trạng thái disable button để debug
-  const disableStartBtn = !(user?.id || anonId);
+  const disableStartBtn = !(user?.id || anonId) || isStartingQueue;
   useEffect(() => {
     console.log("[CHAT] Trạng thái disable nút Bắt đầu chat:", disableStartBtn, "| user?.id:", user?.id, "| anonId:", anonId);
-  }, [user?.id, anonId]);
+  }, [user?.id, anonId, isStartingQueue]);
 
   // Khi bấm ngắt kết nối
   const disconnect = async () => {
@@ -290,8 +298,17 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
               disabled={disableStartBtn}
             >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Bắt đầu chat
+              {isStartingQueue ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin w-4 h-4 mr-2 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
+                  Đang bắt đầu...
+                </span>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Bắt đầu chat
+                </>
+              )}
             </Button>
             {!(user?.id || anonId) && (
               <p className="text-xs text-gray-500 mt-2">Vui lòng đăng nhập hoặc tiếp tục dưới dạng khách để bắt đầu chat</p>

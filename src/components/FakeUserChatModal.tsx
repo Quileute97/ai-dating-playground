@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useConversationHistory } from "@/hooks/useConversationHistory";
 import { supabase } from "@/integrations/supabase/client";
+// Thêm import aiService
+import { aiService } from "@/services/aiService";
 
 interface FakeUserChatModalProps {
   isOpen: boolean;
@@ -36,6 +38,8 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
 
   const [input, setInput] = useState("");
   const [localMessages, setLocalMessages] = useState<any[]>([]);
+  const [isAITyping, setIsAITyping] = useState(false);
+
   const scrollEndRef = useRef<HTMLDivElement>(null);
 
   // Reset khi mở modal hoặc user ảo mới
@@ -51,6 +55,20 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
     scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversationData, localMessages]);
 
+  // LẤY API KEY từ localStorage, nếu có thì truyền vào aiService
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      const settings = localStorage.getItem('datingAppSettings');
+      if (settings) {
+        const parsed = JSON.parse(settings);
+        if (parsed.openaiApiKey) {
+          aiService.setApiKey(parsed.openaiApiKey);
+        }
+      }
+    } catch {}
+  }, [isOpen]);
+
   // Auto AI trả lời nếu không có reply từ admin
   useEffect(() => {
     if (!isOpen || !user) return;
@@ -62,13 +80,32 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
     const lastMsg = mergedMsgs[mergedMsgs.length - 1];
     if (lastMsg.sender === "admin") {
       aiTimeout.current = setTimeout(async () => {
-        // AI trả lời bằng DummyAIReply
+        // Nếu đã có API key thì gọi OpenAI, ngược lại dùng Dummy
+        let aiReplyText = "";
+        let usedOpenAI = false;
+        try {
+          // chỉ generate AI nếu có API Key đã set vào aiService
+          if ((aiService as any).apiKey) {
+            setIsAITyping(true);
+            const messagesForAI = mergedMsgs.map(m => ({
+              role: m.sender === 'admin' ? 'user' : 'assistant',
+              content: m.content
+            }));
+            const aiResp = await aiService.generateResponse(messagesForAI, user.aiPrompt || "friendly");
+            aiReplyText = aiResp.message;
+            usedOpenAI = true;
+          }
+        } catch (err) {
+          aiReplyText = DummyAIReply(user.aiPrompt);
+        }
+        if (!aiReplyText) aiReplyText = DummyAIReply(user.aiPrompt);
+
         // Nếu đã có conversation trên DB -> insert ngược vào Supabase
         if (conversationData?.id) {
           await supabase.from("messages").insert({
             conversation_id: conversationData.id,
             sender: "fake",
-            content: DummyAIReply(user.aiPrompt),
+            content: aiReplyText,
           });
           refetch(); // Sync lại latest messages
         } else {
@@ -78,11 +115,12 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
             {
               id: Date.now() + "_ai",
               sender: "fake",
-              content: DummyAIReply(user.aiPrompt),
+              content: aiReplyText,
               created_at: new Date().toISOString()
             }
           ]);
         }
+        setIsAITyping(false);
       }, DEMO_AI_REPLY_DELAY);
     }
     // eslint-disable-next-line
@@ -220,6 +258,9 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
         </div>
         <div className="text-xs text-gray-400 pt-1">
           Nếu admin không trả lời sau 1 phút, AI sẽ tự động phản hồi cho demo (bình thường là 1 giờ)
+          {isAITyping && (
+            <span className="ml-2 text-purple-500 font-semibold animate-pulse">AI đang trả lời...</span>
+          )}
         </div>
       </DialogContent>
     </Dialog>

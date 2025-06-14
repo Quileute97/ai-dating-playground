@@ -6,9 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Camera, Edit, Save, X, Plus, Loader2 } from 'lucide-react';
+import { Camera, Edit, Save, X, Plus, Loader2, ImagePlus } from 'lucide-react';
 import { uploadAvatar } from '@/utils/uploadAvatar';
+import { uploadAlbumImage } from '@/utils/uploadAlbumImage';
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -22,45 +22,31 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     age: user?.age || '',
-    location: user?.location || '',
     bio: user?.bio || 'Chào mọi người! Tôi đang tìm kiếm những kết nối thú vị.',
-    interests: user?.interests || [],
-    newInterest: '',
     avatar: user?.avatar || '',
+    album: user?.album || [],
   });
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const albumInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
     const updatedUser = {
       ...user,
       ...profileData,
-      interests: profileData.interests,
+      album: profileData.album,
       avatar: profileData.avatar,
     };
     onUpdateProfile(updatedUser);
     setIsEditing(false);
   };
 
-  const addInterest = () => {
-    if (profileData.newInterest.trim() && !profileData.interests.includes(profileData.newInterest.trim())) {
-      setProfileData({
-        ...profileData,
-        interests: [...profileData.interests, profileData.newInterest.trim()],
-        newInterest: ''
-      });
-    }
-  };
-
-  const removeInterest = (interest: string) => {
-    setProfileData({
-      ...profileData,
-      interests: profileData.interests.filter(i => i !== interest)
-    });
-  };
-
   const handleCameraClick = () => {
-    if (fileInputRef.current) fileInputRef.current.click();
+    if (avatarInputRef.current) avatarInputRef.current.click();
+  };
+
+  const handleAlbumClick = () => {
+    if (albumInputRef.current) albumInputRef.current.click();
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,6 +60,24 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
       alert(err.message || "Đã có lỗi xảy ra khi upload ảnh đại diện!");
     }
     setIsUploading(false);
+  };
+
+  const handleAlbumFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+    setIsUploading(true);
+    const uploadedUrls: string[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        const url = await uploadAlbumImage(file);
+        uploadedUrls.push(url);
+      }
+      setProfileData({ ...profileData, album: [...profileData.album, ...uploadedUrls] });
+    } catch (err: any) {
+      alert(err.message || "Đã có lỗi xảy ra khi upload ảnh vào album!");
+    }
+    setIsUploading(false);
+    if (albumInputRef.current) albumInputRef.current.value = ""; // reset input
   };
 
   return (
@@ -119,7 +123,7 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
                   <input
                     type="file"
                     accept="image/*"
-                    ref={fileInputRef}
+                    ref={avatarInputRef}
                     className="hidden"
                     onChange={handleFileChange}
                   />
@@ -161,18 +165,6 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
                   )}
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Địa điểm</Label>
-                {isEditing ? (
-                  <Input
-                    id="location"
-                    value={profileData.location}
-                    onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-                  />
-                ) : (
-                  <p className="font-medium">{user?.location}</p>
-                )}
-              </div>
             </CardContent>
           </Card>
 
@@ -195,44 +187,47 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
             </CardContent>
           </Card>
 
-          {/* Interests */}
+          {/* Album Section */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Sở thích</CardTitle>
+              <CardTitle className="text-lg">Album ảnh</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {profileData.interests.map((interest, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="bg-purple-100 text-purple-700 hover:bg-purple-200"
-                  >
-                    {interest}
-                    {isEditing && (
-                      <button
-                        onClick={() => removeInterest(interest)}
-                        className="ml-1 hover:text-red-500"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </Badge>
-                ))}
-              </div>
-              
               {isEditing && (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Thêm sở thích mới..."
-                    value={profileData.newInterest}
-                    onChange={(e) => setProfileData({ ...profileData, newInterest: e.target.value })}
-                    onKeyPress={(e) => e.key === 'Enter' && addInterest()}
-                  />
-                  <Button onClick={addInterest} size="sm">
-                    <Plus className="w-4 h-4" />
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleAlbumClick}
+                    size="sm"
+                    type="button"
+                    className="bg-purple-500 hover:bg-purple-600"
+                  >
+                    <ImagePlus className="w-4 h-4 mr-1" />
+                    Thêm ảnh vào album
                   </Button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={albumInputRef}
+                    className="hidden"
+                    multiple
+                    onChange={handleAlbumFileChange}
+                  />
+                  {isUploading && <Loader2 className="ml-2 w-5 h-5 text-purple-500 animate-spin" />}
                 </div>
+              )}
+              {profileData.album && profileData.album.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {profileData.album.map((img: string, idx: number) => (
+                    <img
+                      key={idx}
+                      src={img}
+                      alt={`Ảnh ${idx + 1}`}
+                      className="rounded-lg object-cover w-full h-24 border"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-400">Chưa có ảnh nào trong album.</div>
               )}
             </CardContent>
           </Card>
@@ -255,3 +250,4 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
 };
 
 export default UserProfile;
+

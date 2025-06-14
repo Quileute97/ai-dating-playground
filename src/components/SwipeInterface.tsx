@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import PayOSModal from './PayOSModal';
 import { useBankInfo } from "@/hooks/useBankInfo";
 import { useUpgradeStatus } from './hooks/useUpgradeStatus';
+import { useUserLike } from "@/hooks/useUserLike";
 
 interface UserProfile {
   id: string;
@@ -62,13 +63,15 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
   const { data: goldUpgrade, isLoading: goldLoading } = useUpgradeStatus(user?.id, 'gold');
+  const { likeUser, isProcessing } = useUserLike(user?.id);
 
   const currentProfile = mockProfiles[currentProfileIndex];
   const maxFreeMatches = 10;
   const remainingMatches = maxFreeMatches - dailyMatches;
 
-  const handleSwipe = (direction: 'left' | 'right' | 'super') => {
-    // Check if user has reached daily limit and is not gold member
+  const handleSwipe = async (direction: 'left' | 'right' | 'super') => {
+    if (!currentProfile) return;
+    // Limit (giữ nguyên code cũ)
     if (!isGoldActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
       toast({
         title: "Đã hết lượt match miễn phí!",
@@ -80,18 +83,32 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     }
 
     setSwipeDirection(direction === 'super' ? 'right' : direction);
-    
-    if (direction === 'right' || direction === 'super') {
-      // Increment daily matches count
-      if (!isGoldActive) {
-        setDailyMatches(prev => prev + 1);
-      }
 
-      // Simulate match (30% chance)
-      if (Math.random() > 0.7) {
-        setMatches(prev => prev + 1);
-        setShowMatch(true);
-        setTimeout(() => setShowMatch(false), 3000);
+    if (direction === 'right' || direction === 'super') {
+      // Gọi API Supabase lưu like và kiểm tra match thật sự
+      try {
+        const res = await likeUser(currentProfile.id);
+        if (!isGoldActive) setDailyMatches(prev => prev + 1);
+        if (res.matched) {
+          setMatches(prev => prev + 1);
+          setShowMatch(true);
+          setTimeout(() => setShowMatch(false), 3000);
+          toast({
+            title: "It's a Match! 💖",
+            description: `Bạn và ${currentProfile.name} đã thích nhau!`,
+          });
+        } else {
+          toast({
+            title: "Đã thích!",
+            description: `Bạn đã thích ${currentProfile.name}`,
+          });
+        }
+      } catch (e) {
+        toast({
+          title: "Có lỗi xảy ra!",
+          description: "Vui lòng thử lại",
+          variant: "destructive"
+        });
       }
     }
 

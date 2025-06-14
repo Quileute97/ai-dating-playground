@@ -19,7 +19,8 @@ interface Message {
 interface ChatInterfaceProps {
   user?: any;
   isAdminMode?: boolean;
-  matchmaking?: any; // Thêm prop mới
+  matchmaking?: any;
+  anonId?: string; // Thêm prop mới
 }
 
 interface StrangerSettings {
@@ -29,7 +30,7 @@ interface StrangerSettings {
 
 const PING_SOUND_URL = "/ping.mp3"; // Dùng file ở public thư mục, nếu chưa có thì dùng URL gốc ngoài
 
-const ChatInterface = ({ user, isAdminMode = false, matchmaking }: ChatInterfaceProps) => {
+const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -96,13 +97,14 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking }: ChatInterface
     return ageProfiles[Math.floor(Math.random() * ageProfiles.length)];
   };
 
-  // startSearching: chỉ gọi matchmaking.startQueue() với userId
+  // startSearching: chỉ gọi matchmaking.startQueue() với userId hoặc anonId
   const startSearching = () => {
     setMessages([]);
     setConversationHistory([]);
     setIsAIMode(false);
-    if (matchmaking?.startQueue && user?.id) {
-      matchmaking.startQueue(user.id);
+    const realUserId = user?.id || anonId;
+    if (matchmaking?.startQueue && realUserId) {
+      matchmaking.startQueue(realUserId);
     }
   };
 
@@ -276,13 +278,13 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking }: ChatInterface
             <Button 
               onClick={startSearching}
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
-              disabled={!user?.id}
+              disabled={!(user?.id || anonId)}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               Bắt đầu chat
             </Button>
-            {!user?.id && (
-              <p className="text-xs text-gray-500 mt-2">Vui lòng đăng nhập để bắt đầu chat</p>
+            {!(user?.id || anonId) && (
+              <p className="text-xs text-gray-500 mt-2">Vui lòng đăng nhập hoặc tiếp tục dưới dạng khách để bắt đầu chat</p>
             )}
           </Card>
         </div>

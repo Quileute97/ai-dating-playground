@@ -11,6 +11,7 @@ import FilterModal from './FilterModal';
 import AuthModal from './AuthModal';
 import UserProfile from './UserProfile';
 import AIConfigModal from './AIConfigModal';
+import AdminLogin from './AdminLogin';
 
 const DatingApp = () => {
   const [activeTab, setActiveTab] = useState('chat');
@@ -19,8 +20,10 @@ const DatingApp = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showAIConfig, setShowAIConfig] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [user, setUser] = useState(null);
   const [isFirstTime, setIsFirstTime] = useState(true);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   useEffect(() => {
     // Check if user has visited before
@@ -51,6 +54,7 @@ const DatingApp = () => {
   const handleLogout = () => {
     setUser(null);
     setIsAdminMode(false);
+    setIsAdminAuthenticated(false);
     setActiveTab('chat');
   };
 
@@ -68,6 +72,25 @@ const DatingApp = () => {
     setActiveTab(tabId);
   };
 
+  const handleAdminToggle = () => {
+    if (!isAdminMode) {
+      // Trying to enter admin mode - require authentication
+      if (!isAdminAuthenticated) {
+        setShowAdminLogin(true);
+      } else {
+        setIsAdminMode(true);
+      }
+    } else {
+      // Exiting admin mode
+      setIsAdminMode(false);
+    }
+  };
+
+  const handleAdminLogin = () => {
+    setIsAdminAuthenticated(true);
+    setIsAdminMode(true);
+  };
+
   const renderTabContent = () => {
     if (isAdminMode) {
       return <AdminDashboard />;
@@ -75,7 +98,7 @@ const DatingApp = () => {
 
     switch (activeTab) {
       case 'chat':
-        return <ChatInterface user={user} />;
+        return <ChatInterface user={user} isAdminMode={isAdminAuthenticated} />;
       case 'dating':
         return <SwipeInterface user={user} />;
       case 'nearby':
@@ -171,7 +194,7 @@ const DatingApp = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsAdminMode(!isAdminMode)}
+            onClick={handleAdminToggle}
             className={`backdrop-blur-sm border-purple-200 shadow-sm transition-all duration-200 ${
               isAdminMode 
                 ? 'bg-purple-500 text-white hover:bg-purple-600 shadow-lg' 
@@ -229,6 +252,12 @@ const DatingApp = () => {
       <AIConfigModal
         isOpen={showAIConfig}
         onClose={() => setShowAIConfig(false)}
+      />
+
+      <AdminLogin
+        isOpen={showAdminLogin}
+        onClose={() => setShowAdminLogin(false)}
+        onLogin={handleAdminLogin}
       />
     </div>
   );

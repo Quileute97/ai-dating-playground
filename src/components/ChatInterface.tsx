@@ -16,9 +16,10 @@ interface Message {
 
 interface ChatInterfaceProps {
   user?: any;
+  isAdminMode?: boolean;
 }
 
-const ChatInterface = ({ user }: ChatInterfaceProps) => {
+const ChatInterface = ({ user, isAdminMode = false }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -215,7 +216,7 @@ const ChatInterface = ({ user }: ChatInterfaceProps) => {
               <Users className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tìm kiếm...</h2>
-            <p className="text-gray-600 mb-4">Đang kết nối bạn với AI thông minh</p>
+            <p className="text-gray-600 mb-4">Đang kết nối bạn với người khác</p>
             <div className="flex justify-center">
               <div className="flex space-x-1">
                 <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
@@ -241,7 +242,8 @@ const ChatInterface = ({ user }: ChatInterfaceProps) => {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-gray-800">{stranger.name}, {stranger.age}</span>
-                  {isAIMode && (
+                  {/* Only show AI badge for admin */}
+                  {isAdminMode && isAIMode && (
                     <Badge variant="secondary" className="bg-purple-100 text-purple-700">
                       <Bot className="w-3 h-3 mr-1" />
                       AI

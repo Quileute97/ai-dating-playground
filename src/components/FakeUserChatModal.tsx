@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useConversationHistory } from "@/hooks/useConversationHistory";
 
 interface FakeUserChatModalProps {
   isOpen: boolean;
@@ -14,6 +14,7 @@ interface FakeUserChatModalProps {
     avatar: string;
     aiPrompt: string;
   } | null;
+  userRealId?: string; // Truyền user id thật vào prop này để fetch
 }
 
 interface Message {
@@ -30,11 +31,14 @@ const DummyAIReply = (prompt: string) => {
   return `(${prompt.slice(0,40)}...) [AI tự động trả lời]`;
 };
 
-const FakeUserChatModal = ({ isOpen, onClose, user }: FakeUserChatModalProps) => {
+const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatModalProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [lastAdminReply, setLastAdminReply] = useState<number | null>(null);
   const aiTimeout = useRef<NodeJS.Timeout|null>(null);
+
+  // Lấy lịch sử chat từ Supabase hook
+  const { data: conversationData, isLoading } = useConversationHistory(userRealId || "", user?.id || null);
 
   // reset khi mở modal mới
   useEffect(() => {
@@ -144,4 +148,3 @@ const FakeUserChatModal = ({ isOpen, onClose, user }: FakeUserChatModalProps) =>
 };
 
 export default FakeUserChatModal;
-

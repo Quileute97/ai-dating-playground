@@ -10,6 +10,7 @@ import EditAIPromptModal from './EditAIPromptModal';
 import { aiService } from '@/services/aiService';
 import FakeUserChatModal from './FakeUserChatModal';
 import PostAsFakeUserModal from './PostAsFakeUserModal';
+import { supabase } from "@/integrations/supabase/client";
 
 interface FakeUser {
   id: string;
@@ -90,6 +91,8 @@ const AdminDashboard = () => {
 
   const [chatFakeUser, setChatFakeUser] = useState<FakeUser | null>(null);
   const [postFakeUser, setPostFakeUser] = useState<FakeUser | null>(null);
+
+  const [user, setUser] = useState<any>(null); // Dùng user info từ DatingApp nếu có
 
   const handleAddFakeUser = (userData: Omit<FakeUser, 'id'>) => {
     const newUser: FakeUser = {
@@ -327,6 +330,7 @@ const AdminDashboard = () => {
                 aiPrompt: chatFakeUser.aiPrompt
               }}
               onClose={() => setChatFakeUser(null)}
+              userRealId={user?.id || ""}
             />
             {/* Modal đăng bài với user ảo */}
             <PostAsFakeUserModal

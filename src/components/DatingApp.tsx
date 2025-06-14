@@ -224,7 +224,7 @@ const DatingApp = () => {
           {/* LEFT: RealTimeActivityPanel (can collapse, refactored) */}
           {isLeftPanelOpen ? (
             <div className="relative">
-              <RealTimeActivityPanel />
+              <RealTimeActivityPanel userId={user?.id} />
               <SidePanelToggle
                 isOpen={isLeftPanelOpen}
                 side="left"

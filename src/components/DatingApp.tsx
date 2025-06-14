@@ -17,6 +17,7 @@ import ActiveFriendsWithChatPanel from './ActiveFriendsWithChatPanel';
 import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
 import MainTabs from './MainTabs';
 import SidePanelToggle from './SidePanelToggle';
+import { supabase } from "@/integrations/supabase/client";
 
 const DatingApp = () => {
   const [activeTab, setActiveTab] = useState('chat');
@@ -26,7 +27,8 @@ const DatingApp = () => {
   const [showProfile, setShowProfile] = useState(false);
   const [showAIConfig, setShowAIConfig] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
+  const [session, setSession] = useState<any>(null);
   const [isFirstTime, setIsFirstTime] = useState(true);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
@@ -37,6 +39,35 @@ const DatingApp = () => {
   // ====== NEW: Matchmaking logic nâng lên DatingApp =======
   const userId = user?.id ?? null;
   const matchmaking = useStrangerMatchmaking(userId);
+
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user || null);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user || null);
+    });
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .then(({ data }) => {
+          setIsAdminAuthenticated(data && data.length > 0);
+        });
+    } else {
+      setIsAdminAuthenticated(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     const hasVisited = localStorage.getItem('hasVisited');
@@ -63,12 +94,13 @@ const DatingApp = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setUser(null);
     setIsAdminMode(false);
     setIsAdminAuthenticated(false);
     setActiveTab('chat');
     matchmaking.reset?.();
+    await supabase.auth.signOut();
   };
 
   const handleUpdateProfile = (updatedUser: any) => {
@@ -87,6 +119,7 @@ const DatingApp = () => {
 
   const handleAdminToggle = () => {
     if (!isAdminMode) {
+      // Chỉ cho mở admin dashboard khi có quyền admin
       if (!isAdminAuthenticated) {
         setShowAdminLogin(true);
       } else {
@@ -97,9 +130,10 @@ const DatingApp = () => {
     }
   };
 
-  const handleAdminLogin = () => {
-    setIsAdminAuthenticated(true);
+  const handleAdminLogin = (loggedInUser: any) => {
+    setUser(loggedInUser);
     setIsAdminMode(true);
+    setIsAdminAuthenticated(true);
   };
 
   const renderTabContent = () => {

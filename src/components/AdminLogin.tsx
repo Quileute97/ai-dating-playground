@@ -6,15 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Lock, User } from 'lucide-react';
+import { supabase } from "@/integrations/supabase/client";
 
 interface AdminLoginProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: () => void;
+  onLogin: (user: any) => void;
 }
 
 const AdminLogin = ({ isOpen, onClose, onLogin }: AdminLoginProps) => {
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -22,20 +23,39 @@ const AdminLogin = ({ isOpen, onClose, onLogin }: AdminLoginProps) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
-    // Simple admin authentication (in production, use proper auth)
-    if (credentials.username === 'admin' && credentials.password === 'admin123') {
-      setTimeout(() => {
-        onLogin();
-        setIsLoading(false);
-        onClose();
-      }, 1000);
-    } else {
-      setTimeout(() => {
-        setError('Sai thông tin đăng nhập');
-        setIsLoading(false);
-      }, 1000);
+    // Đăng nhập Supabase Auth
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password,
+    });
+    if (loginError) {
+      setError('Sai tài khoản hoặc mật khẩu Supabase');
+      setIsLoading(false);
+      return;
     }
+    // Kiểm tra quyền admin (truy vấn bảng user_roles)
+    const user = data.user;
+    if (!user) {
+      setError('Đăng nhập thất bại!');
+      setIsLoading(false);
+      return;
+    }
+    const { data: roles, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin');
+    if (roleError || !roles || roles.length === 0) {
+      setError('Tài khoản này không có quyền admin!');
+      setIsLoading(false);
+      return;
+    }
+    // Thành công
+    setTimeout(() => {
+      onLogin(user);
+      setIsLoading(false);
+      onClose();
+    }, 800);
   };
 
   return (
@@ -55,15 +75,16 @@ const AdminLogin = ({ isOpen, onClose, onLogin }: AdminLoginProps) => {
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Tên đăng nhập</Label>
+                <Label htmlFor="email">Email đăng nhập</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    id="username"
-                    placeholder="admin"
+                    id="email"
+                    type="email"
+                    placeholder="admin@example.com"
                     className="pl-10"
-                    value={credentials.username}
-                    onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+                    value={credentials.email}
+                    onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                     required
                   />
                 </div>
@@ -105,9 +126,9 @@ const AdminLogin = ({ isOpen, onClose, onLogin }: AdminLoginProps) => {
                 )}
               </Button>
             </form>
-            
             <div className="mt-4 text-xs text-gray-500 bg-gray-50 p-2 rounded">
-              <strong>Demo:</strong> username: admin, password: admin123
+              Đăng nhập với tài khoản Supabase đã gán quyền "admin" <br />
+              <b>Bạn cần tự thêm vai trò admin cho account này bằng bảng user_roles trên Supabase dashboard</b>
             </div>
           </CardContent>
         </Card>

@@ -8,6 +8,8 @@ import AddAIPromptModal from './AddAIPromptModal';
 import EditFakeUserModal from './EditFakeUserModal';
 import EditAIPromptModal from './EditAIPromptModal';
 import { aiService } from '@/services/aiService';
+import FakeUserChatModal from './FakeUserChatModal';
+import PostAsFakeUserModal from './PostAsFakeUserModal';
 
 interface FakeUser {
   id: string;
@@ -86,6 +88,9 @@ const AdminDashboard = () => {
   const [editingFakeUser, setEditingFakeUser] = useState<FakeUser | null>(null);
   const [editingAIPrompt, setEditingAIPrompt] = useState<AIPrompt | null>(null);
 
+  const [chatFakeUser, setChatFakeUser] = useState<FakeUser | null>(null);
+  const [postFakeUser, setPostFakeUser] = useState<FakeUser | null>(null);
+
   const handleAddFakeUser = (userData: Omit<FakeUser, 'id'>) => {
     const newUser: FakeUser = {
       ...userData,
@@ -135,6 +140,12 @@ const AdminDashboard = () => {
     setAIPrompts(prev =>
       prev.map(p => p.id === prompt.id ? prompt : p)
     );
+  };
+
+  const handlePostAsFakeUser = (content: string, user: FakeUser) => {
+    // Chỉ hiển thị thông báo, chưa update trực tiếp vào Timeline
+    alert(`Đã đăng bài với tư cách ${user.name}:\n\n${content}`);
+    // Để tích hợp thực tế: cần truyền tới component Timeline thông qua global state hoặc props callback
   };
 
   return (
@@ -251,7 +262,6 @@ const AdminDashboard = () => {
                         alt={user.name}
                         className="w-16 h-16 rounded-full object-cover"
                       />
-                      
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold">{user.name}</h3>
@@ -268,9 +278,24 @@ const AdminDashboard = () => {
                         <p className="text-xs text-gray-500 italic">
                           AI Prompt: {user.aiPrompt.substring(0, 100)}...
                         </p>
+                        <div className="flex gap-2 mt-3">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setChatFakeUser(user)}
+                          >
+                            Nhắn tin
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setPostFakeUser(user)}
+                          >
+                            Đăng bài
+                          </Button>
+                        </div>
                       </div>
-
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -292,6 +317,30 @@ const AdminDashboard = () => {
                 </Card>
               ))}
             </div>
+            {/* Modal chat với user ảo */}
+            <FakeUserChatModal
+              isOpen={!!chatFakeUser}
+              user={chatFakeUser && {
+                id: chatFakeUser.id,
+                name: chatFakeUser.name,
+                avatar: chatFakeUser.avatar,
+                aiPrompt: chatFakeUser.aiPrompt
+              }}
+              onClose={() => setChatFakeUser(null)}
+            />
+            {/* Modal đăng bài với user ảo */}
+            <PostAsFakeUserModal
+              isOpen={!!postFakeUser}
+              user={postFakeUser && {
+                id: postFakeUser.id,
+                name: postFakeUser.name,
+                avatar: postFakeUser.avatar
+              }}
+              onClose={() => setPostFakeUser(null)}
+              onPost={content => {
+                if (postFakeUser) handlePostAsFakeUser(content, postFakeUser);
+              }}
+            />
           </TabsContent>
 
           {/* AI Prompts Tab */}

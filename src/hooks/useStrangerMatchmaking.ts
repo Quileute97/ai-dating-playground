@@ -133,6 +133,22 @@ export function useStrangerMatchmaking() {
     userIdRef.current = null;
   };
 
+  const reset = () => {
+    console.log("[STRANGER] [reset] Resetting matchmaking state");
+    
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+
+    setIsInQueue(false);
+    setIsMatched(false);
+    setPartnerId(null);
+    setConversationId(null);
+    setError(null);
+    userIdRef.current = null;
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -153,5 +169,6 @@ export function useStrangerMatchmaking() {
     error,
     startQueue,
     stopQueue,
+    reset,
   };
 }

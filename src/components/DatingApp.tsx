@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,8 +31,8 @@ const DatingApp = () => {
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
 
-  // Kết nối matchmaking (anonId hoặc user id)
-  const matchmaking = useStrangerMatchmaking(user?.id ?? anonId);
+  // Kết nối matchmaking - không truyền tham số
+  const matchmaking = useStrangerMatchmaking();
 
   // Kiểm tra quyền admin mỗi khi user thay đổi
   useEffect(() => {
@@ -74,7 +73,7 @@ const DatingApp = () => {
     setIsAdminMode(false);
     setIsAdminAuthenticated(false);
     setActiveTab("chat");
-    matchmaking.reset?.();
+    matchmaking.reset();
     const { supabase } = await import("@/integrations/supabase/client");
     await supabase.auth.signOut();
   };
@@ -117,7 +116,7 @@ const DatingApp = () => {
     }
     switch (activeTab) {
       case "chat":
-        return <ChatInterface user={user} isAdminMode={isAdminAuthenticated} matchmaking={matchmaking} />;
+        return <ChatInterface user={user} isAdminMode={isAdminAuthenticated} matchmaking={matchmaking} userId={user?.id ?? anonId} />;
       case "dating":
         return user ? <SwipeInterface user={user} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "nearby":

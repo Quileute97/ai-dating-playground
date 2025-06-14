@@ -130,11 +130,10 @@ const AdminDashboard = () => {
   React.useEffect(() => {
     // Lấy số lượng pending upgrade
     const fetchUpgradeCount = async () => {
-      const { data, error } = await supabase
+      const { count, error } = await supabase
         .from("upgrade_requests")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
-      if (data && typeof data.count === "number") setPendingUpgradeCount(data.count);
+        .select("id", { count: "exact", head: true });
+      if (typeof count === "number") setPendingUpgradeCount(count);
     };
     fetchUpgradeCount();
 
@@ -219,10 +218,21 @@ const AdminDashboard = () => {
     alert('Đã lưu mã quảng cáo header!');
   };
 
+  // Sử dụng toast UI/sonner feedback thay vì alert
+  const { toast } = require("@/components/ui/sonner");
+
   // Save bank info
   const handleSaveBankInfo = () => {
     localStorage.setItem('bankInfo', JSON.stringify(bankInfo));
-    alert('Đã lưu thông tin tài khoản ngân hàng & QR!');
+    // Đảm bảo cập nhật lại state bankInfo từ localStorage
+    const newInfo = JSON.parse(localStorage.getItem('bankInfo') ?? '{}');
+    setBankInfo({
+      bankName: newInfo.bankName || '',
+      accountNumber: newInfo.accountNumber || '',
+      accountHolder: newInfo.accountHolder || '',
+      qrUrl: newInfo.qrUrl || ''
+    });
+    toast.success('Đã lưu thông tin tài khoản ngân hàng & QR!');
   };
 
   // Handle QR upload

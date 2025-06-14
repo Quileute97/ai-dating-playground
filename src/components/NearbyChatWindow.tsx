@@ -6,14 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'contact';
-  timestamp: Date;
-  status: 'sent' | 'delivered' | 'read';
-}
+import { useNearbyConversation } from '@/hooks/useNearbyConversation';
 
 interface NearbyUser {
   id: string;
@@ -26,23 +19,16 @@ interface NearbyUser {
 
 interface NearbyChatWindowProps {
   user: NearbyUser;
+  currentUserId: string | null;
   onClose: () => void;
 }
 
-const NearbyChatWindow = ({ user, onClose }: NearbyChatWindowProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: `Chào bạn! Tôi thấy chúng ta ở gần nhau. Rất vui được làm quen! 😊`,
-      sender: 'contact',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000),
-      status: 'read'
-    }
-  ]);
+const NearbyChatWindow = ({ user, currentUserId, onClose }: NearbyChatWindowProps) => {
   const [inputValue, setInputValue] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const { messages, sendMessage, loading } = useNearbyConversation(currentUserId, user.id);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -52,66 +38,11 @@ const NearbyChatWindow = ({ user, onClose }: NearbyChatWindowProps) => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputValue,
-      sender: 'user',
-      timestamp: new Date(),
-      status: 'sent'
-    };
-
-    setMessages(prev => [...prev, newMessage]);
+    
+    await sendMessage(inputValue);
     setInputValue('');
-
-    // Simulate contact typing and response
-    setIsTyping(true);
-    setTimeout(() => {
-      const responses = [
-        "Wow, bạn ở gần đây thật! Có muốn đi uống cà phê không? ☕",
-        "Haha, thú vị quá! Bạn thường hay đi đâu chơi vậy? 🤔",
-        "Mình cũng đang ở quanh khu này! Có gì hay ho không? 😄",
-        "Nghe hay đấy! Mình cũng thích khu này lắm 😊",
-        "Bạn có thích đi khám phá những quán mới không? 🍕"
-      ];
-      
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      
-      const response: Message = {
-        id: (Date.now() + 1).toString(),
-        text: randomResponse,
-        sender: 'contact',
-        timestamp: new Date(),
-        status: 'read'
-      };
-
-      setMessages(prev => [...prev, response]);
-      setIsTyping(false);
-
-      // Update message status to delivered after a delay
-      setTimeout(() => {
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === newMessage.id 
-              ? { ...msg, status: 'delivered' as const }
-              : msg
-          )
-        );
-      }, 1000);
-
-      // Update to read after another delay
-      setTimeout(() => {
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === newMessage.id 
-              ? { ...msg, status: 'read' as const }
-              : msg
-          )
-        );
-      }, 2000);
-    }, 1500 + Math.random() * 2000);
   };
 
   const handleVideoCall = () => {
@@ -128,18 +59,20 @@ const NearbyChatWindow = ({ user, onClose }: NearbyChatWindowProps) => {
     });
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'sent':
-        return '✓';
-      case 'delivered':
-        return '✓✓';
-      case 'read':
-        return '✓✓';
-      default:
-        return '';
-    }
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  if (loading) {
+    return (
+      <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-2"></div>
+          <p className="text-gray-600">Đang tải cuộc trò chuyện...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col">
@@ -166,7 +99,7 @@ const NearbyChatWindow = ({ user, onClose }: NearbyChatWindowProps) => {
             <div className="flex items-center gap-1">
               {user.isOnline && <div className="w-2 h-2 bg-green-500 rounded-full"></div>}
               <span className="text-xs text-gray-500">
-                {isTyping ? 'Đang nhập...' : user.isOnline ? 'Đang online' : user.lastSeen}
+                {user.isOnline ? 'Đang online' : user.lastSeen}
               </span>
             </div>
           </div>
@@ -188,46 +121,30 @@ const NearbyChatWindow = ({ user, onClose }: NearbyChatWindowProps) => {
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-            >
-              <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 ${
-                message.sender === 'user'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                  : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
-              }`}>
-                <p className="text-sm break-words">{message.text}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <p className={`text-xs ${
-                    message.sender === 'user' ? 'text-purple-100' : 'text-gray-500'
+          {messages.length === 0 ? (
+            <div className="text-center text-gray-500 mt-8">
+              <p>Bắt đầu cuộc trò chuyện với {user.name}!</p>
+            </div>
+          ) : (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.sender === currentUserId ? 'justify-end' : 'justify-start'} animate-fade-in`}
+              >
+                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 ${
+                  message.sender === currentUserId
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                    : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
+                }`}>
+                  <p className="text-sm break-words">{message.content}</p>
+                  <p className={`text-xs mt-1 ${
+                    message.sender === currentUserId ? 'text-purple-100' : 'text-gray-500'
                   }`}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatTime(message.created_at)}
                   </p>
-                  {message.sender === 'user' && (
-                    <span className={`text-xs ml-2 ${
-                      message.status === 'read' ? 'text-blue-200' : 'text-purple-200'
-                    }`}>
-                      {getStatusIcon(message.status)}
-                    </span>
-                  )}
                 </div>
               </div>
-            </div>
-          ))}
-          
-          {/* Typing Indicator */}
-          {isTyping && (
-            <div className="flex justify-start animate-fade-in">
-              <div className="bg-white/80 backdrop-blur-sm border border-purple-100 px-4 py-2 rounded-2xl shadow-md">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
-              </div>
-            </div>
+            ))
           )}
           
           <div ref={messagesEndRef} />
@@ -243,13 +160,12 @@ const NearbyChatWindow = ({ user, onClose }: NearbyChatWindowProps) => {
             placeholder="Nhập tin nhắn..."
             className="flex-1 border-purple-200 focus:border-purple-400 transition-colors"
             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            disabled={isTyping}
           />
           <Button
             onClick={handleSendMessage}
             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
             size="sm"
-            disabled={isTyping || !inputValue.trim()}
+            disabled={!inputValue.trim()}
           >
             <Send className="w-4 h-4" />
           </Button>

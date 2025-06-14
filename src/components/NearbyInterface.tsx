@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import NearbyChatWindow from './NearbyChatWindow';
@@ -206,7 +205,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     );
   }
   if (chatUser) {
-    return <NearbyChatWindow user={chatUser} onClose={handleCloseChat} />;
+    return <NearbyChatWindow user={chatUser} currentUserId={user?.id} onClose={handleCloseChat} />;
   }
 
   // Only pass bankInfo if all required fields are present
@@ -234,4 +233,3 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
 };
 
 export default NearbyInterface;
-

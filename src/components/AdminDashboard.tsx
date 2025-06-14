@@ -286,6 +286,17 @@ const AdminDashboard = () => {
     reader.readAsDataURL(file);
   };
 
+  // Save AI/General settings
+  const handleSaveSettings = () => {
+    // Lưu settings vào localStorage (hoặc thêm API/save Supabase ở đây nếu cần)
+    localStorage.setItem('datingAppSettings', JSON.stringify(settings));
+    toast({
+      title: "Đã lưu cài đặt hệ thống!",
+      description: "",
+      variant: "default"
+    });
+  };
+
   // Tab content
   return (
     <div className="h-full bg-gradient-to-br from-gray-50 to-blue-50 p-6 overflow-y-auto">

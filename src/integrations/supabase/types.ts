@@ -68,6 +68,48 @@ export type Database = {
           },
         ]
       }
+      upgrade_requests: {
+        Row: {
+          admin_id: string | null
+          approved_at: string | null
+          bank_info: Json | null
+          created_at: string | null
+          id: string
+          note: string | null
+          price: number
+          status: string
+          type: string
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          approved_at?: string | null
+          bank_info?: Json | null
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          price: number
+          status?: string
+          type: string
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          approved_at?: string | null
+          bank_info?: Json | null
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          price?: number
+          status?: string
+          type?: string
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Bot, MessageSquare, Settings, TrendingUp, Eye, Plus, Edit, Trash2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import HeaderAdManager from "./HeaderAdManager";
 import BankInfoManager from "./BankInfoManager";
+import UpgradeRequestsAdmin from "./UpgradeRequestsAdmin";
 
 interface FakeUser {
   id: string;
@@ -123,6 +124,37 @@ const AdminDashboard = () => {
   });
   const [qrImgUploading, setQrImgUploading] = useState(false);
 
+  // NEW: Đếm số yêu cầu upgrade pending để hiện thông báo cho admin
+  const [pendingUpgradeCount, setPendingUpgradeCount] = React.useState(0);
+
+  React.useEffect(() => {
+    // Lấy số lượng pending upgrade
+    const fetchUpgradeCount = async () => {
+      const { data, error } = await supabase
+        .from("upgrade_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      if (data && typeof data.count === "number") setPendingUpgradeCount(data.count);
+    };
+    fetchUpgradeCount();
+
+    // Subcribe realtime upgrade_requests
+    const channel = supabase
+      .channel("upgrade-requests-pending")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "upgrade_requests" },
+        (payload) => {
+          fetchUpgradeCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const handleAddFakeUser = (userData: Omit<FakeUser, 'id'>) => {
     const newUser: FakeUser = {
       ...userData,
@@ -215,12 +247,25 @@ const AdminDashboard = () => {
           <p className="text-gray-600">Quản lý website hẹn hò và AI</p>
         </div>
 
+        {/* Bổ sung thông báo nếu có đơn upgrade mới */}
+        {pendingUpgradeCount > 0 && (
+          <div className="mb-6 p-4 bg-yellow-100 rounded text-yellow-900 font-semibold flex items-center gap-2">
+            <span>🔔 Có {pendingUpgradeCount} yêu cầu nâng cấp tài khoản mới đang chờ duyệt!</span>
+          </div>
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
             <TabsTrigger value="fake-users">Người dùng ảo</TabsTrigger>
             <TabsTrigger value="ai-prompts">AI Prompts</TabsTrigger>
             <TabsTrigger value="settings">Cài đặt</TabsTrigger>
+            <TabsTrigger value="upgrade-requests">
+              Yêu cầu nâng cấp
+              {pendingUpgradeCount > 0 && (
+                <span className="ml-2 px-2 py-1 bg-yellow-400 text-xs rounded text-black">{pendingUpgradeCount}</span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -544,6 +589,11 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Tab: Quản lý yêu cầu nâng cấp */}
+          <TabsContent value="upgrade-requests" className="space-y-6">
+            <UpgradeRequestsAdmin />
           </TabsContent>
         </Tabs>
 

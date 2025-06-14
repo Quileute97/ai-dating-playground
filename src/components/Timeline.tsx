@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { uploadAnhMoe } from "@/utils/uploadAnhMoe";
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
@@ -111,15 +112,24 @@ const PostForm: React.FC<{
   const [location, setLocation] = useState<LocationData | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
 
-  // Choose media
-  const handleMediaChange = (e: ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
+  // NEW: loading state cho upload ảnh/video
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  // Chọn media và upload lên anh.moe
+  const handleMediaChange = async (e: ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setMedia({
-      type,
-      url: URL.createObjectURL(file),
-      file
-    });
+    setUploadingMedia(true);
+    try {
+      const url = await uploadAnhMoe(file);
+      setMedia({
+        type,
+        url,
+      });
+    } catch (err) {
+      alert("Upload file thất bại!");
+    }
+    setUploadingMedia(false);
   };
 
   // Remove media
@@ -158,7 +168,7 @@ const PostForm: React.FC<{
   // Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() && !media) return; // phải có text hoặc media
+    if ((!content.trim() && !media) || uploadingMedia) return; // phải có text hoặc media, không được submit khi đang upload file
     await onCreate({
       user: {
         name: user?.name ?? demoUser.name,
@@ -187,7 +197,7 @@ const PostForm: React.FC<{
             placeholder="Bạn đang nghĩ gì?"
             value={content}
             onChange={e => setContent(e.target.value)}
-            disabled={posting}
+            disabled={posting || uploadingMedia}
           />
           <div className="flex gap-2 flex-wrap items-center">
             {/* Upload buttons */}
@@ -198,7 +208,7 @@ const PostForm: React.FC<{
                 accept="image/*"
                 className="hidden"
                 onChange={e => handleMediaChange(e, "image")}
-                disabled={posting}
+                disabled={posting || uploadingMedia}
               />
               <span>Ảnh</span>
             </label>
@@ -209,12 +219,12 @@ const PostForm: React.FC<{
                 accept="video/*"
                 className="hidden"
                 onChange={e => handleMediaChange(e, "video")}
-                disabled={posting}
+                disabled={posting || uploadingMedia}
               />
               <span>Video</span>
             </label>
             {/* Sticker chooser */}
-            <PopoverStickerSelect sticker={sticker} setSticker={setSticker} disabled={posting} />
+            <PopoverStickerSelect sticker={sticker} setSticker={setSticker} disabled={posting || uploadingMedia} />
           </div>
           {/* Media preview */}
           {media && (
@@ -230,7 +240,7 @@ const PostForm: React.FC<{
                 className="absolute -top-3 -right-3 bg-white text-gray-600 hover:text-red-500 border rounded-full w-7 h-7 flex items-center justify-center shadow-md"
                 onClick={handleRemoveMedia}
                 tabIndex={-1}
-                disabled={posting}
+                disabled={posting || uploadingMedia}
               >
                 ×
               </button>
@@ -258,7 +268,7 @@ const PostForm: React.FC<{
               checked={locationEnabled}
               onChange={e => setLocationEnabled(e.target.checked)}
               className="accent-pink-500 w-4 h-4"
-              disabled={posting || loadingLocation}
+              disabled={posting || loadingLocation || uploadingMedia}
             />
             Cho phép hiển thị địa điểm của tôi
             <MapPin size={16} className="text-pink-500" />
@@ -271,9 +281,9 @@ const PostForm: React.FC<{
         <Button
           type="submit"
           className="h-10 px-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 self-stretch sm:self-auto"
-          disabled={posting}
+          disabled={posting || uploadingMedia}
         >
-          {posting ? "Đang đăng..." : "Đăng"}
+          {posting ? "Đang đăng..." : uploadingMedia ? "Đang tải file..." : "Đăng"}
         </Button>
       </form>
     </Card>

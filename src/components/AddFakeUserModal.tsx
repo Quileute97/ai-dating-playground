@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 
 interface FakeUser {
   id: string;
@@ -48,6 +49,7 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
   });
 
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Khi danh sách prompt thay đổi đặt prompt đầu tiên làm mặc định
   React.useEffect(() => {
@@ -58,6 +60,23 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
     }));
   }, [aiPrompts]);
 
+  // Xử lý upload ảnh đại diện
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadTimelineMedia(file);
+      setFormData(prev => ({
+        ...prev,
+        avatar: url
+      }));
+    } catch (error: any) {
+      alert('Upload ảnh thất bại: ' + error.message);
+    }
+    setUploading(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -65,7 +84,8 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
       !formData.bio ||
       !formData.aiPromptId ||
       !formData.gender ||
-      !formData.age
+      !formData.age ||
+      !formData.avatar
     ) {
       alert('Vui lòng điền đầy đủ thông tin!');
       return;
@@ -81,7 +101,6 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
       bio: formData.bio,
       aiPromptId: formData.aiPromptId,
       isActive: formData.isActive,
-      // aiPrompt: formData.aiPrompt
     });
 
     // Gọi onAdd với đúng prop
@@ -127,6 +146,29 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
               placeholder="Nhập tên..."
               required
             />
+          </div>
+
+          {/* Upload avatar */}
+          <div className="space-y-2">
+            <Label htmlFor="avatar">Ảnh đại diện</Label>
+            <div className="flex items-center gap-4">
+              <img
+                src={formData.avatar || '/placeholder.svg'}
+                alt="avatar"
+                className="w-16 h-16 rounded-full object-cover border"
+              />
+              <Input
+                id="avatar"
+                type="file"
+                accept="image/*"
+                className="w-full"
+                onChange={handleAvatarUpload}
+                disabled={uploading || loading}
+              />
+            </div>
+            {uploading && (
+              <div className="text-xs text-blue-600">Đang upload ảnh...</div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -206,7 +248,7 @@ const AddFakeUserModal = ({ isOpen, onClose, onAdd, aiPrompts }: AddFakeUserModa
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
               Hủy
             </Button>
-            <Button type="submit" className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500" disabled={loading}>
+            <Button type="submit" className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500" disabled={loading || uploading}>
               {loading ? 'Đang thêm...' : 'Thêm user'}
             </Button>
           </div>

@@ -37,8 +37,20 @@ const DatingApp = () => {
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
 
   // ====== NEW: Matchmaking logic nâng lên DatingApp =======
-  const userId = user?.id ?? null;
-  const matchmaking = useStrangerMatchmaking(userId);
+  // Sử dụng user.id nếu có, hoặc anonId nếu chưa đăng nhập
+  const [anonId, setAnonId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      // Chỉ tạo 1 lần duy nhất cho mỗi session (bằng localStorage)
+      let storedAnonId = localStorage.getItem('anon_stranger_id');
+      if (!storedAnonId) {
+        storedAnonId = 'anon-' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('anon_stranger_id', storedAnonId);
+      }
+      setAnonId(storedAnonId);
+    }
+  }, [user]);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {

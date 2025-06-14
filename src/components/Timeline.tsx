@@ -1,10 +1,16 @@
 
 import React, { useState } from "react";
-import { User, MessageCircle, Heart, SendHorizonal } from "lucide-react";
+import { User, MessageCircle, Heart, SendHorizonal, MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+
+interface LocationData {
+  lat: number;
+  lng: number;
+  formatted?: string;
+}
 
 interface Comment {
   id: number;
@@ -21,6 +27,8 @@ interface Post {
   likes: number;
   liked: boolean;
   comments: Comment[];
+  location?: LocationData | null;
+  locationEnabled?: boolean;
 }
 
 const demoUser = {
@@ -49,7 +57,13 @@ const initialPosts: Post[] = [
         content: "Đúng rồi đó, đi cafe không bạn?",
         createdAt: "1 giờ trước"
       }
-    ]
+    ],
+    locationEnabled: true,
+    location: {
+      lat: 21.028511,
+      lng: 105.804817,
+      formatted: "Hà Nội",
+    }
   },
   {
     id: 2,
@@ -61,7 +75,8 @@ const initialPosts: Post[] = [
     createdAt: "4 giờ trước",
     likes: 1,
     liked: false,
-    comments: []
+    comments: [],
+    locationEnabled: false
   }
 ];
 
@@ -69,11 +84,36 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [postContent, setPostContent] = useState("");
   const [commentContent, setCommentContent] = useState<{ [key: number]: string }>({});
+  const [locationEnabled, setLocationEnabled] = useState(false);
+  const [posting, setPosting] = useState(false);
+
+  // Helper to get geolocation (returns promise LocationData|null)
+  const getCurrentLocation = () => {
+    return new Promise<LocationData | null>((resolve) => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        () => {
+          resolve(null);
+        },
+        { enableHighAccuracy: true, timeout: 4000 }
+      );
+    });
+  };
 
   // Đăng bài viết mới
-  const handlePostSubmit = (e: React.FormEvent) => {
+  const handlePostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!postContent.trim()) return;
+    setPosting(true);
+
+    let location: LocationData | null = null;
+    if (locationEnabled) {
+      location = await getCurrentLocation();
+    }
+
     const newPost: Post = {
       id: posts.length + 1,
       user: {
@@ -84,10 +124,20 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
       createdAt: "Vừa xong",
       likes: 0,
       liked: false,
-      comments: []
+      comments: [],
+      location: location
+        ? {
+            lat: location.lat,
+            lng: location.lng,
+            formatted: `(${location.lat.toFixed(5)}, ${location.lng.toFixed(5)})`
+          }
+        : undefined,
+      locationEnabled,
     };
     setPosts([newPost, ...posts]);
     setPostContent("");
+    setLocationEnabled(false);
+    setPosting(false);
   };
 
   // Gửi comment cho bài viết
@@ -135,17 +185,32 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
       <Card className="mb-6 p-4">
         <form onSubmit={handlePostSubmit} className="flex gap-3 flex-col sm:flex-row items-start">
           <img src={user?.avatar || demoUser.avatar} alt={user?.name || demoUser.name} className="w-10 h-10 rounded-full object-cover" />
-          <Textarea
-            className="flex-1"
-            placeholder="Bạn đang nghĩ gì?"
-            value={postContent}
-            onChange={e => setPostContent(e.target.value)}
-          />
+          <div className="flex-1 w-full flex flex-col gap-2">
+            <Textarea
+              className="flex-1"
+              placeholder="Bạn đang nghĩ gì?"
+              value={postContent}
+              onChange={e => setPostContent(e.target.value)}
+              disabled={posting}
+            />
+            <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={locationEnabled}
+                onChange={e => setLocationEnabled(e.target.checked)}
+                className="accent-pink-500 w-4 h-4"
+                disabled={posting}
+              />
+              Cho phép hiển thị địa điểm của tôi
+              <MapPin size={16} className="text-pink-500" />
+            </label>
+          </div>
           <Button
             type="submit"
             className="h-10 px-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 self-stretch sm:self-auto"
+            disabled={posting}
           >
-            Đăng
+            {posting ? "Đang đăng..." : "Đăng"}
           </Button>
         </form>
       </Card>
@@ -162,6 +227,16 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
               </div>
             </div>
             <div className="text-base text-gray-800 mb-2 whitespace-pre-line">{post.content}</div>
+            {/* Location */}
+            {post.locationEnabled && post.location && (
+              <div className="flex items-center gap-1 text-xs text-gray-500 mb-2 ml-12">
+                <MapPin size={13} className="text-pink-400" />
+                <span>
+                  Vị trí: {post.location.formatted || `${post.location.lat}, ${post.location.lng}`}
+                </span>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex items-center gap-4 mb-2">
               <Button
@@ -218,3 +293,5 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
 };
 
 export default Timeline;
+
+// Lưu ý: Đoạn code đã dài, bạn nên tách các phần (Post, PostForm, ...), nếu muốn refactor hãy yêu cầu nhé!

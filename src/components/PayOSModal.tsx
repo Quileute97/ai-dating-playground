@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { CreditCard, X, Loader2, CheckCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -14,9 +13,23 @@ interface PayOSModalProps {
   packageType: 'nearby' | 'gold';
   packageName: string;
   price: number;
+  bankInfo?: {
+    bankName: string;
+    accountNumber: string;
+    accountHolder: string;
+    qrUrl: string;
+  };
 }
 
-const PayOSModal = ({ isOpen, onClose, onSuccess, packageType, packageName, price }: PayOSModalProps) => {
+const PayOSModal = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  packageType,
+  packageName,
+  price,
+  bankInfo,
+}: PayOSModalProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'confirm' | 'processing' | 'success'>('confirm');
   const { toast } = useToast();

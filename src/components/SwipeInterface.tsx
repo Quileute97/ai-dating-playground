@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Heart, X, Zap, ArrowLeft, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import PayOSModal from './PayOSModal';
+import { useBankInfo } from "@/hooks/useBankInfo";
 
 interface UserProfile {
   id: string;
@@ -59,6 +59,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [isGoldMember, setIsGoldMember] = useState(false);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
+  const bankInfo = useBankInfo();
 
   const currentProfile = mockProfiles[currentProfileIndex];
   const maxFreeMatches = 10;
@@ -266,6 +267,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         packageType="gold"
         packageName="Gói GOLD"
         price={99000}
+        bankInfo={bankInfo}
       />
     </div>
   );

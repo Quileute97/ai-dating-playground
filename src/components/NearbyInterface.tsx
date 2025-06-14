@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MapPin, Heart, MessageCircle, Star, Navigation, ArrowLeft, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -7,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import PayOSModal from './PayOSModal';
 import NearbyChatWindow from './NearbyChatWindow';
+import { useBankInfo } from "@/hooks/useBankInfo";
 
 interface NearbyUser {
   id: string;
@@ -97,6 +97,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [hasExpandedRange, setHasExpandedRange] = useState(false);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
+  const bankInfo = useBankInfo();
 
   useEffect(() => {
     requestLocationPermission();
@@ -550,6 +551,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
         packageType="nearby"
         packageName="Mở rộng phạm vi"
         price={49000}
+        bankInfo={bankInfo}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import PayOSModal from './PayOSModal';
 import NearbyChatWindow from './NearbyChatWindow';
 import { useBankInfo } from "@/hooks/useBankInfo";
+import { useUpgradeStatus } from './hooks/useUpgradeStatus';
 
 interface NearbyUser {
   id: string;
@@ -98,6 +99,8 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
+  const { data: nearbyUpgrade, isLoading: nearbyLoading } = useUpgradeStatus(user?.id, 'nearby');
+  const hasUpgrade = nearbyUpgrade?.status === "approved" || nearbyUpgrade?.status === "pending";
 
   useEffect(() => {
     requestLocationPermission();
@@ -131,40 +134,44 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   };
 
   const handleExpandRange = () => {
-    setHasExpandedRange(true);
-    // Add more users from wider range
-    const extendedUsers = [
-      ...nearbyUsers,
-      {
-        id: '6',
-        name: 'Phương Anh',
-        age: 25,
-        distance: 8.2,
-        avatar: '/placeholder.svg',
-        isOnline: true,
-        lastSeen: 'Đang online',
-        interests: ['Thời trang', 'Làm đẹp'],
-        rating: 4.6,
-        isLiked: false
-      },
-      {
-        id: '7',
-        name: 'Tuấn Minh',
-        age: 27,
-        distance: 12.5,
-        avatar: '/placeholder.svg',
-        isOnline: false,
-        lastSeen: '2 giờ trước',
-        interests: ['Kinh doanh', 'Đầu tư'],
-        rating: 4.4,
-        isLiked: false
-      }
-    ];
-    setNearbyUsers(extendedUsers);
-    toast({
-      title: "Đã mở rộng phạm vi! 🎉",
-      description: "Tìm thấy thêm nhiều người trong phạm vi 20km",
-    });
+    if (!hasUpgrade) {
+      // Create a new request for upgrade
+      const extendedUsers = [
+        ...nearbyUsers,
+        {
+          id: '6',
+          name: 'Phương Anh',
+          age: 25,
+          distance: 8.2,
+          avatar: '/placeholder.svg',
+          isOnline: true,
+          lastSeen: 'Đang online',
+          interests: ['Thời trang', 'Làm đẹp'],
+          rating: 4.6,
+          isLiked: false
+        },
+        {
+          id: '7',
+          name: 'Tuấn Minh',
+          age: 27,
+          distance: 12.5,
+          avatar: '/placeholder.svg',
+          isOnline: false,
+          lastSeen: '2 giờ trước',
+          interests: ['Kinh doanh', 'Đầu tư'],
+          rating: 4.4,
+          isLiked: false
+        }
+      ];
+      setNearbyUsers(extendedUsers);
+      toast({
+        title: "Đã mở rộng phạm vi! 🎉",
+        description: "Tìm thấy thêm nhiều người trong phạm vi 20km",
+      });
+    } else {
+      // Use the existing state from server
+      setHasExpandedRange(true);
+    }
   };
 
   const handleViewProfile = (user: NearbyUser) => {
@@ -513,7 +520,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
         </ScrollArea>
 
         {/* Upgrade Banner */}
-        {!hasExpandedRange ? (
+        {!hasUpgrade && !nearbyLoading ? (
           <Card className="mt-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
             <div className="text-center">
               <h3 className="font-semibold mb-1">Mở rộng phạm vi tìm kiếm</h3>

@@ -52,8 +52,11 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking }: ChatInterface
   };
   useEffect(() => { scrollToBottom(); }, [messages]);
 
-  const matchmakingStatus = matchmaking?.status;
-  const matchResult = matchmaking?.matchResult;
+  const matchmakingStatus = matchmaking?.isInQueue ? 'searching' : matchmaking?.isMatched ? 'matched' : 'idle';
+  const matchResult = {
+    conversationId: matchmaking?.conversationId,
+    partnerId: matchmaking?.partnerId
+  };
 
   const generateStrangerProfile = (settings: StrangerSettings) => {
     const profiles = {
@@ -93,12 +96,14 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking }: ChatInterface
     return ageProfiles[Math.floor(Math.random() * ageProfiles.length)];
   };
 
-  // startSearching: chỉ gọi matchmaking.joinQueue()
+  // startSearching: chỉ gọi matchmaking.startQueue() với userId
   const startSearching = () => {
     setMessages([]);
     setConversationHistory([]);
     setIsAIMode(false);
-    if (matchmaking?.joinQueue) matchmaking.joinQueue();
+    if (matchmaking?.startQueue && user?.id) {
+      matchmaking.startQueue(user.id);
+    }
   };
 
   // Khi bấm ngắt kết nối
@@ -271,10 +276,14 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking }: ChatInterface
             <Button 
               onClick={startSearching}
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
+              disabled={!user?.id}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               Bắt đầu chat
             </Button>
+            {!user?.id && (
+              <p className="text-xs text-gray-500 mt-2">Vui lòng đăng nhập để bắt đầu chat</p>
+            )}
           </Card>
         </div>
       )}

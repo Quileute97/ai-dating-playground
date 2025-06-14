@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { uploadAnhMoe } from "@/utils/uploadAnhMoe";
+import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
@@ -115,13 +115,13 @@ const PostForm: React.FC<{
   // NEW: loading state cho upload ảnh/video
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
-  // Chọn media và upload lên anh.moe
+  // Chọn media và upload lên Supabase Storage (đã thay thế anh.moe)
   const handleMediaChange = async (e: ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingMedia(true);
     try {
-      const url = await uploadAnhMoe(file);
+      const url = await uploadTimelineMedia(file);
       setMedia({
         type,
         url,

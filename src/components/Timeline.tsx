@@ -1,3 +1,4 @@
+
 import React, { useState, ChangeEvent } from "react";
 import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -168,7 +169,10 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
 
   return (
     <div className="max-w-lg mx-auto py-6 h-full flex flex-col animate-fade-in">
-      <PostForm user={user} onCreate={handlePostSubmit} posting={creating} />
+      {/* CHỈ HIỂN THỊ PostForm NẾU ĐÃ ĐĂNG NHẬP */}
+      {user && (
+        <PostForm user={user} onCreate={handlePostSubmit} posting={creating} />
+      )}
       <div className="flex-1 overflow-y-auto space-y-3 mt-2">
         {isLoading && (
           <div className="text-center text-gray-500 pt-12">Đang tải timeline...</div>

@@ -203,36 +203,8 @@ const PostForm: React.FC<{
   const [media, setMedia] = React.useState<MediaFile | null>(null);
   const [sticker, setSticker] = React.useState<typeof STICKERS[number] | null>(null);
 
-  // Tỉnh/thành phố
-  const [locationName, setLocationName] = React.useState<string | null>(null);
-  const [suggestedProvince, setSuggestedProvince] = React.useState<string | null>(null);
-
   // NEW: loading state cho upload ảnh/video
   const [uploadingMedia, setUploadingMedia] = useState(false);
-
-  // Lấy tỉnh từ GPS
-  React.useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      // Fake API get city name by GPS, bạn có thể dùng api khác nếu muốn
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi`);
-        const json = await res.json();
-        let province: string | null = null;
-        // Tìm tên tỉnh/thành phù hợp nhất với VN_PROVINCES
-        for (let name of VN_PROVINCES) {
-          if (json.address.state && json.address.state.includes(name)) province = name;
-          if (json.address.city && json.address.city.includes(name)) province = name;
-        }
-        setSuggestedProvince(province);
-        setLocationName(province);
-      } catch {
-        setSuggestedProvince(null);
-      }
-    });
-  }, []);
 
   // --- Chèn sticker vào đúng vị trí con trỏ soạn thảo
   const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
@@ -275,29 +247,19 @@ const PostForm: React.FC<{
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!content.trim() && !media) || uploadingMedia) return;
-    // Defensive: ensure lat/lng for type compatibility
-    let location = undefined;
-    if (locationName) {
-      location = {
-        formatted: locationName,
-        lat: 0, // Unknown, set as 0 (or optionally: null if allowed in your schema)
-        lng: 0,
-      };
-    }
     await onCreate({
       user: {
         name: user?.name ?? demoUser.name,
         avatar: user?.avatar ?? demoUser.avatar
       },
       content: content.trim(),
-      location,
+      // bỏ location
       media: media ?? undefined,
       sticker,
     });
     setContent("");
     setMedia(null);
     setSticker(null);
-    setLocationName(suggestedProvince || "");
   };
 
   return (
@@ -393,24 +355,7 @@ const PostForm: React.FC<{
               <span className="text-sm text-gray-500">{sticker.name}</span>
             </div>
           )}
-          {/* ĐỊA ĐIỂM: chọn tỉnh/thành */}
-          <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer mt-1.5">
-            Địa điểm:
-            <select
-              className="ml-2 border rounded px-2 py-1 text-sm"
-              value={locationName || ""}
-              onChange={e => setLocationName(e.target.value)}
-              disabled={posting || uploadingMedia}
-            >
-              <option value="">-- Chọn tỉnh thành --</option>
-              {VN_PROVINCES.map(pro => (
-                <option key={pro} value={pro}>{pro}{pro === suggestedProvince ? " (Gợi ý)" : ""}</option>
-              ))}
-            </select>
-            {suggestedProvince && (
-              <span className="text-green-500 ml-2 text-xs">Gợi ý: {suggestedProvince}</span>
-            )}
-          </label>
+          {/* Địa điểm đã bị loại bỏ */}
         </div>
         <Button
           type="submit"
@@ -542,15 +487,7 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
           <span className="text-xs text-gray-500">{post.sticker.name}</span>
         </div>
       )}
-      {/* Địa điểm */}
-      {post.location?.formatted && (
-        <div className="flex items-center gap-1 text-xs text-gray-500 mb-1 mt-1">
-          <MapPin size={14} className="text-pink-400" />
-          <span>
-            {post.location.formatted}
-          </span>
-        </div>
-      )}
+      {/* Địa điểm đã bị loại bỏ */}
       {/* Actions */}
       <div className="flex items-center gap-4 mt-2 mb-2">
         <Button

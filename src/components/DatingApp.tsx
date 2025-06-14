@@ -52,6 +52,9 @@ const DatingApp = () => {
     }
   }, [user]);
 
+  // --- FIX: Define matchmaking ---
+  const matchmaking = useStrangerMatchmaking(user?.id ?? anonId);
+
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);

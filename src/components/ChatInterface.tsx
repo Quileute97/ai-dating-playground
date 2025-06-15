@@ -48,6 +48,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasNotified, setHasNotified] = useState(false);
   const [isStartingQueue, setIsStartingQueue] = useState(false); // NEW
+  const prevIsMatchedRef = useRef<boolean>(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -137,19 +138,17 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
   // Theo dõi trạng thái ghép đôi (matchmakingStatus)
   useEffect(() => {
-    console.log("[CHAT-UI][Effect] (refined check)", {
-      isMatched: matchmaking?.isMatched,
+    const isNowMatched = matchmaking?.isMatched && matchmaking?.partnerId && matchmaking?.conversationId;
+    const wasMatched = prevIsMatchedRef.current;
+    // Debug log trạng thái chuyển đổi
+    console.log("[CHAT-UI][Effect][Patch] prevIsMatched:", wasMatched, "now:", isNowMatched, {
       partnerId: matchmaking?.partnerId,
       conversationId: matchmaking?.conversationId,
-      status: matchmakingStatus,
       stranger,
     });
 
-    if (
-      matchmaking?.isMatched &&
-      matchmaking?.partnerId &&
-      matchmaking?.conversationId
-    ) {
+    // Nếu vừa chuyển từ chưa matched -> matched (hoặc bị reset sau reconnect polling), luôn set stranger mới
+    if (isNowMatched && !wasMatched) {
       setStranger({
         name: "Người lạ",
         age: "?",
@@ -163,31 +162,19 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           timestamp: new Date(),
         },
       ]);
-      console.log(
-        "[CHAT-UI][Effect] (refined) ĐÃ ĐẶT STRANGER mới cho MATCHED:",
-        {
-          conversationId: matchmaking?.conversationId,
-          partnerId: matchmaking?.partnerId,
-        }
-      );
+      console.log("[CHAT-UI][Effect][Patch] ĐÃ ĐẶT STRANGER cho matched!");
     }
 
-    // Khi disconnect hoặc mất kết nối sẽ reset stranger
-    if (!matchmaking?.isMatched && stranger) {
+    // Nếu vừa chuyển từ matched về không matched, reset stranger và messages luôn!
+    if (!isNowMatched && wasMatched) {
       setStranger(null);
       setMessages([]);
-      console.log(
-        "[CHAT-UI][Effect] (refined) Reset stranger do không còn matched."
-      );
+      console.log("[CHAT-UI][Effect][Patch] ĐÃ RESET STRANGER sau disconnect!");
     }
+
+    prevIsMatchedRef.current = !!isNowMatched;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    matchmaking?.isMatched,
-    matchmaking?.partnerId,
-    matchmaking?.conversationId,
-    stranger,
-    matchmakingStatus,
-  ]);
+  }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId]);
 
   // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)
   useEffect(() => {

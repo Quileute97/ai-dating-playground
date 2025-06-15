@@ -54,35 +54,50 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   };
   useEffect(() => { scrollToBottom(); }, [messages]);
 
-  // Debug matchmaking state
+  // Enhanced debug logging
   useEffect(() => {
-    console.log("[CHAT][DEBUG] Matchmaking state:", {
-      isInQueue: matchmaking?.isInQueue,
-      isMatched: matchmaking?.isMatched,
-      partnerId: matchmaking?.partnerId,
-      conversationId: matchmaking?.conversationId,
-      stranger: stranger,
-      messagesLength: messages.length
+    console.log("🖥️ [CHAT UI] State update:", {
+      matchmaking: {
+        isInQueue: matchmaking?.isInQueue,
+        isMatched: matchmaking?.isMatched,
+        partnerId: matchmaking?.partnerId,
+        conversationId: matchmaking?.conversationId
+      },
+      ui: {
+        hasStranger: !!stranger,
+        messagesCount: messages.length,
+        hasNotified
+      },
+      timestamp: new Date().toISOString()
     });
-  }, [matchmaking?.isInQueue, matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, stranger, messages.length]);
+  }, [
+    matchmaking?.isInQueue, 
+    matchmaking?.isMatched, 
+    matchmaking?.partnerId, 
+    matchmaking?.conversationId, 
+    stranger, 
+    messages.length,
+    hasNotified
+  ]);
 
   const startSearching = async () => {
     const realUserId = user?.id || anonId;
-    console.log("[CHAT] Starting search - userId:", realUserId);
+    console.log("🎯 [CHAT UI] Starting search - userId:", realUserId);
     
     // Clear previous state
     setMessages([]);
     setConversationHistory([]);
     setIsAIMode(false);
     setStranger(null);
+    setHasNotified(false);
     
     if (matchmaking?.startQueue && realUserId) {
       try {
         setIsStartingQueue(true);
-        console.log("[CHAT] Calling matchmaking.startQueue");
+        console.log("🎯 [CHAT UI] Calling matchmaking.startQueue");
         await matchmaking.startQueue(realUserId);
       } catch (err) {
-        console.error("[CHAT] Error starting queue:", err);
+        console.error("❌ [CHAT UI] Error starting queue:", err);
       } finally {
         setIsStartingQueue(false);
       }
@@ -90,40 +105,49 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   };
 
   const disconnect = async () => {
-    console.log("[CHAT] Disconnecting");
+    console.log("🔌 [CHAT UI] Disconnecting");
     setStranger(null);
     setMessages([]);
     setConversationHistory([]);
     setIsTyping(false);
+    setHasNotified(false);
     if (matchmaking?.reset) await matchmaking.reset();
   };
 
-  // Handle match state changes
+  // Critical effect for handling match state changes
   useEffect(() => {
     const isCurrentlyMatched = matchmaking?.isMatched && 
                               matchmaking?.partnerId && 
                               matchmaking?.conversationId;
 
-    console.log("[CHAT][MATCH_EFFECT] Processing match state:", {
+    console.log("🎯 [CHAT UI] Match effect triggered:", {
       isCurrentlyMatched,
-      hasStranger: !!stranger,
-      hasMessages: messages.length > 0,
       matchmaking: {
         isMatched: matchmaking?.isMatched,
         partnerId: matchmaking?.partnerId,
         conversationId: matchmaking?.conversationId
+      },
+      ui: {
+        hasStranger: !!stranger,
+        messagesCount: messages.length
       }
     });
 
     if (isCurrentlyMatched) {
-      // If matched but UI not ready, set it up
-      if (!stranger || messages.length === 0) {
-        console.log("[CHAT][MATCH_EFFECT] ✅ Setting up chat UI for matched users");
+      console.log("✅ [CHAT UI] Match detected - setting up chat UI");
+      
+      // Force UI update - always set up chat when matched
+      if (!stranger) {
+        console.log("🎯 [CHAT UI] Creating stranger object");
         setStranger({
           name: "Người lạ",
           age: "?",
           avatar: null,
         });
+      }
+      
+      if (messages.length === 0) {
+        console.log("🎯 [CHAT UI] Adding welcome message");
         setMessages([
           {
             id: Date.now().toString(),
@@ -133,20 +157,22 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           },
         ]);
       }
-    } else {
-      // If not matched, clear UI
+      
+      console.log("✅ [CHAT UI] Chat UI setup complete");
+    } else if (!matchmaking?.isInQueue) {
+      // Only clear UI if not in queue (completely idle)
       if (stranger || messages.length > 0) {
-        console.log("[CHAT][MATCH_EFFECT] ❌ Clearing chat UI - not matched");
+        console.log("🧹 [CHAT UI] Clearing UI - not matched and not in queue");
         setStranger(null);
         setMessages([]);
       }
     }
-  }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId]);
+  }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, matchmaking?.isInQueue]);
 
   // Sound notification when matched
   useEffect(() => {
     if (matchmaking?.isMatched && matchmaking?.partnerId && matchmaking?.conversationId && !hasNotified) {
-      console.log("[CHAT] Playing match notification");
+      console.log("🔔 [CHAT UI] Playing match notification");
       toast({
         title: "🔔 Đã kết nối với người lạ!",
         description: "Bạn đã được ghép nối thành công. Hãy bắt đầu trò chuyện!",
@@ -259,14 +285,16 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
         </div>
       </div>
 
-      {/* Debug info - remove in production */}
+      {/* Enhanced Debug info */}
       {isAdminMode && (
         <div className="bg-yellow-100 p-2 text-xs">
           <strong>Debug:</strong> Status: {matchmakingStatus} | 
           Matched: {String(matchmaking?.isMatched)} | 
           Queue: {String(matchmaking?.isInQueue)} | 
           Partner: {matchmaking?.partnerId || 'none'} | 
-          Conv: {matchmaking?.conversationId || 'none'}
+          Conv: {matchmaking?.conversationId || 'none'} |
+          UI-Stranger: {stranger ? 'yes' : 'no'} |
+          UI-Messages: {messages.length}
         </div>
       )}
 

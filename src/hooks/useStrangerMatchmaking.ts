@@ -17,9 +17,10 @@ export function useStrangerMatchmaking() {
 
   const pollingRef = useRef<number | null>(null);
   const userIdRef = useRef<string | null>(null);
+  const isPollingRef = useRef(false);
 
   const startQueue = async (userId: string) => {
-    console.log("[STRANGER] [startQueue] Starting for userId =", userId, "Type:", typeof userId);
+    console.log("🚀 [MATCHMAKING] Starting queue for userId:", userId);
 
     if (!userId) {
       setError("No user ID provided");
@@ -33,106 +34,132 @@ export function useStrangerMatchmaking() {
       // Check for existing recent match first
       const existingMatch = await checkForExistingMatch(userId);
       if (existingMatch) {
-        console.log("[STRANGER] Found existing recent match:", existingMatch);
+        console.log("✅ [MATCHMAKING] Found existing recent match:", existingMatch);
         setPartnerId(existingMatch.partnerId);
         setConversationId(existingMatch.conversationId);
         setIsMatched(true);
         setIsInQueue(false);
-        console.log("[STRANGER] [startQueue] Early exit: Found recent match");
         return;
       }
 
       // Join queue
       await joinStrangerQueue(userId);
-      console.log("[STRANGER] [startQueue] Successfully joined queue");
+      console.log("📝 [MATCHMAKING] Successfully joined queue");
       setIsInQueue(true);
       setIsMatched(false);
 
-      // Start polling for matches
-      console.log("[STRANGER] Starting polling for matches");
+      // Start aggressive polling
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
-        pollingRef.current = null;
       }
+      
+      isPollingRef.current = true;
+      console.log("🔄 [MATCHMAKING] Starting aggressive polling...");
 
-      pollingRef.current = window.setInterval(async () => {
+      const pollForMatch = async () => {
+        if (!isPollingRef.current || !userIdRef.current) {
+          console.log("❌ [MATCHMAKING] Polling stopped - no user or polling disabled");
+          return;
+        }
+
         const currentUserId = userIdRef.current;
-        if (!currentUserId) {
-          console.log("[STRANGER][POLL] No userId, stopping polling");
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-          }
-          return;
-        }
-
-        console.log("[STRANGER][POLL] Checking for match for user:", currentUserId);
+        console.log("🔍 [MATCHMAKING] Polling round for user:", currentUserId);
         
-        // ALWAYS check backend first - this is crucial for the second user
-        const backendMatch = await checkForExistingMatch(currentUserId);
-        if (backendMatch && backendMatch.partnerId && backendMatch.conversationId) {
-          console.log("[STRANGER][POLL] ✅ FOUND MATCH IN BACKEND:", backendMatch);
+        try {
+          // ALWAYS check backend first - this is critical for second user
+          console.log("🔍 [MATCHMAKING] Checking backend for existing match...");
+          const backendMatch = await checkForExistingMatch(currentUserId);
           
-          // Force update all states immediately
-          setPartnerId(backendMatch.partnerId);
-          setConversationId(backendMatch.conversationId);
-          setIsMatched(true);
-          setIsInQueue(false);
-          
-          // Leave queue and stop polling
-          await leaveStrangerQueue(currentUserId);
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-          }
-          
-          console.log("[STRANGER][POLL] ✅ STATE UPDATED - User should see chat now");
-          return;
-        }
-
-        // If no existing match, try to create new match
-        console.log("[STRANGER][POLL] No backend match found, trying to find new partner");
-        const partner = await findMatch(currentUserId);
-        if (partner) {
-          console.log("[STRANGER][POLL] Found potential partner:", partner);
-          const result = await createConversation(currentUserId, partner);
-          if (result && result.conversationId) {
-            console.log("[STRANGER][POLL] ✅ CREATED NEW CONVERSATION:", result);
+          if (backendMatch && backendMatch.partnerId && backendMatch.conversationId) {
+            console.log("🎯 [MATCHMAKING] ✅ BACKEND MATCH FOUND!", {
+              partnerId: backendMatch.partnerId,
+              conversationId: backendMatch.conversationId,
+              currentUser: currentUserId
+            });
             
-            // Update states
-            setPartnerId(partner);
-            setConversationId(result.conversationId);
-            setIsMatched(true);
-            setIsInQueue(false);
-            
-            // Leave queue and stop polling
-            await leaveStrangerQueue(currentUserId);
+            // Stop polling immediately
+            isPollingRef.current = false;
             if (pollingRef.current) {
               clearInterval(pollingRef.current);
               pollingRef.current = null;
             }
             
-            console.log("[STRANGER][POLL] ✅ NEW MATCH CREATED - User should see chat now");
+            // Update state immediately and forcefully
+            console.log("🎯 [MATCHMAKING] Updating state NOW...");
+            setPartnerId(backendMatch.partnerId);
+            setConversationId(backendMatch.conversationId);
+            setIsMatched(true);
+            setIsInQueue(false);
+            
+            // Leave queue
+            await leaveStrangerQueue(currentUserId);
+            console.log("🎯 [MATCHMAKING] ✅ MATCH COMPLETE - UI should update now!");
             return;
           }
+
+          // If no existing match, try to create new match
+          console.log("🔍 [MATCHMAKING] No backend match, looking for new partner...");
+          const partner = await findMatch(currentUserId);
+          
+          if (partner) {
+            console.log("👥 [MATCHMAKING] Found potential partner:", partner);
+            
+            // Stop polling to prevent race conditions
+            isPollingRef.current = false;
+            if (pollingRef.current) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+            }
+            
+            const result = await createConversation(currentUserId, partner);
+            if (result && result.conversationId) {
+              console.log("🎉 [MATCHMAKING] ✅ NEW CONVERSATION CREATED!", {
+                conversationId: result.conversationId,
+                partner: partner,
+                currentUser: currentUserId
+              });
+              
+              // Update state
+              setPartnerId(partner);
+              setConversationId(result.conversationId);
+              setIsMatched(true);
+              setIsInQueue(false);
+              
+              // Leave queue
+              await leaveStrangerQueue(currentUserId);
+              console.log("🎉 [MATCHMAKING] ✅ NEW MATCH COMPLETE!");
+              return;
+            } else {
+              console.log("❌ [MATCHMAKING] Failed to create conversation, resuming polling...");
+              isPollingRef.current = true;
+            }
+          }
+          
+          console.log("⏳ [MATCHMAKING] No match this round, continuing...");
+          
+        } catch (error) {
+          console.error("❌ [MATCHMAKING] Polling error:", error);
         }
-        
-        console.log("[STRANGER][POLL] No match found this round, continuing...");
-      }, 2000); // Check every 2 seconds
+      };
+
+      // Start immediate polling
+      pollForMatch();
+      
+      pollingRef.current = window.setInterval(pollForMatch, 1500); // More frequent polling
 
     } catch (err) {
-      console.error("[STRANGER] [startQueue] Error:", err);
+      console.error("❌ [MATCHMAKING] Error starting queue:", err);
       setError(err instanceof Error ? err.message : "Failed to join queue");
     }
   };
 
   const stopQueue = async () => {
-    console.log("[STRANGER] [stopQueue] Stopping queue");
+    console.log("🛑 [MATCHMAKING] Stopping queue");
 
+    isPollingRef.current = false;
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
-      console.log("[STRANGER] Stopped polling");
     }
 
     if (userIdRef.current) {
@@ -148,8 +175,9 @@ export function useStrangerMatchmaking() {
   };
 
   const reset = () => {
-    console.log("[STRANGER] [reset] Resetting matchmaking state");
+    console.log("🔄 [MATCHMAKING] Resetting state");
 
+    isPollingRef.current = false;
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
@@ -166,6 +194,7 @@ export function useStrangerMatchmaking() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      isPollingRef.current = false;
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
         pollingRef.current = null;
@@ -176,14 +205,15 @@ export function useStrangerMatchmaking() {
     };
   }, []);
 
-  // Debug logging for state changes
+  // Enhanced debug logging
   useEffect(() => {
-    console.log("[STRANGER][STATE] State changed:", {
+    console.log("📊 [MATCHMAKING STATE]", {
       isInQueue,
       isMatched,
       partnerId,
       conversationId,
       error,
+      isPolling: isPollingRef.current,
       timestamp: new Date().toISOString()
     });
   }, [isInQueue, isMatched, partnerId, conversationId, error]);

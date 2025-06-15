@@ -137,41 +137,36 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
   // Theo dõi trạng thái ghép đôi (matchmakingStatus)
   useEffect(() => {
-    // Debug toàn bộ state từ matchmaking để kiểm tra
+    // Log đầy đủ state để debug
     console.log("[CHAT-UI][Effect] matchmakingStatus:", matchmakingStatus, "matchResult:", matchResult, "stranger:", stranger);
 
     if (matchmakingStatus === "matched" && matchResult.conversationId && matchResult.partnerId) {
-      if (!stranger) {
-        setStranger({
-          name: "Người lạ",
-          age: "?",
-          avatar: null,
-        });        
-        setMessages([
-          {
-            id: Date.now().toString(),
-            text: `Bạn đã được kết nối với 1 người lạ. Hãy bắt đầu trò chuyện!`,
-            sender: "stranger",
-            timestamp: new Date(),
-          }
-        ]);
-        console.log("[CHAT-UI][Effect] Đã vào chat với stranger:", {conversationId: matchResult.conversationId, partnerId: matchResult.partnerId});
-      } else {
-        // Đã vào khung chat, không set lại stranger
-        console.log("[CHAT-UI][Effect] Đã có stranger, giữ nguyên.");
-      }
+      // Luôn luôn set stranger mới khi matched & matchResult thay đổi, không kiểm tra stranger cũ
+      setStranger({
+        name: "Người lạ",
+        age: "?",
+        avatar: null,
+      });
+      setMessages([
+        {
+          id: Date.now().toString(),
+          text: `Bạn đã được kết nối với 1 người lạ. Hãy bắt đầu trò chuyện!`,
+          sender: "stranger",
+          timestamp: new Date(),
+        }
+      ]);
+      console.log("[CHAT-UI][Effect] ĐÃ ĐẶT STRANGER mới:", {conversationId: matchResult.conversationId, partnerId: matchResult.partnerId});
     }
+
     // Khi disconnect hoặc mất kết nối sẽ reset stranger
     if (matchmakingStatus !== "matched" && stranger) {
       setStranger(null);
       setMessages([]);
       console.log("[CHAT-UI][Effect] Reset stranger do không còn matched.");
     }
-    // Bổ sung: Nếu matchmakingStatus matched, stranger lại NULL thì set lại
-    // ... phần này đã cover phía trên
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchmakingStatus, matchResult.conversationId, matchResult.partnerId, stranger]);
-
+  }, [matchmakingStatus, matchResult.conversationId, matchResult.partnerId]);
+  
   // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)
   useEffect(() => {
     if (

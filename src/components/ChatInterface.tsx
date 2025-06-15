@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, Heart, Settings, Users, Bot, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { aiService, AIMessage } from '@/services/aiService';
 import StrangerSettingsModal from './StrangerSettingsModal';
+import { useNearbyConversation } from '@/hooks/useNearbyConversation';
 
 interface Message {
   id: string;
@@ -49,10 +50,25 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   const [hasNotified, setHasNotified] = useState(false);
   const [isStartingQueue, setIsStartingQueue] = useState(false);
 
-  const scrollToBottom = () => {
+  // Lấy userId hiện tại và partnerId để truyền vào useNearbyConversation khi đã match
+  const currentUserId = user?.id || anonId || null;
+  const partnerId = matchmaking?.partnerId || null;
+  const isMatched = matchmaking?.isMatched && matchmaking?.partnerId && matchmaking?.conversationId;
+
+  // Sử dụng useNearbyConversation khi kết nối thành công (matched)
+  const {
+    messages: nearbyMessages,
+    sendMessage: sendSupabaseMessage,
+    loading: isMessagesLoading,
+  } = useNearbyConversation(
+    isMatched ? currentUserId : null, 
+    isMatched ? partnerId : null
+  );
+
+  // Cuộn xuống cuối tin nhắn
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-  useEffect(() => { scrollToBottom(); }, [messages]);
+  }, [nearbyMessages]);
 
   // Enhanced debug logging
   useEffect(() => {
@@ -188,31 +204,16 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     }
   }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, hasNotified, toast]);
 
+  // Sửa handleSendMessage: dùng sendSupabaseMessage khi đã matched, AI logic giữ nguyên
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputValue,
-      sender: 'user',
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, newMessage]);
-    
-    const userMessage: AIMessage = {
-      role: 'user',
-      content: inputValue
-    };
-    setConversationHistory(prev => [...prev, userMessage]);
-    setInputValue('');
 
     if (isAIMode) {
       setIsTyping(true);
       try {
         await aiService.simulateTyping();
         const aiResponse = await aiService.generateResponse(
-          [...conversationHistory, userMessage],
+          [...conversationHistory, { role: 'user', content: inputValue }],
           aiPersonality
         );
 
@@ -225,7 +226,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
         };
 
         setMessages(prev => [...prev, response]);
-        setConversationHistory(prev => [...prev, userMessage, {
+        setConversationHistory(prev => [...prev, { role: 'user', content: inputValue }, {
           role: 'assistant',
           content: aiResponse.message
         }]);
@@ -242,6 +243,9 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       } finally {
         setIsTyping(false);
       }
+    } else if (isMatched && sendSupabaseMessage) {
+      await sendSupabaseMessage(inputValue.trim());
+      setInputValue('');
     }
   };
 
@@ -356,7 +360,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       )}
 
       {/* Chat UI when matched */}
-      {matchmakingStatus === "matched" && stranger && (
+      {matchmaking?.isMatched && stranger && (
         <>
           {/* Stranger Info */}
           <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 p-3">
@@ -397,26 +401,41 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-              >
-                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 hover:scale-105 ${
-                  message.sender === 'user'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                    : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
-                }`}>
-                  <p className="text-sm">{message.text}</p>
-                  <p className={`text-xs mt-1 ${
-                    message.sender === 'user' ? 'text-purple-100' : 'text-gray-500'
+            {/* Render từ nearbyMessages nếu đã matched, còn AI/demo thì giữ như cũ */}
+            {(isAIMode
+              ? conversationHistory.map((msg, idx) =>
+                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 ${
+                      msg.role === 'user'
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                        : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
+                    }`}>
+                      <p className="text-sm">{msg.content}</p>
+                    </div>
+                  </div>
+                )
+              : nearbyMessages?.map((message: any) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.sender === currentUserId ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                >
+                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 hover:scale-105 ${
+                    message.sender === currentUserId
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                      : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
                   }`}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                    <p className="text-sm">{message.content}</p>
+                    <p className={`text-xs mt-1 ${
+                      message.sender === currentUserId ? 'text-purple-100' : 'text-gray-500'
+                    }`}>
+                      {message.created_at
+                        ? new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : ''}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-            
+              ))
+            )}
             {isTyping && (
               <div className="flex justify-start animate-fade-in">
                 <div className="bg-white/80 backdrop-blur-sm border border-purple-100 px-4 py-2 rounded-2xl shadow-md">
@@ -441,13 +460,13 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                 placeholder="Nhập tin nhắn..."
                 className="flex-1 border-purple-200 focus:border-purple-400 transition-colors"
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={isTyping}
+                disabled={isTyping || isMessagesLoading}
               />
               <Button
                 onClick={handleSendMessage}
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
                 size="sm"
-                disabled={isTyping || !inputValue.trim()}
+                disabled={isTyping || isMessagesLoading || !inputValue.trim()}
               >
                 <Send className="w-4 h-4" />
               </Button>

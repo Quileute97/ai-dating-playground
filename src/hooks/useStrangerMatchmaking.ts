@@ -8,6 +8,13 @@ import {
   createConversation 
 } from "@/services/strangerMatchmakingService";
 
+/**
+ * STATE REPAIR: 
+ * Nếu có phát hiện match thì LUÔN cập nhật lại state (kể cả giống giá trị cũ)
+ * Không dừng polling trước khi update state
+ * Thêm logs để dễ debug.
+ */
+
 export function useStrangerMatchmaking() {
   const [isInQueue, setIsInQueue] = useState(false);
   const [isMatched, setIsMatched] = useState(false);
@@ -35,8 +42,9 @@ export function useStrangerMatchmaking() {
       const existingMatch = await checkForExistingMatch(userId);
       if (existingMatch) {
         console.log("✅ [MATCHMAKING] Found existing recent match:", existingMatch);
-        setPartnerId(existingMatch.partnerId);
-        setConversationId(existingMatch.conversationId);
+        // FORCE UPDATE state
+        setPartnerId(existingMatch.partnerId ?? null);
+        setConversationId(existingMatch.conversationId ?? null);
         setIsMatched(true);
         setIsInQueue(false);
         return;
@@ -77,19 +85,17 @@ export function useStrangerMatchmaking() {
               currentUser: currentUserId
             });
             
-            // Stop polling immediately
+            // FORCE UPDATE state even if values are old
+            setPartnerId(backendMatch.partnerId);
+            setConversationId(backendMatch.conversationId);
+            setIsMatched(true);
+            setIsInQueue(false);
+            // Dừng polling ngay lập tức sau khi cập nhật state
             isPollingRef.current = false;
             if (pollingRef.current) {
               clearInterval(pollingRef.current);
               pollingRef.current = null;
             }
-            
-            // Update state immediately and forcefully
-            console.log("🎯 [MATCHMAKING] Updating state NOW...");
-            setPartnerId(backendMatch.partnerId);
-            setConversationId(backendMatch.conversationId);
-            setIsMatched(true);
-            setIsInQueue(false);
             
             // Leave queue
             await leaveStrangerQueue(currentUserId);
@@ -119,7 +125,7 @@ export function useStrangerMatchmaking() {
                 currentUser: currentUserId
               });
               
-              // Update state
+              // FORCE UPDATE state
               setPartnerId(partner);
               setConversationId(result.conversationId);
               setIsMatched(true);
@@ -145,7 +151,9 @@ export function useStrangerMatchmaking() {
       // Start immediate polling
       pollForMatch();
       
-      pollingRef.current = window.setInterval(pollForMatch, 1500); // More frequent polling
+      pollingRef.current = window.setInterval(() => {
+        pollForMatch(); // Chạy polling liên tục mỗi 1.5s
+      }, 1500);
 
     } catch (err) {
       console.error("❌ [MATCHMAKING] Error starting queue:", err);
@@ -205,7 +213,7 @@ export function useStrangerMatchmaking() {
     };
   }, []);
 
-  // Enhanced debug logging
+  // Enhanced debug logging: log mọi lần update state
   useEffect(() => {
     console.log("📊 [MATCHMAKING STATE]", {
       isInQueue,

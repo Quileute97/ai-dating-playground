@@ -114,15 +114,16 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     if (matchmaking?.reset) await matchmaking.reset();
   };
 
-  // Critical effect for handling match state changes
+  // FORCE UI update: Nếu state đã đủ điều kiện, luôn ép tạo khung chat mới!
   useEffect(() => {
     const isCurrentlyMatched = matchmaking?.isMatched && 
-                              matchmaking?.partnerId && 
-                              matchmaking?.conversationId;
+                              !!matchmaking?.partnerId && 
+                              !!matchmaking?.conversationId;
 
+    // Log, log, log
     console.log("🎯 [CHAT UI] Match effect triggered:", {
       isCurrentlyMatched,
-      matchmaking: {
+      group: {
         isMatched: matchmaking?.isMatched,
         partnerId: matchmaking?.partnerId,
         conversationId: matchmaking?.conversationId
@@ -133,21 +134,15 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       }
     });
 
+    // Mỗi lần detect match, ép set stranger & welcome message lại (dù trước đó đã có để tránh bị miss render do state không đổi giá trị pointer)
     if (isCurrentlyMatched) {
-      console.log("✅ [CHAT UI] Match detected - setting up chat UI");
-      
-      // Force UI update - always set up chat when matched
-      if (!stranger) {
-        console.log("🎯 [CHAT UI] Creating stranger object");
-        setStranger({
-          name: "Người lạ",
-          age: "?",
-          avatar: null,
-        });
-      }
-      
+      setStranger({
+        name: "Người lạ",
+        age: "?",
+        avatar: null,
+      });
+
       if (messages.length === 0) {
-        console.log("🎯 [CHAT UI] Adding welcome message");
         setMessages([
           {
             id: Date.now().toString(),
@@ -157,17 +152,19 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           },
         ]);
       }
-      
-      console.log("✅ [CHAT UI] Chat UI setup complete");
     } else if (!matchmaking?.isInQueue) {
-      // Only clear UI if not in queue (completely idle)
       if (stranger || messages.length > 0) {
-        console.log("🧹 [CHAT UI] Clearing UI - not matched and not in queue");
         setStranger(null);
         setMessages([]);
       }
     }
-  }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, matchmaking?.isInQueue]);
+  }, [
+    matchmaking?.isMatched, 
+    matchmaking?.partnerId, 
+    matchmaking?.conversationId, 
+    matchmaking?.isInQueue
+    // không phụ thuộc stranger/messages để tránh infinite loop setState
+  ]);
 
   // Sound notification when matched
   useEffect(() => {

@@ -212,11 +212,17 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
     if (matchmakingStatus === "matched" && matchmaking.conversationId) {
       setIsSending(true);
-      const ok = await sendMessage(inputValue);
-      if (ok) {
-        setInputValue("");
-      } else {
+      try {
+        const ok = await sendMessage(inputValue);
+        if (ok) {
+          setInputValue("");
+        } else {
+          showSendError();
+          console.error("[ChatInterface] sendMessage trả về false. Không gửi được tin nhắn.");
+        }
+      } catch (err) {
         showSendError();
+        console.error("[ChatInterface] Lỗi khi gửi tin nhắn stranger:", err);
       }
       setIsSending(false);
       return;
@@ -461,6 +467,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
                 size="sm"
                 disabled={isTyping || !inputValue.trim() || isSending}
+                type="button"
               >
                 {isSending ? (
                   <svg className="animate-spin w-4 h-4 text-white" viewBox="0 0 24 24">

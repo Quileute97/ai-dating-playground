@@ -1,82 +1,85 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface StrangerMessage {
   id: string;
-  conversation_id: string;
-  sender: string;
   content: string;
+  sender: string;
   created_at: string;
 }
 
-export function useStrangerMessages(conversationId: string | null, currentUserId: string | null) {
+export function useStrangerMessages(conversationId: string | null, userId: string | null) {
   const [messages, setMessages] = useState<StrangerMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Load + subscribe messages
   useEffect(() => {
     if (!conversationId) {
       setMessages([]);
       return;
     }
-
     setLoading(true);
-    let unsub: (() => void) | undefined;
+    let mounted = true;
 
-    async function loadMessages() {
+    async function getMessages() {
       const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
 
-      if (data) {
-        setMessages(data);
+      if (!mounted) return;
+      if (error || !data) {
+        setMessages([]);
+        setLoading(false);
+        return;
       }
+      setMessages(data);
       setLoading(false);
     }
+    getMessages();
 
-    loadMessages();
-
-    // Subscribe
+    // Realtime subscribe
     const channel = supabase
-      .channel(`messages-${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          setMessages((prev) => [...prev, payload.new as StrangerMessage]);
-        }
-      )
+      .channel(`stranger-messages-${conversationId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`
+      }, (payload) => {
+        setMessages(prev => [...prev, payload.new as StrangerMessage]);
+      })
       .subscribe();
 
-    unsub = () => {
+    return () => {
+      mounted = false;
       supabase.removeChannel(channel);
     };
-
-    return unsub;
   }, [conversationId]);
 
-  const sendMessage = async (content: string) => {
-    if (!conversationId || !currentUserId || !content.trim()) return false;
-    const { error } = await supabase.from("messages").insert([
-      {
+  // Gửi message mới
+  const sendMessage = async (text: string) => {
+    if (!conversationId || !userId || !text.trim()) return false;
+    const { error } = await supabase
+      .from('messages')
+      .insert([{
         conversation_id: conversationId,
-        sender: currentUserId,
-        content: content.trim(),
-      },
-    ]);
-    if (!error) {
-      // No-op: real-time subscription will update UI, don't add local echo
-      return true;
+        content: text.trim(),
+        sender: userId
+      }]);
+    if (error) {
+      console.error('[useStrangerMessages] Error sending message:', error);
+      return false;
     }
-    return false;
+    // Update conversation last message
+    await supabase.from('conversations').update({
+      last_message: text.trim(),
+      last_message_at: new Date().toISOString()
+    }).eq('id', conversationId);
+    return true;
   };
 
-  return { messages, sendMessage, loading };
+  return { messages, loading, sendMessage };
 }

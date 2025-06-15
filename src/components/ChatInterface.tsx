@@ -49,14 +49,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasNotified, setHasNotified] = useState(false);
   const [isStartingQueue, setIsStartingQueue] = useState(false);
-  const currentUserId = user?.id || anonId || null;
-
-  // New for stranger mode: use real-time Supabase messages
-  const { messages: peerMessages, sendMessage: peerSendMessage, loading: loadingPeerMsg } =
-    useStrangerMessages(
-      matchmaking?.isMatched ? matchmaking?.conversationId : null,
-      currentUserId
-    );
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -197,35 +189,21 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     }
   }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, hasNotified, toast]);
 
-  // Determine messages to show: 
-  const shouldShowStrangerChat = matchmaking?.isMatched && stranger && !isAIMode;
-  const shouldShowAIChat = isAIMode && stranger;
+  const userId = user?.id || anonId;
+  const { messages: strangerMessages, loading: messagesLoading, sendMessage } = useStrangerMessages(
+    matchmaking?.conversationId || null,
+    userId
+  );
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
-    if (shouldShowAIChat) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: inputValue,
-        sender: 'user',
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, newMessage]);
-      
-      const userMessage: AIMessage = {
-        role: 'user',
-        content: inputValue
-      };
-      setConversationHistory(prev => [...prev, userMessage]);
-      setInputValue('');
-
+    if (isAIMode) {
       setIsTyping(true);
       try {
         await aiService.simulateTyping();
         const aiResponse = await aiService.generateResponse(
-          [...conversationHistory, userMessage],
+          [...conversationHistory, { role: 'user', content: inputValue }],
           aiPersonality
         );
 
@@ -238,7 +216,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
         };
 
         setMessages(prev => [...prev, response]);
-        setConversationHistory(prev => [...prev, userMessage, {
+        setConversationHistory(prev => [...prev, { role: 'user', content: inputValue }, {
           role: 'assistant',
           content: aiResponse.message
         }]);
@@ -255,10 +233,14 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       } finally {
         setIsTyping(false);
       }
-    } else if (shouldShowStrangerChat) {
-      // Gửi message lên Supabase
-      const ok = await peerSendMessage(inputValue.trim());
+      return;
+    }
+
+    // Đang matched với người lạ
+    if (matchmakingStatus === "matched" && matchmaking.conversationId) {
+      const ok = await sendMessage(inputValue);
       if (ok) setInputValue("");
+      return;
     }
   };
 
@@ -412,73 +394,42 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
             </div>
           </div>
 
-          {/* Messages */}
-          {shouldShowStrangerChat && (
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {(loadingPeerMsg ?
-                <div className="text-center text-xs text-gray-500">Đang tải tin nhắn...</div>
-                :
-                peerMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.sender === currentUserId ? 'justify-end' : 'justify-start'} animate-fade-in`}
-                  >
-                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 hover:scale-105 ${
-                      msg.sender === currentUserId
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                        : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
-                    }`}>
-                      <p className="text-sm">{msg.content}</p>
-                      <p className={`text-xs mt-1 ${
-                        msg.sender === currentUserId ? 'text-purple-100' : 'text-gray-500'
-                      }`}>
-                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-
-          {shouldShowAIChat && (
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-                >
-                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 hover:scale-105 ${
-                    message.sender === 'user'
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                      : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
+          {/* Messages (dùng strangerMessages từ Supabase) */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {(strangerMessages || []).map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.sender === userId ? 'justify-end' : 'justify-start'} animate-fade-in`}
+              >
+                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 hover:scale-105 ${
+                  msg.sender === userId
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                    : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
+                }`}>
+                  <p className="text-sm">{msg.content}</p>
+                  <p className={`text-xs mt-1 ${
+                    msg.sender === userId ? 'text-purple-100' : 'text-gray-500'
                   }`}>
-                    <p className="text-sm">{message.text}</p>
-                    <p className={`text-xs mt-1 ${
-                      message.sender === 'user' ? 'text-purple-100' : 'text-gray-500'
-                    }`}>
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
+                    {msg.created_at && new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            ))}
+            
+            {isTyping && (
+              <div className="flex justify-start animate-fade-in">
+                <div className="bg-white/80 backdrop-blur-sm border border-purple-100 px-4 py-2 rounded-2xl shadow-md">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 </div>
-              ))}
-              
-              {isTyping && (
-                <div className="flex justify-start animate-fade-in">
-                  <div className="bg-white/80 backdrop-blur-sm border border-purple-100 px-4 py-2 rounded-2xl shadow-md">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
-            </div>
-          )}
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
 
           {/* Input */}
           <div className="bg-white/80 backdrop-blur-sm border-t border-purple-100 p-4">
@@ -489,13 +440,13 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                 placeholder="Nhập tin nhắn..."
                 className="flex-1 border-purple-200 focus:border-purple-400 transition-colors"
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={isTyping || loadingPeerMsg}
+                disabled={isTyping}
               />
               <Button
                 onClick={handleSendMessage}
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
                 size="sm"
-                disabled={(isTyping || loadingPeerMsg) || !inputValue.trim()}
+                disabled={isTyping || !inputValue.trim()}
               >
                 <Send className="w-4 h-4" />
               </Button>

@@ -137,11 +137,19 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
   // Theo dõi trạng thái ghép đôi (matchmakingStatus)
   useEffect(() => {
-    // Log đầy đủ state để debug
-    console.log("[CHAT-UI][Effect] matchmakingStatus:", matchmakingStatus, "matchResult:", matchResult, "stranger:", stranger);
+    console.log("[CHAT-UI][Effect] (refined check)", {
+      isMatched: matchmaking?.isMatched,
+      partnerId: matchmaking?.partnerId,
+      conversationId: matchmaking?.conversationId,
+      status: matchmakingStatus,
+      stranger,
+    });
 
-    if (matchmakingStatus === "matched" && matchResult.conversationId && matchResult.partnerId) {
-      // Luôn luôn set stranger mới khi matched & matchResult thay đổi, không kiểm tra stranger cũ
+    if (
+      matchmaking?.isMatched &&
+      matchmaking?.partnerId &&
+      matchmaking?.conversationId
+    ) {
       setStranger({
         name: "Người lạ",
         age: "?",
@@ -153,20 +161,34 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           text: `Bạn đã được kết nối với 1 người lạ. Hãy bắt đầu trò chuyện!`,
           sender: "stranger",
           timestamp: new Date(),
-        }
+        },
       ]);
-      console.log("[CHAT-UI][Effect] ĐÃ ĐẶT STRANGER mới:", {conversationId: matchResult.conversationId, partnerId: matchResult.partnerId});
+      console.log(
+        "[CHAT-UI][Effect] (refined) ĐÃ ĐẶT STRANGER mới cho MATCHED:",
+        {
+          conversationId: matchmaking?.conversationId,
+          partnerId: matchmaking?.partnerId,
+        }
+      );
     }
 
     // Khi disconnect hoặc mất kết nối sẽ reset stranger
-    if (matchmakingStatus !== "matched" && stranger) {
+    if (!matchmaking?.isMatched && stranger) {
       setStranger(null);
       setMessages([]);
-      console.log("[CHAT-UI][Effect] Reset stranger do không còn matched.");
+      console.log(
+        "[CHAT-UI][Effect] (refined) Reset stranger do không còn matched."
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchmakingStatus, matchResult.conversationId, matchResult.partnerId]);
-  
+  }, [
+    matchmaking?.isMatched,
+    matchmaking?.partnerId,
+    matchmaking?.conversationId,
+    stranger,
+    matchmakingStatus,
+  ]);
+
   // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)
   useEffect(() => {
     if (

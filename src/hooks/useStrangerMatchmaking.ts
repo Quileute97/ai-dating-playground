@@ -64,23 +64,33 @@ export function useStrangerMatchmaking() {
             now: new Date().toISOString(),
           }
         );
-        // KHÔNG dừng polling quá sớm: Polling chỉ dừng nếu vừa được matched thành công (setIsMatched)
-        if (!userIdRef.current) {
+        // NOTE: Không rely vào biến isMatched ở closure, luôn truy cập từ state mới nhất hoặc kiểm tra lại trực tiếp!
+        // CLIP: Nếu đã có partnerId và conversationId => đã match thành công (chủ động hoặc bị động)
+        let latestUserId = userIdRef.current;
+        if (!latestUserId) {
           // Khi reset state queue
-          console.log("[STRANGER] [polling] userIdRef null -> stop polling");
+          console.log("[STRANGER][POLL][ABORT] userIdRef null, stop polling");
           clearInterval(pollingRef.current!);
           pollingRef.current = null;
           return;
         }
-        if (isMatched) {
-          // Chỉ dừng khi thật sự đã set matched (phải luôn update state trước khi clearInterval)
+        // Luôn luôn check trực tiếp từ backend để phòng trường hợp setState bị trễ!
+        const exist = await checkForExistingMatch(latestUserId);
+        if (exist && exist.partnerId && exist.conversationId) {
+          setPartnerId(exist.partnerId);
+          setConversationId(exist.conversationId);
+          setIsMatched(true);
+          setIsInQueue(false);
+          // Dừng polling ngay lập tức khi đã match thành công!
           clearInterval(pollingRef.current!);
           pollingRef.current = null;
-          console.log("[STRANGER] [polling] Stopped polling because isMatched=true");
+          // Xóa khỏi queue
+          await leaveStrangerQueue(latestUserId);
+          console.log("[STRANGER][POLL] Đã matched (manual polling), stop và chuyển UI!");
           return;
         }
-        // Nếu state stuck, vẫn tiếp tục polling để không bị 'kẹp'
-        await tryMatch(userIdRef.current);
+        // Nếu chưa matched, thực hiện tryMatch như cũ
+        await tryMatch(latestUserId);
       }, 1500); // Check every 1.5 seconds
 
     } catch (err) {
@@ -91,59 +101,48 @@ export function useStrangerMatchmaking() {
 
   const tryMatch = async (userId: string) => {
     try {
-      console.log("[STRANGER] [tryMatch] Polling for userId:", userId, "at", new Date().toISOString());
+      console.log("[STRANGER][tryMatch] Đang polling tìm ghép đôi cho:", userId, new Date().toISOString());
 
-      // NEW: Luôn checkForExistingMatch, kể cả khi là người bị động!
+      // Luôn check lại match ở backend, không rely vào state!
       const existingMatch = await checkForExistingMatch(userId);
-      console.log("[STRANGER] [tryMatch] checkForExistingMatch returns:", existingMatch);
 
-      if (existingMatch) {
-        // Đã có người tạo conversation với mình!
+      if (existingMatch && existingMatch.partnerId && existingMatch.conversationId) {
         setPartnerId(existingMatch.partnerId);
         setConversationId(existingMatch.conversationId);
         setIsMatched(true);
         setIsInQueue(false);
-
-        // Remove khỏi queue và stop polling
         await leaveStrangerQueue(userId);
 
+        // Dừng polling luôn!
         if (pollingRef.current) {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
         }
-        console.log("[STRANGER] Matched (bị động) (tryMatch), chuyển sang chat!");
+        console.log("[STRANGER] Matched phía bị động (tryMatch): đã cập nhật UI!");
         return;
       }
 
-      // Nếu chưa có conversation, thử chủ động tìm match (match với người khác)
+      // Nếu chưa có conversation, thử chủ động match
       const partner = await findMatch(userId);
       if (partner) {
-        console.log("[STRANGER] [tryMatch] Found partner in queue:", partner);
-        
-        // Create conversation
         const result = await createConversation(userId, partner);
-        if (result) {
+        if (result && result.conversationId) {
           setPartnerId(partner);
           setConversationId(result.conversationId);
           setIsMatched(true);
           setIsInQueue(false);
-
-          // Chỉ gọi leaveStrangerQueue với userId local (KHÔNG gọi với partner)
           await leaveStrangerQueue(userId);
-
-          // Stop polling
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
             pollingRef.current = null;
           }
-          console.log("[STRANGER] Matched (chủ động), chuyển sang chat!");
+          console.log("[STRANGER] Matched phía chủ động, đã cập nhật UI!");
+          return;
         }
-      } else {
-        // Không có ai, vẫn tiếp tục ở hàng chờ!
-        console.log("[STRANGER] [tryMatch] Không tìm thấy partner, tiếp tục tìm kiếm...");
       }
+      // Nếu vẫn không thấy, vẫn giữ ở hàng chờ!
     } catch (err) {
-      console.error("[STRANGER] [tryMatch] Error:", err);
+      console.error("[STRANGER][tryMatch][ERR]", err);
       setError(err instanceof Error ? err.message : "Matching failed");
     }
   };

@@ -140,14 +140,12 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   useEffect(() => {
     const isNowMatched = matchmaking?.isMatched && matchmaking?.partnerId && matchmaking?.conversationId;
     const wasMatched = prevIsMatchedRef.current;
-    // Debug log trạng thái chuyển đổi
-    console.log("[CHAT-UI][Effect][Patch] prevIsMatched:", wasMatched, "now:", isNowMatched, {
+    console.log("[DEBUG][Effect] prevIsMatched:", wasMatched, "isNowMatched:", isNowMatched, {
+      isMatched: matchmaking?.isMatched,
       partnerId: matchmaking?.partnerId,
       conversationId: matchmaking?.conversationId,
       stranger,
     });
-
-    // Nếu vừa chuyển từ chưa matched -> matched (hoặc bị reset sau reconnect polling), luôn set stranger mới
     if (isNowMatched && !wasMatched) {
       setStranger({
         name: "Người lạ",
@@ -164,16 +162,12 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       ]);
       console.log("[CHAT-UI][Effect][Patch] ĐÃ ĐẶT STRANGER cho matched!");
     }
-
-    // Nếu vừa chuyển từ matched về không matched, reset stranger và messages luôn!
     if (!isNowMatched && wasMatched) {
       setStranger(null);
       setMessages([]);
       console.log("[CHAT-UI][Effect][Patch] ĐÃ RESET STRANGER sau disconnect!");
     }
-
     prevIsMatchedRef.current = !!isNowMatched;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId]);
 
   // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)
@@ -184,13 +178,10 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       matchResult.partnerId &&
       !hasNotified
     ) {
-      // Hiện Toast
       toast({
         title: "🔔 Đã kết nối với người lạ!",
         description: "Bạn đã được ghép nối thành công. Quay lại Tab Chat để bắt đầu trò chuyện!",
       });
-
-      // Phát âm thanh
       if (!audioRef.current) {
         audioRef.current = new window.Audio(PING_SOUND_URL);
       }
@@ -198,7 +189,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       audioRef.current.play().catch(() => {}); // Ignore play error (browser lock)
       setHasNotified(true);
     }
-    // Nếu reset về trạng thái idle/searching thì lại cho phép notify lần nữa
     if (matchmakingStatus !== "matched" && hasNotified) {
       setHasNotified(false);
     }
@@ -216,7 +206,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
     setMessages(prev => [...prev, newMessage]);
     
-    // Add to conversation history for AI
     const userMessage: AIMessage = {
       role: 'user',
       content: inputValue
@@ -269,6 +258,17 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       description: `Sẽ tìm kiếm ${settings.gender === 'all' ? 'tất cả giới tính' : settings.gender === 'male' ? 'nam' : settings.gender === 'female' ? 'nữ' : 'khác'}, ${settings.ageGroup === 'all' ? 'mọi độ tuổi' : settings.ageGroup === 'gen-z' ? 'Gen Z' : settings.ageGroup === 'millennial' ? '9x' : 'trên 35'}`,
     });
   };
+
+  useEffect(() => {
+    console.log("[DEBUG][ChatInterface render]", {
+      isMatched: matchmaking?.isMatched,
+      partnerId: matchmaking?.partnerId,
+      conversationId: matchmaking?.conversationId,
+      matchmakingStatus,
+      messages,
+      stranger,
+    });
+  });
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">

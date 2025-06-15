@@ -49,8 +49,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasNotified, setHasNotified] = useState(false);
   const [isStartingQueue, setIsStartingQueue] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [pendingMessages, setPendingMessages] = useState<{id: string, content: string, sender: string, created_at: string}[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -191,74 +189,14 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     }
   }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, hasNotified, toast]);
 
-  // Toast lỗi gửi tin nhắn
-  const showSendError = (msg = "Gửi tin nhắn thất bại, vui lòng thử lại sau.") => {
-    toast({ title: "Lỗi gửi tin nhắn", description: msg, variant: "destructive" });
-  };
-
-  // Sử dụng hook mới cho chat stranger
   const userId = user?.id || anonId;
-  const { messages: strangerMessages, loading: strangerMsgLoading, sendMessage } = useStrangerMessages(
+  const { messages: strangerMessages, loading: messagesLoading, sendMessage } = useStrangerMessages(
     matchmaking?.conversationId || null,
     userId
   );
 
-  // Khi realtime đã nhận được tin nhắn thực, loại bỏ khỏi pending
-  useEffect(() => {
-    if (pendingMessages.length === 0) return;
-    if (!strangerMessages) return;
-    // Loại những message có id đã xuất hiện trong strangerMessages
-    setPendingMessages((prev) =>
-      prev.filter(
-        (pendingMsg) =>
-          !strangerMessages.some(
-            (msg) =>
-              msg.content === pendingMsg.content &&
-              msg.sender === pendingMsg.sender &&
-              new Date(msg.created_at).getTime() >= new Date(pendingMsg.created_at).getTime()
-          )
-      )
-    );
-  }, [strangerMessages, pendingMessages]);
-
-  // Sửa lại hàm gửi tin nhắn cho stranger chat thêm optimistic update
-  const handleSendMessage = async (evt?: React.KeyboardEvent | React.MouseEvent) => {
-    if (evt && "key" in evt) {
-      if (evt.key !== "Enter") return;
-      evt.preventDefault();
-    }
-    if (!inputValue.trim() || isSending) return;
-
-    if (matchmakingStatus === "matched" && matchmaking.conversationId) {
-      setIsSending(true);
-      const sendingText = inputValue.trim();
-      // Generate tạm thời 1 id và thời gian
-      const optimisticId = "local-" + Date.now();
-      const optimisticMsg = {
-        id: optimisticId,
-        content: sendingText,
-        sender: userId,
-        created_at: new Date().toISOString(),
-      };
-      setPendingMessages((prev) => [...prev, optimisticMsg]);
-      setInputValue("");
-      try {
-        const ok = await sendMessage(sendingText);
-        if (!ok) {
-          showSendError();
-          console.error("[ChatInterface] sendMessage trả về false. Không gửi được tin nhắn.");
-          // Xóa optimisticMsg bị fail
-          setPendingMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-        }
-      } catch (err) {
-        showSendError();
-        console.error("[ChatInterface] Lỗi khi gửi tin nhắn stranger:", err);
-        // Xóa optimisticMsg bị fail
-        setPendingMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-      }
-      setIsSending(false);
-      return;
-    }
+  const handleSendMessage = async () => {
+    if (!inputValue.trim()) return;
 
     if (isAIMode) {
       setIsTyping(true);
@@ -268,6 +206,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           [...conversationHistory, { role: 'user', content: inputValue }],
           aiPersonality
         );
+
         const response: Message = {
           id: (Date.now() + 1).toString(),
           text: aiResponse.message,
@@ -275,13 +214,14 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           timestamp: new Date(),
           isAI: true
         };
+
         setMessages(prev => [...prev, response]);
         setConversationHistory(prev => [...prev, { role: 'user', content: inputValue }, {
           role: 'assistant',
           content: aiResponse.message
         }]);
       } catch (error) {
-        showSendError("AI trả lời lỗi, thử lại sau.");
+        console.error('AI response error:', error);
         const fallbackResponse: Message = {
           id: (Date.now() + 1).toString(),
           text: 'Xin lỗi, mình đang gặp chút vấn đề. Bạn có thể thử lại không? 😅',
@@ -293,6 +233,13 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       } finally {
         setIsTyping(false);
       }
+      return;
+    }
+
+    // Đang matched với người lạ
+    if (matchmakingStatus === "matched" && matchmaking.conversationId) {
+      const ok = await sendMessage(inputValue);
+      if (ok) setInputValue("");
       return;
     }
   };
@@ -447,9 +394,9 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
             </div>
           </div>
 
-          {/* Messages (DÙNG strangerMessages từ Supabase + optimistic pending) */}
+          {/* Messages (dùng strangerMessages từ Supabase) */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {[...(strangerMessages || []), ...pendingMessages].map((msg) => (
+            {(strangerMessages || []).map((msg) => (
               <div
                 key={msg.id}
                 className={`flex ${msg.sender === userId ? 'justify-end' : 'justify-start'} animate-fade-in`}
@@ -460,15 +407,15 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                     : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
                 }`}>
                   <p className="text-sm">{msg.content}</p>
-                  <p className={`text-xs mt-1 ${msg.sender === userId ? 'text-purple-100' : 'text-gray-500'}`}>
+                  <p className={`text-xs mt-1 ${
+                    msg.sender === userId ? 'text-purple-100' : 'text-gray-500'
+                  }`}>
                     {msg.created_at && new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    {String(msg.id).startsWith("local-") && (
-                      <span className="ml-2 text-xs text-yellow-400">(Đang gửi...)</span>
-                    )}
                   </p>
                 </div>
               </div>
             ))}
+            
             {isTyping && (
               <div className="flex justify-start animate-fade-in">
                 <div className="bg-white/80 backdrop-blur-sm border border-purple-100 px-4 py-2 rounded-2xl shadow-md">
@@ -480,6 +427,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                 </div>
               </div>
             )}
+            
             <div ref={messagesEndRef} />
           </div>
 
@@ -491,25 +439,16 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Nhập tin nhắn..."
                 className="flex-1 border-purple-200 focus:border-purple-400 transition-colors"
-                onKeyDown={handleSendMessage}
-                disabled={isTyping || isSending}
-                autoFocus
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                disabled={isTyping}
               />
               <Button
                 onClick={handleSendMessage}
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
                 size="sm"
-                disabled={isTyping || !inputValue.trim() || isSending}
-                type="button"
+                disabled={isTyping || !inputValue.trim()}
               >
-                {isSending ? (
-                  <svg className="animate-spin w-4 h-4 text-white" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+                <Send className="w-4 h-4" />
               </Button>
             </div>
           </div>

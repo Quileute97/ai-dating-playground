@@ -236,10 +236,18 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       return;
     }
 
-    // Đang matched với người lạ
-    if (matchmakingStatus === "matched" && matchmaking.conversationId) {
+    // Nếu đang matched (có conversationId) thì gửi qua Supabase - hỗ trợ cả user thật & khách (anonId)
+    if (matchmaking?.conversationId) {
       const ok = await sendMessage(inputValue);
-      if (ok) setInputValue("");
+      if (ok) {
+        setInputValue("");
+      } else {
+        // Báo lỗi rõ log ra console nếu gửi fail
+        console.warn('[ChatInterface] Gửi tin nhắn thất bại - kiểm tra policy/GUEST', {
+          conversationId: matchmaking?.conversationId,
+          userId
+        });
+      }
       return;
     }
   };

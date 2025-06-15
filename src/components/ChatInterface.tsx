@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { aiService, AIMessage } from '@/services/aiService';
 import StrangerSettingsModal from './StrangerSettingsModal';
-import { useStrangerMessages } from "@/hooks/useStrangerMessages";
 
 interface Message {
   id: string;
@@ -189,21 +188,31 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     }
   }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, hasNotified, toast]);
 
-  const userId = user?.id || anonId;
-  const { messages: strangerMessages, loading: messagesLoading, sendMessage } = useStrangerMessages(
-    matchmaking?.conversationId || null,
-    userId
-  );
-
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
+
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      text: inputValue,
+      sender: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    
+    const userMessage: AIMessage = {
+      role: 'user',
+      content: inputValue
+    };
+    setConversationHistory(prev => [...prev, userMessage]);
+    setInputValue('');
 
     if (isAIMode) {
       setIsTyping(true);
       try {
         await aiService.simulateTyping();
         const aiResponse = await aiService.generateResponse(
-          [...conversationHistory, { role: 'user', content: inputValue }],
+          [...conversationHistory, userMessage],
           aiPersonality
         );
 
@@ -216,7 +225,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
         };
 
         setMessages(prev => [...prev, response]);
-        setConversationHistory(prev => [...prev, { role: 'user', content: inputValue }, {
+        setConversationHistory(prev => [...prev, userMessage, {
           role: 'assistant',
           content: aiResponse.message
         }]);
@@ -233,22 +242,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       } finally {
         setIsTyping(false);
       }
-      return;
-    }
-
-    // Nếu đang matched (có conversationId) thì gửi qua Supabase - hỗ trợ cả user thật & khách (anonId)
-    if (matchmaking?.conversationId) {
-      const ok = await sendMessage(inputValue);
-      if (ok) {
-        setInputValue("");
-      } else {
-        // Báo lỗi rõ log ra console nếu gửi fail
-        console.warn('[ChatInterface] Gửi tin nhắn thất bại - kiểm tra policy/GUEST', {
-          conversationId: matchmaking?.conversationId,
-          userId
-        });
-      }
-      return;
     }
   };
 
@@ -402,23 +395,23 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
             </div>
           </div>
 
-          {/* Messages (dùng strangerMessages từ Supabase) */}
+          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {(strangerMessages || []).map((msg) => (
+            {messages.map((message) => (
               <div
-                key={msg.id}
-                className={`flex ${msg.sender === userId ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                key={message.id}
+                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
               >
                 <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 hover:scale-105 ${
-                  msg.sender === userId
+                  message.sender === 'user'
                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
                     : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
                 }`}>
-                  <p className="text-sm">{msg.content}</p>
+                  <p className="text-sm">{message.text}</p>
                   <p className={`text-xs mt-1 ${
-                    msg.sender === userId ? 'text-purple-100' : 'text-gray-500'
+                    message.sender === 'user' ? 'text-purple-100' : 'text-gray-500'
                   }`}>
-                    {msg.created_at && new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
               </div>

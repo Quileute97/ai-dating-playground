@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { 
   joinStrangerQueue, 
@@ -18,7 +19,7 @@ export function useStrangerMatchmaking() {
   const userIdRef = useRef<string | null>(null);
 
   const startQueue = async (userId: string) => {
-    console.log("[STRANGER] [startQueue] userId =", userId, "Type:", typeof userId);
+    console.log("[STRANGER] [startQueue] Starting for userId =", userId, "Type:", typeof userId);
 
     if (!userId) {
       setError("No user ID provided");
@@ -37,8 +38,7 @@ export function useStrangerMatchmaking() {
         setConversationId(existingMatch.conversationId);
         setIsMatched(true);
         setIsInQueue(false);
-        console.log("[STRANGER] [startQueue] Early exit: Found recent match, set matched");
-        // Polling không cần thiết nếu đã match
+        console.log("[STRANGER] [startQueue] Early exit: Found recent match");
         return;
       }
 
@@ -46,104 +46,83 @@ export function useStrangerMatchmaking() {
       await joinStrangerQueue(userId);
       console.log("[STRANGER] [startQueue] Successfully joined queue");
       setIsInQueue(true);
+      setIsMatched(false);
 
       // Start polling for matches
       console.log("[STRANGER] Starting polling for matches");
-      if (pollingRef.current) clearInterval(pollingRef.current);
-
-      pollingRef.current = window.setInterval(async () => {
-        console.log(
-          "[STRANGER] [polling] Queue state:",
-          {
-            isMatched,
-            isInQueue,
-            partnerId,
-            conversationId,
-            error,
-            userIdRef: userIdRef.current,
-            now: new Date().toISOString(),
-          }
-        );
-        // NOTE: Không rely vào biến isMatched ở closure, luôn truy cập từ state mới nhất hoặc kiểm tra lại trực tiếp!
-        // CLIP: Nếu đã có partnerId và conversationId => đã match thành công (chủ động hoặc bị động)
-        let latestUserId = userIdRef.current;
-        if (!latestUserId) {
-          // Khi reset state queue
-          console.log("[STRANGER][POLL][ABORT] userIdRef null, stop polling");
-          clearInterval(pollingRef.current!);
-          pollingRef.current = null;
-          return;
-        }
-        // Luôn luôn check trực tiếp từ backend để phòng trường hợp setState bị trễ!
-        const exist = await checkForExistingMatch(latestUserId);
-        if (exist && exist.partnerId && exist.conversationId) {
-          setPartnerId(exist.partnerId);
-          setConversationId(exist.conversationId);
-          setIsMatched(true);
-          setIsInQueue(false);
-          // Dừng polling ngay lập tức khi đã match thành công!
-          clearInterval(pollingRef.current!);
-          pollingRef.current = null;
-          // Xóa khỏi queue
-          await leaveStrangerQueue(latestUserId);
-          console.log("[STRANGER][POLL] Đã matched (manual polling), stop và chuyển UI!");
-          return;
-        }
-        // Nếu chưa matched, thực hiện tryMatch như cũ
-        await tryMatch(latestUserId);
-      }, 1500); // Check every 1.5 seconds
-
-    } catch (err) {
-      console.error("[STRANGER] [startQueue] Error:", err);
-      setError(err instanceof Error ? err.message : "Failed to join queue");
-    }
-  };
-
-  const tryMatch = async (userId: string) => {
-    try {
-      console.log("[STRANGER][tryMatch] Đang polling tìm ghép đôi cho:", userId, new Date().toISOString());
-
-      // Luôn check lại match ở backend, không rely vào state!
-      const existingMatch = await checkForExistingMatch(userId);
-
-      if (existingMatch && existingMatch.partnerId && existingMatch.conversationId) {
-        setPartnerId(existingMatch.partnerId);
-        setConversationId(existingMatch.conversationId);
-        setIsMatched(true);
-        setIsInQueue(false);
-        await leaveStrangerQueue(userId);
-
-        // Dừng polling luôn!
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
-          pollingRef.current = null;
-        }
-        console.log("[STRANGER] Matched phía bị động (tryMatch): đã cập nhật UI!");
-        return;
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
       }
 
-      // Nếu chưa có conversation, thử chủ động match
-      const partner = await findMatch(userId);
-      if (partner) {
-        const result = await createConversation(userId, partner);
-        if (result && result.conversationId) {
-          setPartnerId(partner);
-          setConversationId(result.conversationId);
-          setIsMatched(true);
-          setIsInQueue(false);
-          await leaveStrangerQueue(userId);
+      pollingRef.current = window.setInterval(async () => {
+        const currentUserId = userIdRef.current;
+        if (!currentUserId) {
+          console.log("[STRANGER][POLL] No userId, stopping polling");
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
             pollingRef.current = null;
           }
-          console.log("[STRANGER] Matched phía chủ động, đã cập nhật UI!");
           return;
         }
-      }
-      // Nếu vẫn không thấy, vẫn giữ ở hàng chờ!
+
+        console.log("[STRANGER][POLL] Checking for match for user:", currentUserId);
+        
+        // ALWAYS check backend first - this is crucial for the second user
+        const backendMatch = await checkForExistingMatch(currentUserId);
+        if (backendMatch && backendMatch.partnerId && backendMatch.conversationId) {
+          console.log("[STRANGER][POLL] ✅ FOUND MATCH IN BACKEND:", backendMatch);
+          
+          // Force update all states immediately
+          setPartnerId(backendMatch.partnerId);
+          setConversationId(backendMatch.conversationId);
+          setIsMatched(true);
+          setIsInQueue(false);
+          
+          // Leave queue and stop polling
+          await leaveStrangerQueue(currentUserId);
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+          
+          console.log("[STRANGER][POLL] ✅ STATE UPDATED - User should see chat now");
+          return;
+        }
+
+        // If no existing match, try to create new match
+        console.log("[STRANGER][POLL] No backend match found, trying to find new partner");
+        const partner = await findMatch(currentUserId);
+        if (partner) {
+          console.log("[STRANGER][POLL] Found potential partner:", partner);
+          const result = await createConversation(currentUserId, partner);
+          if (result && result.conversationId) {
+            console.log("[STRANGER][POLL] ✅ CREATED NEW CONVERSATION:", result);
+            
+            // Update states
+            setPartnerId(partner);
+            setConversationId(result.conversationId);
+            setIsMatched(true);
+            setIsInQueue(false);
+            
+            // Leave queue and stop polling
+            await leaveStrangerQueue(currentUserId);
+            if (pollingRef.current) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+            }
+            
+            console.log("[STRANGER][POLL] ✅ NEW MATCH CREATED - User should see chat now");
+            return;
+          }
+        }
+        
+        console.log("[STRANGER][POLL] No match found this round, continuing...");
+      }, 2000); // Check every 2 seconds
+
     } catch (err) {
-      console.error("[STRANGER][tryMatch][ERR]", err);
-      setError(err instanceof Error ? err.message : "Matching failed");
+      console.error("[STRANGER] [startQueue] Error:", err);
+      setError(err instanceof Error ? err.message : "Failed to join queue");
     }
   };
 
@@ -153,7 +132,7 @@ export function useStrangerMatchmaking() {
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
-      console.log("[STRANGER] Stopping polling");
+      console.log("[STRANGER] Stopped polling");
     }
 
     if (userIdRef.current) {
@@ -196,6 +175,18 @@ export function useStrangerMatchmaking() {
       }
     };
   }, []);
+
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log("[STRANGER][STATE] State changed:", {
+      isInQueue,
+      isMatched,
+      partnerId,
+      conversationId,
+      error,
+      timestamp: new Date().toISOString()
+    });
+  }, [isInQueue, isMatched, partnerId, conversationId, error]);
 
   return {
     isInQueue,

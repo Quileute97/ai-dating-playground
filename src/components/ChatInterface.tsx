@@ -20,7 +20,7 @@ interface ChatInterfaceProps {
   user?: any;
   isAdminMode?: boolean;
   matchmaking?: any;
-  anonId?: string; // Thêm prop mới
+  anonId?: string;
 }
 
 interface StrangerSettings {
@@ -28,7 +28,7 @@ interface StrangerSettings {
   ageGroup: string;
 }
 
-const PING_SOUND_URL = "/ping.mp3"; // Dùng file ở public thư mục, nếu chưa có thì dùng URL gốc ngoài
+const PING_SOUND_URL = "/ping.mp3";
 
 const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -47,88 +47,50 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasNotified, setHasNotified] = useState(false);
-  const [isStartingQueue, setIsStartingQueue] = useState(false); // NEW
-  const prevIsMatchedRef = useRef<boolean>(false);
+  const [isStartingQueue, setIsStartingQueue] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   useEffect(() => { scrollToBottom(); }, [messages]);
 
-  const matchmakingStatus = matchmaking?.isInQueue ? 'searching' : matchmaking?.isMatched ? 'matched' : 'idle';
-  const matchResult = {
-    conversationId: matchmaking?.conversationId,
-    partnerId: matchmaking?.partnerId
-  };
+  // Debug matchmaking state
+  useEffect(() => {
+    console.log("[CHAT][DEBUG] Matchmaking state:", {
+      isInQueue: matchmaking?.isInQueue,
+      isMatched: matchmaking?.isMatched,
+      partnerId: matchmaking?.partnerId,
+      conversationId: matchmaking?.conversationId,
+      stranger: stranger,
+      messagesLength: messages.length
+    });
+  }, [matchmaking?.isInQueue, matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, stranger, messages.length]);
 
-  const generateStrangerProfile = (settings: StrangerSettings) => {
-    const profiles = {
-      male: {
-        gen_z: [
-          { name: "Minh", age: 22, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face" },
-          { name: "Tuấn", age: 24, avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" }
-        ],
-        millennial: [
-          { name: "Hoàng", age: 28, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face" },
-          { name: "Nam", age: 32, avatar: "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?w=150&h=150&fit=crop&crop=face" }
-        ]
-      },
-      female: {
-        gen_z: [
-          { name: "Linh", age: 21, avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face" },
-          { name: "Mai", age: 23, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face" }
-        ],
-        millennial: [
-          { name: "Hương", age: 29, avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face" },
-          { name: "Thảo", age: 31, avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=150&h=150&fit=crop&crop=face" }
-        ]
-      }
-    };
-
-    if (settings.gender === 'all') {
-      const allProfiles = [...(profiles.male[settings.ageGroup] || []), ...(profiles.female[settings.ageGroup] || [])];
-      return allProfiles[Math.floor(Math.random() * allProfiles.length)];
-    }
-
-    const genderProfiles = profiles[settings.gender as keyof typeof profiles];
-    if (!genderProfiles) return profiles.female.gen_z[0]; // fallback
-
-    const ageProfiles = genderProfiles[settings.ageGroup as keyof typeof genderProfiles];
-    if (!ageProfiles) return profiles.female.gen_z[0]; // fallback
-
-    return ageProfiles[Math.floor(Math.random() * ageProfiles.length)];
-  };
-
-  // startSearching: chỉ gọi matchmaking.startQueue() với userId hoặc anonId
   const startSearching = async () => {
     const realUserId = user?.id || anonId;
-    console.log("[CHAT] Bấm Bắt đầu chat - user?.id:", user?.id, "| anonId:", anonId, "| realUserId:", realUserId);
+    console.log("[CHAT] Starting search - userId:", realUserId);
+    
+    // Clear previous state
     setMessages([]);
     setConversationHistory([]);
     setIsAIMode(false);
+    setStranger(null);
+    
     if (matchmaking?.startQueue && realUserId) {
       try {
-        setIsStartingQueue(true); // đánh dấu đang xử lý
-        console.log("[CHAT] Gọi matchmaking.startQueue với realUserId", realUserId);
+        setIsStartingQueue(true);
+        console.log("[CHAT] Calling matchmaking.startQueue");
         await matchmaking.startQueue(realUserId);
       } catch (err) {
-        console.log("[CHAT] Lỗi khi startQueue:", err);
+        console.error("[CHAT] Error starting queue:", err);
       } finally {
-        setIsStartingQueue(false); // luôn enable lại dù lỗi hay thành công
+        setIsStartingQueue(false);
       }
-    } else {
-      console.log("[CHAT] Không thể startQueue vì thiếu userId/anonId");
     }
   };
 
-  // Trước khi render, log trạng thái disable button để debug
-  const disableStartBtn = !(user?.id || anonId) || isStartingQueue;
-  useEffect(() => {
-    console.log("[CHAT] Trạng thái disable nút Bắt đầu chat:", disableStartBtn, "| user?.id:", user?.id, "| anonId:", anonId);
-  }, [user?.id, anonId, isStartingQueue]);
-
-  // Khi bấm ngắt kết nối
   const disconnect = async () => {
+    console.log("[CHAT] Disconnecting");
     setStranger(null);
     setMessages([]);
     setConversationHistory([]);
@@ -136,79 +98,72 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     if (matchmaking?.reset) await matchmaking.reset();
   };
 
-  // Theo dõi trạng thái ghép đôi (matchmakingStatus)
+  // Handle match state changes
   useEffect(() => {
-    const isNowMatched =
-      matchmaking?.isMatched &&
-      matchmaking?.partnerId &&
-      matchmaking?.conversationId;
+    const isCurrentlyMatched = matchmaking?.isMatched && 
+                              matchmaking?.partnerId && 
+                              matchmaking?.conversationId;
 
-    // Luôn log rõ để dễ debug
-    console.log("[PATCH][ChatInterface][MATCH EFFECT][FORCE]", {
-      isNowMatched,
-      stranger,
-      messages,
-      matchmakingStatus,
-      partnerId: matchmaking?.partnerId,
-      conversationId: matchmaking?.conversationId,
+    console.log("[CHAT][MATCH_EFFECT] Processing match state:", {
+      isCurrentlyMatched,
+      hasStranger: !!stranger,
+      hasMessages: messages.length > 0,
+      matchmaking: {
+        isMatched: matchmaking?.isMatched,
+        partnerId: matchmaking?.partnerId,
+        conversationId: matchmaking?.conversationId
+      }
     });
 
-    // Nếu đã matched, nhưng stranger chưa được set, hoặc messages chưa có greeting -> ép lại UI khung chat!
-    if (isNowMatched && (!stranger || messages.length === 0 || stranger?.name !== "Người lạ")) {
-      setStranger({
-        name: "Người lạ",
-        age: "?",
-        avatar: null,
-      });
-      setMessages([
-        {
-          id: Date.now().toString(),
-          text: `Bạn đã được kết nối với 1 người lạ. Hãy bắt đầu trò chuyện!`,
-          sender: "stranger",
-          timestamp: new Date(),
-        },
-      ]);
-      console.log("[PATCH][ChatInterface] ĐÃ FORCE SET STRANGER & MESSAGES cho UI cả 2 phía (kể cả người bấm sau)!");
+    if (isCurrentlyMatched) {
+      // If matched but UI not ready, set it up
+      if (!stranger || messages.length === 0) {
+        console.log("[CHAT][MATCH_EFFECT] ✅ Setting up chat UI for matched users");
+        setStranger({
+          name: "Người lạ",
+          age: "?",
+          avatar: null,
+        });
+        setMessages([
+          {
+            id: Date.now().toString(),
+            text: `Bạn đã được kết nối với 1 người lạ. Hãy bắt đầu trò chuyện!`,
+            sender: "stranger",
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    } else {
+      // If not matched, clear UI
+      if (stranger || messages.length > 0) {
+        console.log("[CHAT][MATCH_EFFECT] ❌ Clearing chat UI - not matched");
+        setStranger(null);
+        setMessages([]);
+      }
     }
+  }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId]);
 
-    if (!isNowMatched && (stranger || messages.length > 0)) {
-      setStranger(null);
-      setMessages([]);
-      console.log("[PATCH][ChatInterface] ĐÃ RESET STRANGER + MESSAGE khi disconnect (rời khung chat).");
-    }
-    prevIsMatchedRef.current = !!isNowMatched;
-  }, [
-    matchmaking?.isMatched,
-    matchmaking?.partnerId,
-    matchmaking?.conversationId,
-    matchmakingStatus,
-    stranger,
-    messages.length,
-  ]);
-
-  // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)
+  // Sound notification when matched
   useEffect(() => {
-    if (
-      matchmakingStatus === "matched" &&
-      matchResult.conversationId &&
-      matchResult.partnerId &&
-      !hasNotified
-    ) {
+    if (matchmaking?.isMatched && matchmaking?.partnerId && matchmaking?.conversationId && !hasNotified) {
+      console.log("[CHAT] Playing match notification");
       toast({
         title: "🔔 Đã kết nối với người lạ!",
-        description: "Bạn đã được ghép nối thành công. Quay lại Tab Chat để bắt đầu trò chuyện!",
+        description: "Bạn đã được ghép nối thành công. Hãy bắt đầu trò chuyện!",
       });
+      
       if (!audioRef.current) {
         audioRef.current = new window.Audio(PING_SOUND_URL);
       }
       audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {}); // Ignore play error (browser lock)
+      audioRef.current.play().catch(() => {});
       setHasNotified(true);
     }
-    if (matchmakingStatus !== "matched" && hasNotified) {
+    
+    if (!matchmaking?.isMatched && hasNotified) {
       setHasNotified(false);
     }
-  }, [matchmakingStatus, matchResult, hasNotified, toast]);
+  }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, hasNotified, toast]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -275,31 +230,13 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     });
   };
 
-  useEffect(() => {
-    console.log("[DEBUG][ChatInterface render]", {
-      isMatched: matchmaking?.isMatched,
-      partnerId: matchmaking?.partnerId,
-      conversationId: matchmaking?.conversationId,
-      matchmakingStatus,
-      messages,
-      stranger,
-    });
-  });
+  const disableStartBtn = !(user?.id || anonId) || isStartingQueue;
+  const matchmakingStatus = matchmaking?.isInQueue ? 'searching' : matchmaking?.isMatched ? 'matched' : 'idle';
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      {/* DEBUG PATCH: Nếu đã matched mà stranger vẫn null, show cảnh báo UI */}
-      {(matchmakingStatus === "matched" && !stranger) && (
-        <div className="bg-yellow-100 text-yellow-800 text-center py-4">
-          <b>⚠️ Đã matched thành công nhưng UI không hiện chat! Patch này báo lỗi để giúp debug.</b>
-          <br />
-          partnerId: {matchmaking?.partnerId?.toString() || "null"}, &nbsp;
-          conversationId: {matchmaking?.conversationId?.toString() || "null"}
-        </div>
-      )}
-
-      {/* Optionally preload the sound */}
       <audio ref={audioRef} src={PING_SOUND_URL} preload="auto" style={{display:'none'}} />
+      
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 p-4 shadow-sm animate-fade-in">
         <div className="flex items-center justify-between">
@@ -322,8 +259,19 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
         </div>
       </div>
 
-      {/* Connection Status (Chỉ hiện nếu chưa matched & chưa searching) */}
-      {(matchmakingStatus !== "matched" && matchmakingStatus !== "searching") && (
+      {/* Debug info - remove in production */}
+      {isAdminMode && (
+        <div className="bg-yellow-100 p-2 text-xs">
+          <strong>Debug:</strong> Status: {matchmakingStatus} | 
+          Matched: {String(matchmaking?.isMatched)} | 
+          Queue: {String(matchmaking?.isInQueue)} | 
+          Partner: {matchmaking?.partnerId || 'none'} | 
+          Conv: {matchmaking?.conversationId || 'none'}
+        </div>
+      )}
+
+      {/* Connection Status */}
+      {matchmakingStatus !== "matched" && matchmakingStatus !== "searching" && (
         <div className="flex-1 flex items-center justify-center p-6">
           <Card className="w-full max-w-md p-6 text-center bg-white/70 backdrop-blur-sm border-purple-200 animate-scale-in">
             <div className="bg-gradient-to-r from-purple-500 to-pink-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -364,18 +312,25 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
             </div>
             <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tìm kiếm người lạ...</h2>
             <p className="text-gray-600 mb-4">Nếu chưa có ai, bạn sẽ là người đầu tiên trong hàng chờ.</p>
-            <div className="flex justify-center">
+            <div className="flex justify-center mb-4">
               <div className="flex space-x-1">
                 <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
                 <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
             </div>
+            <Button 
+              variant="outline" 
+              onClick={disconnect}
+              className="text-sm"
+            >
+              Dừng tìm kiếm
+            </Button>
           </Card>
         </div>
       )}
 
-      {/* Chat UI khi đã được match */}
+      {/* Chat UI when matched */}
       {matchmakingStatus === "matched" && stranger && (
         <>
           {/* Stranger Info */}
@@ -395,7 +350,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                   <span className="font-medium text-gray-800">
                     {stranger.name ? `${stranger.name}, ${stranger.age}` : 'Người lạ'}
                   </span>
-                  {/* Only show AI badge for admin */}
                   {isAdminMode && isAIMode && (
                     <Badge variant="secondary" className="bg-purple-100 text-purple-700">
                       <Bot className="w-3 h-3 mr-1" />
@@ -438,7 +392,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
               </div>
             ))}
             
-            {/* Typing Indicator */}
             {isTyping && (
               <div className="flex justify-start animate-fade-in">
                 <div className="bg-white/80 backdrop-blur-sm border border-purple-100 px-4 py-2 rounded-2xl shadow-md">

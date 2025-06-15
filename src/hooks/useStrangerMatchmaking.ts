@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { 
   joinStrangerQueue, 
@@ -19,7 +20,7 @@ export function useStrangerMatchmaking() {
 
   const startQueue = async (userId: string) => {
     console.log("[STRANGER] [startQueue] userId =", userId, "Type:", typeof userId);
-    
+
     if (!userId) {
       setError("No user ID provided");
       return;
@@ -36,6 +37,8 @@ export function useStrangerMatchmaking() {
         setPartnerId(existingMatch.partnerId);
         setConversationId(existingMatch.conversationId);
         setIsMatched(true);
+        setIsInQueue(false);
+        // Polling không cần thiết nếu đã match, đảm bảo! 
         return;
       }
 
@@ -44,7 +47,7 @@ export function useStrangerMatchmaking() {
       console.log("[STRANGER] [startQueue] Successfully joined queue");
       setIsInQueue(true);
 
-      // Start polling for matches with shorter interval for better responsiveness
+      // Start polling for matches
       console.log("[STRANGER] Starting polling for matches");
       pollingRef.current = window.setInterval(async () => {
         await tryMatch(userId);
@@ -58,28 +61,31 @@ export function useStrangerMatchmaking() {
 
   const tryMatch = async (userId: string) => {
     try {
-      console.log("[STRANGER] [tryMatch] Attempting to find match for:", userId);
-      
-      // First check if someone already created a conversation with us
+      console.log("[STRANGER] [tryMatch] Polling for:", userId);
+
+      // NEW: Luôn checkForExistingMatch, kể cả khi là người bị động!
       const existingMatch = await checkForExistingMatch(userId);
+      console.log("[STRANGER] [tryMatch] checkForExistingMatch returns:", existingMatch);
+
       if (existingMatch) {
-        console.log("[STRANGER] [tryMatch] Found existing match:", existingMatch);
+        // Đã có người tạo conversation với mình!
         setPartnerId(existingMatch.partnerId);
         setConversationId(existingMatch.conversationId);
         setIsMatched(true);
         setIsInQueue(false);
-        
-        // Remove from queue and stop polling
+
+        // Remove khỏi queue và stop polling
         await leaveStrangerQueue(userId);
+
         if (pollingRef.current) {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
         }
-        console.log("[STRANGER] Stopping polling - found existing match");
+        console.log("[STRANGER] Matched (bị động), chuyển sang chat!");
         return;
       }
 
-      // Look for a partner in queue
+      // Nếu chưa có conversation, thử chủ động tìm match (match với người khác)
       const partner = await findMatch(userId);
       if (partner) {
         console.log("[STRANGER] [tryMatch] Found partner in queue:", partner);
@@ -101,7 +107,7 @@ export function useStrangerMatchmaking() {
             clearInterval(pollingRef.current);
             pollingRef.current = null;
           }
-          console.log("[STRANGER] Stopping polling - match created");
+          console.log("[STRANGER] Matched (chủ động), chuyển sang chat!");
         }
       }
     } catch (err) {
@@ -112,7 +118,7 @@ export function useStrangerMatchmaking() {
 
   const stopQueue = async () => {
     console.log("[STRANGER] [stopQueue] Stopping queue");
-    
+
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
@@ -133,7 +139,7 @@ export function useStrangerMatchmaking() {
 
   const reset = () => {
     console.log("[STRANGER] [reset] Resetting matchmaking state");
-    
+
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
     }

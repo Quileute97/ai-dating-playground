@@ -204,7 +204,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     }
   }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, hasNotified, toast]);
 
-  // Sửa handleSendMessage: dùng sendSupabaseMessage khi đã matched, AI logic giữ nguyên
+  // Sửa handleSendMessage: dùng sendSupabaseMessage khi đã matched, không cập nhật local messages nữa
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
@@ -242,10 +242,11 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
         setMessages(prev => [...prev, fallbackResponse]);
       } finally {
         setIsTyping(false);
+        setInputValue(''); // Đảm bảo clear input cho chế độ AI luôn
       }
     } else if (isMatched && sendSupabaseMessage) {
       await sendSupabaseMessage(inputValue.trim());
-      setInputValue('');
+      setInputValue(''); // Đã gửi thì clear input (QUAN TRỌNG!)
     }
   };
 

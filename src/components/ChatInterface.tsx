@@ -190,6 +190,11 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     }
   }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, hasNotified, toast]);
 
+  // Toast lỗi gửi tin nhắn
+  const showSendError = (msg = "Gửi tin nhắn thất bại, vui lòng thử lại sau.") => {
+    toast({ title: "Lỗi gửi tin nhắn", description: msg, variant: "destructive" });
+  };
+
   // Sử dụng hook mới cho chat stranger
   const userId = user?.id || anonId;
   const { messages: strangerMessages, loading: strangerMsgLoading, sendMessage } = useStrangerMessages(
@@ -205,22 +210,18 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     }
     if (!inputValue.trim() || isSending) return;
 
-    // Đang matched với người lạ (stranger chat)
     if (matchmakingStatus === "matched" && matchmaking.conversationId) {
       setIsSending(true);
-      console.log("[ChatInterface] Gửi tin nhắn:", inputValue);
       const ok = await sendMessage(inputValue);
       if (ok) {
         setInputValue("");
       } else {
-        // Thông báo lỗi gửi
-        console.warn("Gửi tin nhắn thất bại, vui lòng thử lại sau.");
+        showSendError();
       }
       setIsSending(false);
       return;
     }
 
-    // AI mode giữ nguyên như cũ
     if (isAIMode) {
       setIsTyping(true);
       try {
@@ -229,7 +230,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           [...conversationHistory, { role: 'user', content: inputValue }],
           aiPersonality
         );
-
         const response: Message = {
           id: (Date.now() + 1).toString(),
           text: aiResponse.message,
@@ -237,14 +237,13 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           timestamp: new Date(),
           isAI: true
         };
-
         setMessages(prev => [...prev, response]);
         setConversationHistory(prev => [...prev, { role: 'user', content: inputValue }, {
           role: 'assistant',
           content: aiResponse.message
         }]);
       } catch (error) {
-        console.error('AI response error:', error);
+        showSendError("AI trả lời lỗi, thử lại sau.");
         const fallbackResponse: Message = {
           id: (Date.now() + 1).toString(),
           text: 'Xin lỗi, mình đang gặp chút vấn đề. Bạn có thể thử lại không? 😅',
@@ -431,7 +430,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                 </div>
               </div>
             ))}
-
             {isTyping && (
               <div className="flex justify-start animate-fade-in">
                 <div className="bg-white/80 backdrop-blur-sm border border-purple-100 px-4 py-2 rounded-2xl shadow-md">

@@ -8,6 +8,10 @@ import { useToast } from '@/hooks/use-toast';
 import { aiService, AIMessage } from '@/services/aiService';
 import StrangerSettingsModal from './StrangerSettingsModal';
 import { supabase } from '@/integrations/supabase/client';
+import ChatHeader from './ChatHeader';
+import StrangerHeader from './StrangerHeader';
+import MessageList from './MessageList';
+import MessageInput from './MessageInput';
 
 interface Message {
   id: string;
@@ -328,26 +332,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       <audio ref={audioRef} src={PING_SOUND_URL} preload="auto" style={{display:'none'}} />
       
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 p-4 shadow-sm animate-fade-in">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-full">
-              <Users className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-gray-800">Chat với người lạ</h1>
-              <p className="text-sm text-gray-500">Kết nối và trò chuyện ngẫu nhiên</p>
-            </div>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowStrangerSettings(true)}
-          >
-            <Settings className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+      <ChatHeader onOpenSettings={() => setShowStrangerSettings(true)} />
 
       {/* Enhanced Debug info */}
       {isAdminMode && (
@@ -426,100 +411,29 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       {matchmakingStatus === "matched" && stranger && (
         <>
           {/* Stranger Info */}
-          <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 p-3">
-            <div className="flex items-center gap-3">
-              {stranger.avatar ? (
-                <img 
-                  src={stranger.avatar} 
-                  alt={stranger.name ?? 'Stranger'}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-purple-200"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-purple-200 flex items-center justify-center text-gray-500">?</div>
-              )}
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-800">
-                    {stranger.name ? `${stranger.name}, ${stranger.age}` : 'Người lạ'}
-                  </span>
-                  {isAdminMode && isAIMode && (
-                    <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                      <Bot className="w-3 h-3 mr-1" />
-                      AI
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-gray-500">
-                    {isTyping ? 'Đang nhập...' : 'Đang online'}
-                  </span>
-                </div>
-              </div>
-              <Button variant="outline" size="sm" onClick={disconnect}>
-                Ngắt kết nối
-              </Button>
-            </div>
-          </div>
+          <StrangerHeader
+            stranger={stranger}
+            isAdminMode={isAdminMode}
+            isAIMode={isAIMode}
+            isTyping={isTyping}
+            onDisconnect={disconnect}
+          />
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-              >
-                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 hover:scale-105 ${
-                  message.sender === 'user'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                    : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
-                }`}>
-                  <p className="text-sm">{message.text}</p>
-                  <p className={`text-xs mt-1 ${
-                    message.sender === 'user' ? 'text-purple-100' : 'text-gray-500'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              </div>
-            ))}
-            
-            {isTyping && (
-              <div className="flex justify-start animate-fade-in">
-                <div className="bg-white/80 backdrop-blur-sm border border-purple-100 px-4 py-2 rounded-2xl shadow-md">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </div>
+          <MessageList 
+            messages={messages}
+            isTyping={isTyping}
+            messagesEndRef={messagesEndRef}
+          />
 
           {/* Input */}
-          <div className="bg-white/80 backdrop-blur-sm border-t border-purple-100 p-4">
-            <div className="flex gap-2">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Nhập tin nhắn..."
-                className="flex-1 border-purple-200 focus:border-purple-400 transition-colors"
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={isTyping || !conversationId}
-              />
-              <Button
-                onClick={handleSendMessage}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
-                size="sm"
-                disabled={isTyping || !inputValue.trim() || !conversationId}
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+          <MessageInput
+            inputValue={inputValue}
+            setInputValue={setInputValue}
+            onSend={handleSendMessage}
+            disabled={!conversationId}
+            isTyping={isTyping}
+          />
         </>
       )}
       

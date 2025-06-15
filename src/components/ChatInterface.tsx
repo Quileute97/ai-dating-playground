@@ -145,24 +145,19 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
     const wasMatched = prevIsMatchedRef.current;
 
-    // DEBUG: Luôn log mọi lần matched
-    console.log("[PATCH][Hook] useEffect MATCH:", {
+    // Log thêm để debugg kỹ hơn
+    console.log("[PATCH][ChatInterface][MATCH EFFECT]", {
       isNowMatched,
       wasMatched,
-      status: matchmakingStatus,
+      matchmakingStatus,
       partnerId: matchmaking?.partnerId,
       conversationId: matchmaking?.conversationId,
       stranger,
+      messages,
     });
 
-    // Nếu matched và stranger chưa set, hoặc info không đồng bộ, ép set stranger lại
-    if (
-      isNowMatched &&
-      (!stranger ||
-        stranger.name !== "Người lạ" ||
-        stranger.age !== "?" ||
-        stranger.avatar !== null)
-    ) {
+    // Nếu là lần đầu matched (chuyển trạng thái sang matched)
+    if (isNowMatched && !wasMatched) {
       setStranger({
         name: "Người lạ",
         age: "?",
@@ -176,14 +171,14 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           timestamp: new Date(),
         },
       ]);
-      console.log("[PATCH][useEffect] ĐÃ FORCED SET STRANGER sau khi matched!");
+      console.log("[PATCH][ChatInterface] ĐÃ FORCE SET STRANGER & RESET MESSAGES khi matched!");
     }
 
     // Reset khi disconnect
     if (!isNowMatched && wasMatched) {
       setStranger(null);
       setMessages([]);
-      console.log("[PATCH][useEffect] ĐÃ RESET STRANGER sau disconnect!");
+      console.log("[PATCH][ChatInterface] ĐÃ RESET STRANGER VÀ MESSAGE khi disconnect!");
     }
 
     prevIsMatchedRef.current = !!isNowMatched;
@@ -191,7 +186,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     matchmaking?.isMatched,
     matchmaking?.partnerId,
     matchmaking?.conversationId,
-    matchmakingStatus, // ép chạy lại nếu status đổi
+    matchmakingStatus,
   ]);
 
   // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)

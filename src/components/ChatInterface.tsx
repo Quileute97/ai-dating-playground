@@ -50,6 +50,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   const [hasNotified, setHasNotified] = useState(false);
   const [isStartingQueue, setIsStartingQueue] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [pendingMessages, setPendingMessages] = useState<{id: string, content: string, sender: string, created_at: string}[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -202,7 +203,25 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     userId
   );
 
-  // Sửa lại hàm gửi tin nhắn cho stranger chat
+  // Khi realtime đã nhận được tin nhắn thực, loại bỏ khỏi pending
+  useEffect(() => {
+    if (pendingMessages.length === 0) return;
+    if (!strangerMessages) return;
+    // Loại những message có id đã xuất hiện trong strangerMessages
+    setPendingMessages((prev) =>
+      prev.filter(
+        (pendingMsg) =>
+          !strangerMessages.some(
+            (msg) =>
+              msg.content === pendingMsg.content &&
+              msg.sender === pendingMsg.sender &&
+              new Date(msg.created_at).getTime() >= new Date(pendingMsg.created_at).getTime()
+          )
+      )
+    );
+  }, [strangerMessages, pendingMessages]);
+
+  // Sửa lại hàm gửi tin nhắn cho stranger chat thêm optimistic update
   const handleSendMessage = async (evt?: React.KeyboardEvent | React.MouseEvent) => {
     if (evt && "key" in evt) {
       if (evt.key !== "Enter") return;
@@ -212,17 +231,30 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
     if (matchmakingStatus === "matched" && matchmaking.conversationId) {
       setIsSending(true);
+      const sendingText = inputValue.trim();
+      // Generate tạm thời 1 id và thời gian
+      const optimisticId = "local-" + Date.now();
+      const optimisticMsg = {
+        id: optimisticId,
+        content: sendingText,
+        sender: userId,
+        created_at: new Date().toISOString(),
+      };
+      setPendingMessages((prev) => [...prev, optimisticMsg]);
+      setInputValue("");
       try {
-        const ok = await sendMessage(inputValue);
-        if (ok) {
-          setInputValue("");
-        } else {
+        const ok = await sendMessage(sendingText);
+        if (!ok) {
           showSendError();
           console.error("[ChatInterface] sendMessage trả về false. Không gửi được tin nhắn.");
+          // Xóa optimisticMsg bị fail
+          setPendingMessages((prev) => prev.filter((m) => m.id !== optimisticId));
         }
       } catch (err) {
         showSendError();
         console.error("[ChatInterface] Lỗi khi gửi tin nhắn stranger:", err);
+        // Xóa optimisticMsg bị fail
+        setPendingMessages((prev) => prev.filter((m) => m.id !== optimisticId));
       }
       setIsSending(false);
       return;
@@ -415,9 +447,9 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
             </div>
           </div>
 
-          {/* Messages (DÙNG strangerMessages từ Supabase) */}
+          {/* Messages (DÙNG strangerMessages từ Supabase + optimistic pending) */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {(strangerMessages || []).map((msg) => (
+            {[...(strangerMessages || []), ...pendingMessages].map((msg) => (
               <div
                 key={msg.id}
                 className={`flex ${msg.sender === userId ? 'justify-end' : 'justify-start'} animate-fade-in`}
@@ -428,10 +460,11 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                     : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
                 }`}>
                   <p className="text-sm">{msg.content}</p>
-                  <p className={`text-xs mt-1 ${
-                    msg.sender === userId ? 'text-purple-100' : 'text-gray-500'
-                  }`}>
+                  <p className={`text-xs mt-1 ${msg.sender === userId ? 'text-purple-100' : 'text-gray-500'}`}>
                     {msg.created_at && new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {String(msg.id).startsWith("local-") && (
+                      <span className="ml-2 text-xs text-yellow-400">(Đang gửi...)</span>
+                    )}
                   </p>
                 </div>
               </div>

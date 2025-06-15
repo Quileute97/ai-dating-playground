@@ -138,15 +138,31 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
   // Theo dõi trạng thái ghép đôi (matchmakingStatus)
   useEffect(() => {
-    const isNowMatched = matchmaking?.isMatched && matchmaking?.partnerId && matchmaking?.conversationId;
+    const isNowMatched =
+      matchmaking?.isMatched &&
+      matchmaking?.partnerId &&
+      matchmaking?.conversationId;
+
     const wasMatched = prevIsMatchedRef.current;
-    console.log("[DEBUG][Effect] prevIsMatched:", wasMatched, "isNowMatched:", isNowMatched, {
-      isMatched: matchmaking?.isMatched,
+
+    // DEBUG: Luôn log mọi lần matched
+    console.log("[PATCH][Hook] useEffect MATCH:", {
+      isNowMatched,
+      wasMatched,
+      status: matchmakingStatus,
       partnerId: matchmaking?.partnerId,
       conversationId: matchmaking?.conversationId,
       stranger,
     });
-    if (isNowMatched && !wasMatched) {
+
+    // Nếu matched và stranger chưa set, hoặc info không đồng bộ, ép set stranger lại
+    if (
+      isNowMatched &&
+      (!stranger ||
+        stranger.name !== "Người lạ" ||
+        stranger.age !== "?" ||
+        stranger.avatar !== null)
+    ) {
       setStranger({
         name: "Người lạ",
         age: "?",
@@ -160,15 +176,23 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           timestamp: new Date(),
         },
       ]);
-      console.log("[CHAT-UI][Effect][Patch] ĐÃ ĐẶT STRANGER cho matched!");
+      console.log("[PATCH][useEffect] ĐÃ FORCED SET STRANGER sau khi matched!");
     }
+
+    // Reset khi disconnect
     if (!isNowMatched && wasMatched) {
       setStranger(null);
       setMessages([]);
-      console.log("[CHAT-UI][Effect][Patch] ĐÃ RESET STRANGER sau disconnect!");
+      console.log("[PATCH][useEffect] ĐÃ RESET STRANGER sau disconnect!");
     }
+
     prevIsMatchedRef.current = !!isNowMatched;
-  }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId]);
+  }, [
+    matchmaking?.isMatched,
+    matchmaking?.partnerId,
+    matchmaking?.conversationId,
+    matchmakingStatus, // ép chạy lại nếu status đổi
+  ]);
 
   // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)
   useEffect(() => {
@@ -272,6 +296,16 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+      {/* DEBUG PATCH: Nếu đã matched mà stranger vẫn null, show cảnh báo UI */}
+      {(matchmakingStatus === "matched" && !stranger) && (
+        <div className="bg-yellow-100 text-yellow-800 text-center py-4">
+          <b>⚠️ Đã matched thành công nhưng UI không hiện chat! Patch này báo lỗi để giúp debug.</b>
+          <br />
+          partnerId: {matchmaking?.partnerId?.toString() || "null"}, &nbsp;
+          conversationId: {matchmaking?.conversationId?.toString() || "null"}
+        </div>
+      )}
+
       {/* Optionally preload the sound */}
       <audio ref={audioRef} src={PING_SOUND_URL} preload="auto" style={{display:'none'}} />
       {/* Header */}

@@ -82,12 +82,10 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
         (payload: any) => {
           if (payload.new) {
             const msg = payload.new;
-            const senderUi: 'user' | 'stranger' = 
-              msg.sender === 'real' && user?.id === msg.sender_id
-                ? 'user'
-                : 'stranger';
+            // Xác định sender dựa trên trường sender, vì không còn sender_id
+            const senderUi: 'user' | 'stranger' =
+              msg.sender === 'real' ? 'user' : 'stranger';
 
-            // Kiểm tra tin nhắn có trùng id không, nếu chưa có mới thêm
             setMessages(prev => {
               if (prev.some(m => m.id === msg.id)) return prev;
               return [
@@ -112,16 +110,13 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
-      
+
       if (!data) return;
       setMessages(
         data.map(msg => ({
           id: msg.id,
           text: msg.content,
-          sender:
-            msg.sender === 'real' && user?.id === msg.sender_id
-              ? 'user'
-              : 'stranger',
+          sender: msg.sender === 'real' ? 'user' : 'stranger',
           timestamp: new Date(msg.created_at),
         }))
       );

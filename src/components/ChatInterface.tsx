@@ -143,21 +143,18 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       matchmaking?.partnerId &&
       matchmaking?.conversationId;
 
-    const wasMatched = prevIsMatchedRef.current;
-
-    // Log thêm để debugg kỹ hơn
-    console.log("[PATCH][ChatInterface][MATCH EFFECT]", {
+    // Luôn log rõ để dễ debug
+    console.log("[PATCH][ChatInterface][MATCH EFFECT][FORCE]", {
       isNowMatched,
-      wasMatched,
+      stranger,
+      messages,
       matchmakingStatus,
       partnerId: matchmaking?.partnerId,
       conversationId: matchmaking?.conversationId,
-      stranger,
-      messages,
     });
 
-    // Nếu là lần đầu matched (chuyển trạng thái sang matched)
-    if (isNowMatched && !wasMatched) {
+    // Nếu đã matched, nhưng stranger chưa được set, hoặc messages chưa có greeting -> ép lại UI khung chat!
+    if (isNowMatched && (!stranger || messages.length === 0 || stranger?.name !== "Người lạ")) {
       setStranger({
         name: "Người lạ",
         age: "?",
@@ -171,22 +168,22 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           timestamp: new Date(),
         },
       ]);
-      console.log("[PATCH][ChatInterface] ĐÃ FORCE SET STRANGER & RESET MESSAGES khi matched!");
+      console.log("[PATCH][ChatInterface] ĐÃ FORCE SET STRANGER & MESSAGES cho UI cả 2 phía (kể cả người bấm sau)!");
     }
 
-    // Reset khi disconnect
-    if (!isNowMatched && wasMatched) {
+    if (!isNowMatched && (stranger || messages.length > 0)) {
       setStranger(null);
       setMessages([]);
-      console.log("[PATCH][ChatInterface] ĐÃ RESET STRANGER VÀ MESSAGE khi disconnect!");
+      console.log("[PATCH][ChatInterface] ĐÃ RESET STRANGER + MESSAGE khi disconnect (rời khung chat).");
     }
-
     prevIsMatchedRef.current = !!isNowMatched;
   }, [
     matchmaking?.isMatched,
     matchmaking?.partnerId,
     matchmaking?.conversationId,
     matchmakingStatus,
+    stranger,
+    messages.length,
   ]);
 
   // Hiệu ứng phát âm thanh và hiện toast khi matched (kể cả khi user đang ở tab khác)

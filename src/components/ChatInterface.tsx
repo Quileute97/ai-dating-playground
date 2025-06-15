@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { aiService, AIMessage } from '@/services/aiService';
 import StrangerSettingsModal from './StrangerSettingsModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -48,6 +49,134 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasNotified, setHasNotified] = useState(false);
   const [isStartingQueue, setIsStartingQueue] = useState(false);
+
+  // New: State for loaded (realtime) messages & tracking current conversation
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  // Auto sync state từ matchmaking
+  useEffect(() => {
+    // Cập nhật conversationId khi tìm thấy match mới
+    if (matchmaking?.isMatched && matchmaking?.conversationId) {
+      setConversationId(matchmaking.conversationId);
+    } else if (!matchmaking?.isMatched) {
+      setConversationId(null);
+    }
+  }, [matchmaking?.isMatched, matchmaking?.conversationId]);
+
+  // ====
+  // New: Lắng nghe các message mới từ realtime
+  useEffect(() => {
+    if (!conversationId) return;
+
+    // Realtime subscribe
+    const channel = supabase
+      .channel('realtime-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload: any) => {
+          if (payload.new) {
+            const msg = payload.new;
+            const senderUi: 'user' | 'stranger' = 
+              msg.sender === 'real' && user?.id === msg.sender_id
+                ? 'user'
+                : 'stranger';
+
+            // Kiểm tra tin nhắn có trùng id không, nếu chưa có mới thêm
+            setMessages(prev => {
+              if (prev.some(m => m.id === msg.id)) return prev;
+              return [
+                ...prev,
+                {
+                  id: msg.id,
+                  text: msg.content,
+                  sender: senderUi,
+                  timestamp: new Date(msg.created_at),
+                },
+              ];
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // Load history ban đầu
+    (async () => {
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+      
+      if (!data) return;
+      setMessages(
+        data.map(msg => ({
+          id: msg.id,
+          text: msg.content,
+          sender:
+            msg.sender === 'real' && user?.id === msg.sender_id
+              ? 'user'
+              : 'stranger',
+          timestamp: new Date(msg.created_at),
+        }))
+      );
+    })();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line
+  }, [conversationId, user?.id]);
+
+  // =====
+  // New: Thay đổi hàm gửi message → lưu vào table messages trên Supabase
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || !conversationId || !user?.id) return;
+
+    const newMessageText = inputValue.trim();
+    setInputValue('');
+
+    // Hiện tại: chỉ gửi message nếu có conversationId (đã match)
+    // Lưu message lên Supabase
+    // sender: 'real', sender_id: user.id
+    const { data, error } = await supabase
+      .from('messages')
+      .insert([
+        {
+          conversation_id: conversationId,
+          content: newMessageText,
+          sender: 'real',
+          sender_id: user.id,
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Gửi tin nhắn thất bại!",
+        description: "Có lỗi xảy ra khi gửi tin: " + error.message,
+      });
+      return;
+    }
+
+    // Tin nhắn sẽ hiển thị lập tức khi nhận được event realtime (do logic bên trên).
+    // Tuy nhiên, để cảm giác chat tức thời, có thể append luôn vào UI, tránh chậm trễ hiển thị
+    setMessages(prev => [
+      ...prev,
+      {
+        id: data.id,
+        text: newMessageText,
+        sender: 'user',
+        timestamp: new Date(data.created_at),
+      }
+    ]);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -187,63 +316,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       setHasNotified(false);
     }
   }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, hasNotified, toast]);
-
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputValue,
-      sender: 'user',
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, newMessage]);
-    
-    const userMessage: AIMessage = {
-      role: 'user',
-      content: inputValue
-    };
-    setConversationHistory(prev => [...prev, userMessage]);
-    setInputValue('');
-
-    if (isAIMode) {
-      setIsTyping(true);
-      try {
-        await aiService.simulateTyping();
-        const aiResponse = await aiService.generateResponse(
-          [...conversationHistory, userMessage],
-          aiPersonality
-        );
-
-        const response: Message = {
-          id: (Date.now() + 1).toString(),
-          text: aiResponse.message,
-          sender: 'stranger',
-          timestamp: new Date(),
-          isAI: true
-        };
-
-        setMessages(prev => [...prev, response]);
-        setConversationHistory(prev => [...prev, userMessage, {
-          role: 'assistant',
-          content: aiResponse.message
-        }]);
-      } catch (error) {
-        console.error('AI response error:', error);
-        const fallbackResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          text: 'Xin lỗi, mình đang gặp chút vấn đề. Bạn có thể thử lại không? 😅',
-          sender: 'stranger',
-          timestamp: new Date(),
-          isAI: true
-        };
-        setMessages(prev => [...prev, fallbackResponse]);
-      } finally {
-        setIsTyping(false);
-      }
-    }
-  };
 
   const handleApplyStrangerSettings = (settings: StrangerSettings) => {
     setStrangerSettings(settings);
@@ -441,13 +513,13 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                 placeholder="Nhập tin nhắn..."
                 className="flex-1 border-purple-200 focus:border-purple-400 transition-colors"
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={isTyping}
+                disabled={isTyping || !conversationId}
               />
               <Button
                 onClick={handleSendMessage}
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
                 size="sm"
-                disabled={isTyping || !inputValue.trim()}
+                disabled={isTyping || !inputValue.trim() || !conversationId}
               >
                 <Send className="w-4 h-4" />
               </Button>

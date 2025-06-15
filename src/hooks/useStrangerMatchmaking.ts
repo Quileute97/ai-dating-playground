@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { 
   joinStrangerQueue, 
@@ -49,7 +48,26 @@ export function useStrangerMatchmaking() {
 
       // Start polling for matches
       console.log("[STRANGER] Starting polling for matches");
+      if (pollingRef.current) clearInterval(pollingRef.current);
+
       pollingRef.current = window.setInterval(async () => {
+        console.log(
+          "[STRANGER] [polling] Queue state:",
+          {
+            isMatched,
+            partnerId,
+            conversationId,
+            error,
+            userIdRef: userIdRef.current,
+          }
+        );
+        if (isMatched) {
+          // Nếu đã matched, dừng polling!
+          clearInterval(pollingRef.current!);
+          pollingRef.current = null;
+          console.log("[STRANGER] [polling] Stopped polling because isMatched=true");
+          return;
+        }
         await tryMatch(userId);
       }, 1500); // Check every 1.5 seconds
 
@@ -142,6 +160,7 @@ export function useStrangerMatchmaking() {
 
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
+      pollingRef.current = null;
     }
 
     setIsInQueue(false);
@@ -157,6 +176,7 @@ export function useStrangerMatchmaking() {
     return () => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
+        pollingRef.current = null;
       }
       if (userIdRef.current) {
         leaveStrangerQueue(userIdRef.current);

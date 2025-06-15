@@ -8,6 +8,56 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Heart, Mail, Lock, User, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
+// Thêm dialog quên mật khẩu nhỏ gọn
+function ForgotPasswordDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setInfo("");
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/reset-password"
+    });
+    if (error) {
+      setError(error.message || "Không thể gửi email đặt lại mật khẩu.");
+    } else {
+      setInfo("Nếu email đúng, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu trong hộp thư.");
+    }
+    setLoading(false);
+  };
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Quên mật khẩu</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSend} className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input
+              type="email"
+              placeholder="Nhập email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          {error && <div className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</div>}
+          {info && <div className="text-green-600 text-sm bg-green-50 p-2 rounded">{info}</div>}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Đang gửi..." : "Gửi mail đặt lại mật khẩu"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,6 +77,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState(''); // Thông báo thành công/xác nhận
+  const [showForgot, setShowForgot] = useState(false);
 
   // Utility: Cleanup all Supabase Auth keys in localStorage and sessionStorage
   const cleanupAuthState = () => {
@@ -189,6 +240,16 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
                       />
                     </div>
                   </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      className="text-xs text-blue-600 underline hover:text-blue-800"
+                      tabIndex={-1}
+                      onClick={() => setShowForgot(true)}
+                    >
+                      Quên mật khẩu?
+                    </button>
+                  </div>
                   {error && (
                     <div className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</div>
                   )}
@@ -323,6 +384,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
           </TabsContent>
         </Tabs>
       </DialogContent>
+      <ForgotPasswordDialog open={showForgot} onClose={() => setShowForgot(false)} />
     </Dialog>
   );
 };

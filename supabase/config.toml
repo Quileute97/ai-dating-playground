@@ -1,5 +1,1 @@
-
 project_id = "oeepmsbttxfknkznbnym"
-
-[functions.delete-chat-data]
-verify_jwt = false # đặt public, cho phép gọi từ client (nên an toàn vì chỉ xóa conversation nếu client biết id)

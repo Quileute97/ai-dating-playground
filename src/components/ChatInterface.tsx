@@ -49,13 +49,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   const [hasNotified, setHasNotified] = useState(false);
   const [isStartingQueue, setIsStartingQueue] = useState(false);
 
-  // New: store received messages from Supabase
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [realtimeChannel, setRealtimeChannel] = useState<any>(null);
-
-  // Helper: get current user id (real hoặc anon)
-  const userId = user?.id || anonId;
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -195,109 +188,60 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     }
   }, [matchmaking?.isMatched, matchmaking?.partnerId, matchmaking?.conversationId, hasNotified, toast]);
 
-  // 1. Load messages directly from Supabase:  
-  const loadSupabaseMessages = async (cid: string) => {
-    setLoadingMessages(true);
-    setMessages([]); // Clear old for visual clarity/hard reload
-    try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', cid)
-        .order('created_at', { ascending: true });
-      if (data) {
-        setMessages(
-          data.map((m) => ({
-            id: m.id,
-            text: m.content,
-            sender: m.sender === userId ? "user" : "stranger", // xác định gửi bởi mình
-            timestamp: new Date(m.created_at),
-          }))
-        );
-      }
-      if (error) {
-        console.error('[Chat] Load messages error:', error);
-      }
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-
-  // 2. Realtime Subscribe tin nhắn Supabase, chỉ dùng dữ liệu thực
-  useEffect(() => {
-    const setupRealtime = async (conversationId?: string) => {
-      if (!conversationId) return;
-      const { supabase } = await import('@/integrations/supabase/client');
-      // Cleanup previous channel
-      if (realtimeChannel) {
-        supabase.removeChannel(realtimeChannel);
-        setRealtimeChannel(null);
-      }
-      // Subscribe to new messages for conversation_id
-      const channel = supabase
-        .channel(`messages-${conversationId}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`
-        }, payload => {
-          // Chỉ lấy bản ghi insert hoặc update, push uniquely (lấy luôn tất cả messages lại để avoid duplication)
-          loadSupabaseMessages(conversationId);
-        }).subscribe();
-      setRealtimeChannel(channel);
-    };
-    if (
-      matchmaking?.isMatched &&
-      matchmaking?.conversationId &&
-      userId
-    ) {
-      setupRealtime(matchmaking.conversationId);
-      loadSupabaseMessages(matchmaking.conversationId);
-    }
-    // Cleanup on unmount
-    return () => {
-      if (realtimeChannel) {
-        import('@/integrations/supabase/client').then(({ supabase }) => {
-          supabase.removeChannel(realtimeChannel);
-        });
-      }
-    };
-    // eslint-disable-next-line
-  }, [matchmaking?.conversationId, matchmaking?.isMatched, userId]);
-  // Khi join vào 1 phòng chat mới, chỉ lấy dữ liệu thực từ supabase chứ không render message mock nữa
-
-  // 3. Gửi tin nhắn: Insert lên Supabase, không append vào messages state trực tiếp
-  const [sendLoading, setSendLoading] = useState(false);
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !matchmaking?.conversationId) return;
-    setSendLoading(true);
-    const sendContent = inputValue.trim();
+    if (!inputValue.trim()) return;
+
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      text: inputValue,
+      sender: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    
+    const userMessage: AIMessage = {
+      role: 'user',
+      content: inputValue
+    };
+    setConversationHistory(prev => [...prev, userMessage]);
     setInputValue('');
-    try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { error } = await supabase.from('messages').insert({
-        conversation_id: matchmaking.conversationId,
-        sender: userId,
-        content: sendContent,
-      });
-      if (error) {
-        toast({
-          title: 'Lỗi gửi tin nhắn!',
-          description: error.message,
-          variant: 'destructive'
-        });
+
+    if (isAIMode) {
+      setIsTyping(true);
+      try {
+        await aiService.simulateTyping();
+        const aiResponse = await aiService.generateResponse(
+          [...conversationHistory, userMessage],
+          aiPersonality
+        );
+
+        const response: Message = {
+          id: (Date.now() + 1).toString(),
+          text: aiResponse.message,
+          sender: 'stranger',
+          timestamp: new Date(),
+          isAI: true
+        };
+
+        setMessages(prev => [...prev, response]);
+        setConversationHistory(prev => [...prev, userMessage, {
+          role: 'assistant',
+          content: aiResponse.message
+        }]);
+      } catch (error) {
+        console.error('AI response error:', error);
+        const fallbackResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: 'Xin lỗi, mình đang gặp chút vấn đề. Bạn có thể thử lại không? 😅',
+          sender: 'stranger',
+          timestamp: new Date(),
+          isAI: true
+        };
+        setMessages(prev => [...prev, fallbackResponse]);
+      } finally {
+        setIsTyping(false);
       }
-      // Không cần push mess thủ công vào state, vì đã có Supabase realtime load lại toàn bộ message (Clean Source of Truth)
-    } catch (e) {
-      toast({
-        title: 'Lỗi ngoài ý muốn!',
-        description: 'Không gửi được tin nhắn. Vui lòng thử lại.',
-        variant: 'destructive'
-      });
-    } finally {
-      setSendLoading(false);
     }
   };
 
@@ -453,9 +397,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {loadingMessages && (
-              <div className="flex justify-center my-4 text-sm text-gray-500">Đang tải tin nhắn...</div>
-            )}
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -500,13 +441,13 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                 placeholder="Nhập tin nhắn..."
                 className="flex-1 border-purple-200 focus:border-purple-400 transition-colors"
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={sendLoading}
+                disabled={isTyping}
               />
               <Button
                 onClick={handleSendMessage}
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
                 size="sm"
-                disabled={sendLoading || !inputValue.trim()}
+                disabled={isTyping || !inputValue.trim()}
               >
                 <Send className="w-4 h-4" />
               </Button>

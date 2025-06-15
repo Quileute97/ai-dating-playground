@@ -49,6 +49,7 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasNotified, setHasNotified] = useState(false);
   const [isStartingQueue, setIsStartingQueue] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -196,9 +197,30 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     userId
   );
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
+  // Sửa lại hàm gửi tin nhắn cho stranger chat
+  const handleSendMessage = async (evt?: React.KeyboardEvent | React.MouseEvent) => {
+    if (evt && "key" in evt) {
+      if (evt.key !== "Enter") return;
+      evt.preventDefault();
+    }
+    if (!inputValue.trim() || isSending) return;
 
+    // Đang matched với người lạ (stranger chat)
+    if (matchmakingStatus === "matched" && matchmaking.conversationId) {
+      setIsSending(true);
+      console.log("[ChatInterface] Gửi tin nhắn:", inputValue);
+      const ok = await sendMessage(inputValue);
+      if (ok) {
+        setInputValue("");
+      } else {
+        // Thông báo lỗi gửi
+        console.warn("Gửi tin nhắn thất bại, vui lòng thử lại sau.");
+      }
+      setIsSending(false);
+      return;
+    }
+
+    // AI mode giữ nguyên như cũ
     if (isAIMode) {
       setIsTyping(true);
       try {
@@ -234,13 +256,6 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
       } finally {
         setIsTyping(false);
       }
-      return;
-    }
-
-    // Đang matched với người lạ
-    if (matchmakingStatus === "matched" && matchmaking.conversationId) {
-      const ok = await sendMessage(inputValue);
-      if (ok) setInputValue("");
       return;
     }
   };
@@ -439,16 +454,24 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Nhập tin nhắn..."
                 className="flex-1 border-purple-200 focus:border-purple-400 transition-colors"
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={isTyping}
+                onKeyDown={handleSendMessage}
+                disabled={isTyping || isSending}
+                autoFocus
               />
               <Button
                 onClick={handleSendMessage}
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-200"
                 size="sm"
-                disabled={isTyping || !inputValue.trim()}
+                disabled={isTyping || !inputValue.trim() || isSending}
               >
-                <Send className="w-4 h-4" />
+                {isSending ? (
+                  <svg className="animate-spin w-4 h-4 text-white" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
               </Button>
             </div>
           </div>

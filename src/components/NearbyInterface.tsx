@@ -22,6 +22,11 @@ interface NearbyUser {
   interests: string[];
   rating: number;
   isLiked?: boolean;
+  bio?: string;
+  height?: number;
+  job?: string;
+  education?: string;
+  location_name?: string;
 }
 
 interface NearbyInterfaceProps {
@@ -91,20 +96,30 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const searchRadius = hasExpandedRange && upgradeStatus === "approved" ? 20 : 5;
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, searchRadius);
 
-  // Giả lập dữ liệu với interests, rating, online...
+  // Chuyển đổi profile từ database thành NearbyUser
   function profileToNearbyUser(profile: any): NearbyUser {
-    // Có thể bổ sung logic lấy interests, avatar, lastSeen thật
+    const interests = Array.isArray(profile.interests) ? profile.interests : [];
+    const isRecentlyActive = profile.last_active ? 
+      (new Date().getTime() - new Date(profile.last_active).getTime()) < 30 * 60 * 1000 : false; // 30 phút
+
     return {
       id: profile.id,
       name: profile.name || "Chưa đặt tên",
       age: profile.age || 18,
-      distance: Math.round(profile.distance * 10) / 10,
+      distance: Math.round((profile.distance || 0) * 10) / 10,
       avatar: profile.avatar || "/placeholder.svg",
-      isOnline: Math.random() > 0.4, // Nếu có trạng thái thật thì lấy thật
-      lastSeen: (Math.random() > 0.5 ? "Đang online" : "Vừa xong"),
-      interests: ["Đang cập nhật"],
-      rating: Math.round(40 + Math.random() * 10) / 10,
-      isLiked: false
+      isOnline: isRecentlyActive,
+      lastSeen: profile.last_active ? 
+        (isRecentlyActive ? "Đang online" : `${Math.floor((new Date().getTime() - new Date(profile.last_active).getTime()) / (1000 * 60))} phút trước`) 
+        : "Chưa rõ",
+      interests: interests.length > 0 ? interests : ["Đang cập nhật"],
+      rating: 4.0 + Math.random() * 1.0, // Tạm thời random, sau có thể thêm rating thật
+      isLiked: false,
+      bio: profile.bio,
+      height: profile.height,
+      job: profile.job,
+      education: profile.education,
+      location_name: profile.location_name
     };
   }
 
@@ -141,7 +156,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     // TODO: dùng Supabase cho like thật
     toast({
       title: "Đã thích!",
-      description: `Bạn đã thích user ${userId}`,
+      description: `Bạn đã thích người dùng này`,
     });
   };
 

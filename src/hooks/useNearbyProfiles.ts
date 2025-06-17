@@ -10,6 +10,15 @@ export interface Profile {
   lat: number | null;
   lng: number | null;
   gender?: string | null;
+  bio?: string | null;
+  interests?: any;
+  height?: number | null;
+  job?: string | null;
+  education?: string | null;
+  location_name?: string | null;
+  is_dating_active?: boolean;
+  last_active?: string | null;
+  distance?: number;
 }
 
 export function useNearbyProfiles(currentUserId: string | undefined, userLocation: { lat: number, lng: number } | null, maxDistanceKm: number = 5) {
@@ -36,36 +45,39 @@ export function useNearbyProfiles(currentUserId: string | undefined, userLocatio
     }
 
     async function fetchNearby() {
-      // Lấy tất cả profile và lọc thủ công
+      // Lấy tất cả profile đang hoạt động hẹn hò
       let { data, error } = await supabase
         .from("profiles")
-        .select("id, name, age, avatar, lat, lng, gender");
+        .select("id, name, age, avatar, lat, lng, gender, bio, interests, height, job, education, location_name, is_dating_active, last_active")
+        .eq('is_dating_active', true);
 
       if (error) {
+        console.error('Error fetching nearby profiles:', error);
         setProfiles([]);
         setLoading(false);
         return;
       }
+
       // Loại trừ user hiện tại, chỉ các profile có vị trí
       let filtered = (data as Profile[]).filter(
         (u) =>
           u.id !== currentUserId &&
           u.lat !== null &&
           u.lng !== null &&
-          userLocation
+          userLocation &&
+          u.is_dating_active
       ).map((u) => ({
         ...u,
-        distance:
-          distance(userLocation.lat, userLocation.lng, u.lat!, u.lng!)
+        distance: distance(userLocation.lat, userLocation.lng, u.lat!, u.lng!)
       }));
 
       // Chỉ lấy trong bán kính maxDistanceKm
-      filtered = filtered.filter((u) => u.distance <= maxDistanceKm);
+      filtered = filtered.filter((u) => u.distance! <= maxDistanceKm);
 
       // Sắp xếp theo khoảng cách
-      filtered.sort((a, b) => a.distance - b.distance);
+      filtered.sort((a, b) => (a.distance || 0) - (b.distance || 0));
 
-      setProfiles(filtered as Profile[]);
+      setProfiles(filtered);
       setLoading(false);
     }
 

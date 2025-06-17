@@ -114,13 +114,9 @@ export default function Timeline({ user }: TimelineProps) {
 
     try {
       const result = await uploadTimelineMedia(file);
-      if (typeof result === 'string') {
-        setMediaURL(result);
-        setMediaType(file.type.startsWith('image/') ? 'image' : 'video');
-      } else {
-        setMediaURL(result.publicURL);
-        setMediaType(result.type);
-      }
+      // uploadTimelineMedia returns a string (the public URL)
+      setMediaURL(result);
+      setMediaType(file.type.startsWith('image/') ? 'image' : 'video');
     } catch (error: any) {
       toast({
         title: "Lỗi tải lên media",

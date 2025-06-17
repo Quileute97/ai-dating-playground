@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Heart, MessageCircle, Share, Plus, MapPin, Smile, Hash, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,8 +35,8 @@ const Timeline = ({ user }: TimelineProps) => {
   const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
 
   const { toast } = useToast();
-  const { posts, loading: postsLoading, createPost, deletePost } = useTimelinePosts();
-  const { likePost, unlikePost, hasLiked } = usePostLikes(user?.id);
+  const { posts, isLoading: postsLoading, createPost, deletePost } = useTimelinePosts();
+  const { like: likePost, unlike: unlikePost, liked: hasLiked } = usePostLikes(undefined, user?.id);
   const { comments } = useTimelineComments();
   const { conversations, markAsRead } = useTimelineMessaging(user?.id);
 
@@ -49,14 +50,29 @@ const Timeline = ({ user }: TimelineProps) => {
       return;
     }
 
+    if (!user?.id) {
+      toast({
+        title: "Lỗi đăng nhập!",
+        description: "Vui lòng đăng nhập để đăng bài viết.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     let mediaUrl = null;
     let mediaType = null;
 
     if (selectedFile) {
       try {
         const uploadResult = await uploadTimelineMedia(selectedFile);
-        mediaUrl = uploadResult.publicUrl;
-        mediaType = uploadResult.type;
+        // Handle both string and object return types from upload function
+        if (typeof uploadResult === 'string') {
+          mediaUrl = uploadResult;
+          mediaType = selectedFile.type.startsWith('image/') ? 'image' : 'video';
+        } else {
+          mediaUrl = uploadResult?.publicUrl || uploadResult;
+          mediaType = uploadResult?.type || (selectedFile.type.startsWith('image/') ? 'image' : 'video');
+        }
       } catch (uploadError) {
         toast({
           title: "Lỗi tải lên!",
@@ -69,9 +85,9 @@ const Timeline = ({ user }: TimelineProps) => {
 
     const postData = {
       content: newPost,
+      user_id: user.id,
       media_url: mediaUrl,
       media_type: mediaType,
-      sticker: selectedSticker,
       location: selectedLocation,
     };
 
@@ -113,10 +129,10 @@ const Timeline = ({ user }: TimelineProps) => {
 
   const handleLike = async (postId: string) => {
     try {
-      if (hasLiked(postId)) {
-        await unlikePost(postId);
+      if (hasLiked) {
+        await unlikePost();
       } else {
-        await likePost(postId);
+        await likePost();
       }
     } catch (error) {
       toast({
@@ -357,12 +373,12 @@ const Timeline = ({ user }: TimelineProps) => {
                 <div className="p-4">
                   <div className="flex items-center gap-3 mb-3">
                     <img
-                      src={post.user_avatar || "/placeholder.svg"}
-                      alt={post.user_name || "User"}
+                      src={post.profiles?.avatar || "/placeholder.svg"}
+                      alt={post.profiles?.name || "User"}
                       className="w-10 h-10 rounded-full object-cover"
                     />
                     <div>
-                      <h3 className="font-semibold">{post.user_name || "Anonymous"}</h3>
+                      <h3 className="font-semibold">{post.profiles?.name || "Anonymous"}</h3>
                       <p className="text-sm text-gray-500">
                         {new Date(post.created_at).toLocaleDateString("vi-VN")}
                       </p>
@@ -396,15 +412,15 @@ const Timeline = ({ user }: TimelineProps) => {
                     )}
 
                     {/* Sticker */}
-                    {post.sticker && (
-                      <div className="text-4xl mb-2">{post.sticker.emoji}</div>
+                    {post.sticker && typeof post.sticker === 'object' && 'emoji' in post.sticker && (
+                      <div className="text-4xl mb-2">{(post.sticker as any).emoji}</div>
                     )}
 
                     {/* Location */}
-                    {post.location && (
+                    {post.location && typeof post.location === 'object' && 'name' in post.location && (
                       <div className="flex items-center gap-1 text-sm text-gray-600 mb-2">
                         <MapPin className="w-4 h-4" />
-                        {post.location.name}
+                        {(post.location as any).name}
                       </div>
                     )}
                   </div>
@@ -417,11 +433,11 @@ const Timeline = ({ user }: TimelineProps) => {
                         size="sm"
                         onClick={() => handleLike(post.id)}
                         className={`${
-                          hasLiked(post.id) ? "text-red-500" : "text-gray-600"
+                          hasLiked ? "text-red-500" : "text-gray-600"
                         } hover:text-red-500`}
                       >
-                        <Heart className={`w-4 h-4 mr-1 ${hasLiked(post.id) ? "fill-current" : ""}`} />
-                        {post.likes_count || 0}
+                        <Heart className={`w-4 h-4 mr-1 ${hasLiked ? "fill-current" : ""}`} />
+                        0
                       </Button>
                       
                       <Button
@@ -466,36 +482,33 @@ const Timeline = ({ user }: TimelineProps) => {
       <PostDetailModal
         isOpen={!!selectedPost}
         onClose={() => setSelectedPost(null)}
-        post={selectedPost}
+        postId={selectedPost?.id || null}
       />
 
       {/* Hashtag Posts Modal */}
       <HashtagPostsModal
-        isOpen={!!hashtagFilter}
+        open={!!hashtagFilter}
         onClose={() => setHashtagFilter(null)}
-        hashtag={hashtagFilter}
+        hashtag={hashtagFilter || ""}
+        user={user}
       />
 
-      {/* Chat List Modal */}
-      <TimelineChatList
-        isOpen={showChatList}
-        onClose={() => setShowChatList(false)}
-        conversations={conversations}
-        currentUserId={user?.id}
-        onSelectChat={(otherUserId, otherUserName, otherUserAvatar) => {
-          setSelectedChatUser({ id: otherUserId, name: otherUserName, avatar: otherUserAvatar });
-          setShowChatList(false);
-        }}
-      />
+      {/* Chat List - Only render if user is logged in */}
+      {user && (
+        <TimelineChatList
+          currentUserId={user.id}
+        />
+      )}
 
       {/* Chat Modal */}
       {selectedChatUser && (
         <TimelineChatModal
           isOpen={!!selectedChatUser}
           onClose={() => setSelectedChatUser(null)}
-          otherUser={selectedChatUser}
+          partnerId={selectedChatUser.id}
+          partnerName={selectedChatUser.name}
+          partnerAvatar={selectedChatUser.avatar}
           currentUserId={user?.id}
-          onMarkAsRead={markAsRead}
         />
       )}
     </div>

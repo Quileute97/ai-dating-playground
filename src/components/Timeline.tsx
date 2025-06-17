@@ -9,17 +9,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 import { useTimelinePosts } from "@/hooks/useTimelinePosts";
-import { usePostLikes } from "@/hooks/usePostLikes";
 import { useTimelineComments } from "@/hooks/useTimelineComments";
+import { useTimelinePostLikes } from "@/hooks/useTimelinePostLikes";
 import PostDetailModal from "./PostDetailModal";
 import HashtagPostsModal from "./HashtagPostsModal";
 import SimpleTimelineChatList from "./SimpleTimelineChatList";
+import TimelineErrorBoundary from "./TimelineErrorBoundary";
 
 interface TimelineProps {
   user?: any;
 }
 
-const Timeline = ({ user }: TimelineProps) => {
+const TimelineContent = ({ user }: TimelineProps) => {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newPost, setNewPost] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -33,8 +34,10 @@ const Timeline = ({ user }: TimelineProps) => {
 
   const { toast } = useToast();
   const { posts, isLoading: postsLoading, createPost, deletePost } = useTimelinePosts();
-  const { liked, like, unlike } = usePostLikes(undefined, user?.id);
   const { comments } = useTimelineComments();
+  const { isPostLiked, getPostLikeCount, toggleLike, isToggling } = useTimelinePostLikes(user?.id);
+
+  console.log('🔄 Timeline render - posts:', posts, 'user:', user);
 
   const handleCreatePost = async () => {
     if (!newPost.trim() && !selectedFile && !selectedSticker && !selectedLocation) {
@@ -64,6 +67,7 @@ const Timeline = ({ user }: TimelineProps) => {
         mediaUrl = uploadResult;
         mediaType = selectedFile.type.startsWith('image/') ? 'image' : 'video';
       } catch (uploadError) {
+        console.error('Upload error:', uploadError);
         toast({
           title: "Lỗi tải lên!",
           description: "Có lỗi khi tải lên ảnh/video. Vui lòng thử lại.",
@@ -93,6 +97,7 @@ const Timeline = ({ user }: TimelineProps) => {
         description: "Bài viết của bạn đã được đăng lên timeline.",
       });
     } catch (error) {
+      console.error('Create post error:', error);
       toast({
         title: "Lỗi đăng bài!",
         description: "Có lỗi khi đăng bài viết. Vui lòng thử lại.",
@@ -109,6 +114,7 @@ const Timeline = ({ user }: TimelineProps) => {
         description: "Bài viết đã được xóa khỏi timeline.",
       });
     } catch (error) {
+      console.error('Delete post error:', error);
       toast({
         title: "Lỗi xóa bài!",
         description: "Có lỗi khi xóa bài viết. Vui lòng thử lại.",
@@ -118,15 +124,21 @@ const Timeline = ({ user }: TimelineProps) => {
   };
 
   const handleLike = async (postId: string) => {
-    try {
-      if (liked) {
-        await unlike();
-      } else {
-        await like();
-      }
-    } catch (error) {
+    if (!user?.id) {
       toast({
-        title: "Lỗi thích/bỏ thích!",
+        title: "Cần đăng nhập!",
+        description: "Vui lòng đăng nhập để thích bài viết.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await toggleLike(postId);
+    } catch (error) {
+      console.error('Like error:', error);
+      toast({
+        title: "Lỗi thích bài!",
         description: "Có lỗi khi thích/bỏ thích bài viết. Vui lòng thử lại.",
         variant: "destructive",
       });
@@ -163,6 +175,17 @@ const Timeline = ({ user }: TimelineProps) => {
   const filteredPosts = hashtagFilter
     ? posts?.filter((post) => post.content && post.content.includes(`#${hashtagFilter}`)) || []
     : posts || [];
+
+  if (postsLoading) {
+    return (
+      <div className="h-full bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center py-8">
+          <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải timeline...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 relative">
@@ -266,7 +289,6 @@ const Timeline = ({ user }: TimelineProps) => {
               )}
 
               <div className="flex items-center justify-between">
-                {/* Attachments */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="media-upload">
                     <Input
@@ -295,7 +317,6 @@ const Timeline = ({ user }: TimelineProps) => {
                   </Button>
                 </div>
 
-                {/* Submit Button */}
                 <Button onClick={handleCreatePost} className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
                   Đăng
                 </Button>
@@ -347,14 +368,22 @@ const Timeline = ({ user }: TimelineProps) => {
         </Dialog>
 
         {/* Timeline Posts */}
-        {postsLoading ? (
-          <div className="text-center py-8">
-            <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Đang tải timeline...</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {filteredPosts.map((post) => (
+        <div className="space-y-6">
+          {filteredPosts.length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-gray-500">Chưa có bài viết nào.</p>
+              {user && (
+                <Button
+                  onClick={() => setShowCreatePost(true)}
+                  variant="outline"
+                  className="mt-4"
+                >
+                  Tạo bài viết đầu tiên
+                </Button>
+              )}
+            </Card>
+          ) : (
+            filteredPosts.map((post) => (
               <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="p-4">
                   <div className="flex items-center gap-3 mb-3">
@@ -418,12 +447,13 @@ const Timeline = ({ user }: TimelineProps) => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleLike(post.id)}
+                        disabled={isToggling}
                         className={`${
-                          liked ? "text-red-500" : "text-gray-600"
+                          isPostLiked(post.id) ? "text-red-500" : "text-gray-600"
                         } hover:text-red-500`}
                       >
-                        <Heart className={`w-4 h-4 mr-1 ${liked ? "fill-current" : ""}`} />
-                        0
+                        <Heart className={`w-4 h-4 mr-1 ${isPostLiked(post.id) ? "fill-current" : ""}`} />
+                        {getPostLikeCount(post.id)}
                       </Button>
                       
                       <Button
@@ -459,9 +489,9 @@ const Timeline = ({ user }: TimelineProps) => {
                   </div>
                 </div>
               </Card>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
 
       {/* Post Detail Modal */}
@@ -488,6 +518,14 @@ const Timeline = ({ user }: TimelineProps) => {
         />
       )}
     </div>
+  );
+};
+
+const Timeline = ({ user }: TimelineProps) => {
+  return (
+    <TimelineErrorBoundary>
+      <TimelineContent user={user} />
+    </TimelineErrorBoundary>
   );
 };
 

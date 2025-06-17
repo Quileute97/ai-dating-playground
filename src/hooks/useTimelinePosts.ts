@@ -1,15 +1,15 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useRef } from "react";
+import { useRealtimeSubscription } from "./useRealtimeSubscription";
+import { useState } from "react";
 
 export function useTimelinePosts(userId?: string) {
   const queryClient = useQueryClient();
-  const channelRef = useRef<any>(null);
-  const isSubscribedRef = useRef(false);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
 
   // Lấy tất cả bài post (sắp xếp mới nhất trước)
-  const { data: posts, isLoading, error } = useQuery({
+  const { data: posts, isLoading, error, refetch } = useQuery({
     queryKey: ["timeline-posts"],
     queryFn: async () => {
       console.log('🔄 Fetching timeline posts...');
@@ -40,61 +40,17 @@ export function useTimelinePosts(userId?: string) {
     retryDelay: 1000,
   });
 
-  // Realtime subscription cho posts
-  useEffect(() => {
-    // Chỉ setup nếu chưa subscribe
-    if (isSubscribedRef.current) {
-      console.log('⚠️ Already subscribed to posts channel, skipping');
-      return;
+  // Realtime subscription cho posts với error handling
+  useRealtimeSubscription({
+    channelName: 'timeline-posts',
+    table: 'posts',
+    queryKey: ["timeline-posts"],
+    enabled: true,
+    onError: (error) => {
+      console.error('❌ Posts subscription error:', error);
+      setSubscriptionError(error.message);
     }
-
-    const setupChannel = () => {
-      // Clean up existing channel first
-      if (channelRef.current) {
-        console.log('🧹 Cleaning up existing posts channel');
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-        isSubscribedRef.current = false;
-      }
-
-      const channelName = `posts-changes-${Date.now()}`;
-      console.log('🔗 Setting up posts channel:', channelName);
-
-      const channel = supabase
-        .channel(channelName)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'posts'
-        }, (payload) => {
-          console.log('📊 Posts realtime update:', payload);
-          queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
-        })
-        .subscribe((status) => {
-          console.log('📡 Posts subscription status:', status);
-          if (status === 'SUBSCRIBED') {
-            isSubscribedRef.current = true;
-          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            isSubscribedRef.current = false;
-          }
-        });
-
-      channelRef.current = channel;
-    };
-
-    // Small delay to ensure proper cleanup
-    const timer = setTimeout(setupChannel, 100);
-
-    return () => {
-      clearTimeout(timer);
-      if (channelRef.current) {
-        console.log('🧹 Cleaning up posts channel on unmount');
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-        isSubscribedRef.current = false;
-      }
-    };
-  }, [queryClient]);
+  });
 
   // Thêm bài post mới
   const createPostMutation = useMutation({
@@ -170,14 +126,16 @@ export function useTimelinePosts(userId?: string) {
   console.log('🔍 Timeline posts hook state:', { 
     postsCount: posts?.length || 0, 
     isLoading, 
-    hasError: !!error 
+    hasError: !!error,
+    subscriptionError
   });
 
   return {
     posts,
     isLoading,
     error,
-    refetch: () => queryClient.invalidateQueries({ queryKey: ["timeline-posts"] }),
+    subscriptionError,
+    refetch,
     createPost: createPostMutation.mutateAsync,
     creating: createPostMutation.isPending,
     deletePost: deletePostMutation.mutateAsync,

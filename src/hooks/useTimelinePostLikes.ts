@@ -1,12 +1,12 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useRef } from "react";
+import { useRealtimeSubscription } from "./useRealtimeSubscription";
+import { useState } from "react";
 
 export function useTimelinePostLikes(userId?: string) {
   const queryClient = useQueryClient();
-  const channelRef = useRef<any>(null);
-  const isSubscribedRef = useRef(false);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
 
   // Get all post likes for timeline posts
   const { data: allLikes = [], isLoading } = useQuery({
@@ -28,63 +28,17 @@ export function useTimelinePostLikes(userId?: string) {
     retryDelay: 1000,
   });
 
-  // Realtime subscription for all post likes
-  useEffect(() => {
-    if (!userId) return;
-
-    // Chỉ setup nếu chưa subscribe
-    if (isSubscribedRef.current) {
-      console.log('⚠️ Already subscribed to post likes channel, skipping');
-      return;
+  // Realtime subscription for all post likes with error handling
+  useRealtimeSubscription({
+    channelName: `timeline-post-likes-${userId}`,
+    table: 'post_likes',
+    queryKey: ["timeline-all-post-likes"],
+    enabled: !!userId,
+    onError: (error) => {
+      console.error('❌ Post likes subscription error:', error);
+      setSubscriptionError(error.message);
     }
-
-    const setupChannel = () => {
-      // Clean up existing channel first
-      if (channelRef.current) {
-        console.log('Cleaning up existing post likes channel');
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-        isSubscribedRef.current = false;
-      }
-
-      const channelName = `timeline-post-likes-${userId}-${Date.now()}`;
-      console.log('Setting up post likes channel:', channelName);
-
-      const channel = supabase
-        .channel(channelName)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'post_likes'
-        }, (payload) => {
-          console.log('❤️ Timeline post likes update:', payload);
-          queryClient.invalidateQueries({ queryKey: ["timeline-all-post-likes"] });
-        })
-        .subscribe((status) => {
-          console.log('Post likes subscription status:', status);
-          if (status === 'SUBSCRIBED') {
-            isSubscribedRef.current = true;
-          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-            isSubscribedRef.current = false;
-          }
-        });
-
-      channelRef.current = channel;
-    };
-
-    // Small delay to ensure proper cleanup
-    const timer = setTimeout(setupChannel, 100);
-
-    return () => {
-      clearTimeout(timer);
-      if (channelRef.current) {
-        console.log('Cleaning up post likes channel on unmount');
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-        isSubscribedRef.current = false;
-      }
-    };
-  }, [userId, queryClient]);
+  });
 
   // Helper functions
   const isPostLiked = (postId: string) => {
@@ -151,5 +105,6 @@ export function useTimelinePostLikes(userId?: string) {
     toggleLike,
     isLoading,
     isToggling: likeMutation.isPending || unlikeMutation.isPending,
+    subscriptionError,
   };
 }

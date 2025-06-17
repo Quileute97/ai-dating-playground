@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent } from "react";
-import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile } from "lucide-react";
+import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,22 @@ import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 import { VN_PROVINCES } from "@/utils/vnProvinces";
 import HashtagPostsModal from "./HashtagPostsModal";
 import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
@@ -101,7 +117,7 @@ import { useDatingProfile } from "@/hooks/useDatingProfile";
 
 const Timeline: React.FC<{ user: any }> = ({ user }) => {
   const userId = user?.id;
-  const { posts, isLoading, createPost, creating, refetch } = useTimelinePosts(userId);
+  const { posts, isLoading, createPost, creating, refetch, deletePost, deleting } = useTimelinePosts(userId);
   const { profile } = useDatingProfile(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
 
@@ -120,6 +136,14 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
     refetch();
   };
 
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await deletePost(postId);
+    } catch (error) {
+      console.error("Error deleting post:", error);
+    }
+  };
+
   return (
     <div className="max-w-lg mx-auto py-6 h-full flex flex-col animate-fade-in">
       {/* CHỈ HIỂN THỊ PostForm NẾU ĐÃ ĐĂNG NHẬP */}
@@ -131,7 +155,14 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
           <div className="text-center text-gray-500 pt-12">Đang tải timeline...</div>
         )}
         {!isLoading && posts?.map((post: any) => (
-          <PostItem key={post.id} post={post} user={user} onHashtagClick={setHashtag} />
+          <PostItem 
+            key={post.id} 
+            post={post} 
+            user={user} 
+            onHashtagClick={setHashtag}
+            onDeletePost={handleDeletePost}
+            isDeleting={deleting}
+          />
         ))}
         {posts?.length === 0 && !isLoading && (
           <div className="text-center text-gray-400 pt-16">Chưa có bài viết nào.</div>
@@ -289,8 +320,15 @@ const PostForm: React.FC<{
 // (Component này chỉ dùng cho sticker, đã bỏ hoàn toàn)
 
 // ---------- Sửa PostItem ----------
-const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) => void }> = ({ post, user, onHashtagClick }) => {
+const PostItem: React.FC<{ 
+  post: any; 
+  user: any; 
+  onHashtagClick: (tag: string) => void;
+  onDeletePost: (postId: string) => void;
+  isDeleting: boolean;
+}> = ({ post, user, onHashtagClick, onDeletePost, isDeleting }) => {
   const [commentInput, setCommentInput] = React.useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
   const { likeCount, liked, like, unlike, isToggling } = usePostLikes(post.id, user?.id);
 
@@ -312,25 +350,57 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
     else await like();
   };
 
+  const handleDeletePost = () => {
+    onDeletePost(post.id);
+    setShowDeleteDialog(false);
+  };
+
+  // Kiểm tra xem user hiện tại có phải là chủ bài viết không
+  const isPostOwner = user?.id === post.user_id;
+
   return (
     <Card className="rounded-2xl shadow-md border border-gray-200 mb-4 p-5 bg-white transition hover:shadow-lg">
-      <div className="flex items-center gap-3 mb-2">
-        <img
-          src={post.profiles?.avatar || demoUser.avatar}
-          alt={post.profiles?.name || "User"}
-          className="w-11 h-11 rounded-full object-cover border shadow cursor-pointer"
-          onClick={() => post.profiles?.id && navigate(`/profile/${post.profiles.id}`)}
-        />
-        <div className="flex flex-col">
-          <span
-            className="font-semibold text-gray-800 cursor-pointer hover:underline"
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          <img
+            src={post.profiles?.avatar || demoUser.avatar}
+            alt={post.profiles?.name || "User"}
+            className="w-11 h-11 rounded-full object-cover border shadow cursor-pointer"
             onClick={() => post.profiles?.id && navigate(`/profile/${post.profiles.id}`)}
-          >
-            {post.profiles?.name || "Ẩn danh"}
-          </span>
-          <span className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</span>
+          />
+          <div className="flex flex-col">
+            <span
+              className="font-semibold text-gray-800 cursor-pointer hover:underline"
+              onClick={() => post.profiles?.id && navigate(`/profile/${post.profiles.id}`)}
+            >
+              {post.profiles?.name || "Ẩn danh"}
+            </span>
+            <span className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</span>
+          </div>
         </div>
+        
+        {/* Menu xóa bài viết - chỉ hiển thị cho chủ bài viết */}
+        {isPostOwner && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Xóa bài viết
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
+
+      {/* Content */}
       <div className="text-base text-gray-900 mb-2 whitespace-pre-line leading-relaxed min-h-[18px]" style={{ wordBreak: 'break-word' }}>
         {renderContent(post.content, onHashtagClick)}
       </div>
@@ -343,7 +413,6 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
             className="rounded-lg object-cover border max-h-72 w-full"
             style={{ maxWidth: '98%' }}
           />
-          {/* KHÔNG render sticker overlay */}
         </div>
       )}
       {post.media_url && post.media_type === "video" && (
@@ -354,11 +423,8 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
             className="rounded-lg object-contain border max-h-72 w-full"
             style={{ maxWidth: '98%' }}
           />
-          {/* KHÔNG render sticker overlay */}
         </div>
       )}
-      {/* KHÔNG render sticker nếu không có media */}
-      {/* Địa điểm đã bị loại bỏ */}
       {/* Actions */}
       <div className="flex items-center gap-4 mt-2 mb-2">
         <Button
@@ -413,6 +479,28 @@ const PostItem: React.FC<{ post: any; user: any; onHashtagClick: (tag: string) =
           <SendHorizonal size={16} />
         </Button>
       </form>
+
+      {/* Dialog xác nhận xóa */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa bài viết</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeletePost}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Đang xóa..." : "Xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

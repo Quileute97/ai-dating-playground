@@ -62,6 +62,20 @@ export function useTimelinePosts(userId?: string) {
     }
   });
 
+  // Xóa bài post
+  const deletePostMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .eq("id", postId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
+    }
+  });
+
   return {
     posts,
     isLoading,
@@ -69,5 +83,7 @@ export function useTimelinePosts(userId?: string) {
     refetch: () => queryClient.invalidateQueries({ queryKey: ["timeline-posts"] }),
     createPost: createPostMutation.mutateAsync,
     creating: createPostMutation.isPending,
+    deletePost: deletePostMutation.mutateAsync,
+    deleting: deletePostMutation.isPending,
   };
 }

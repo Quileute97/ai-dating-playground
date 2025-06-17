@@ -12,6 +12,11 @@ interface PostDetailModalProps {
   onClose: () => void;
 }
 
+interface LocationData {
+  name?: string;
+  [key: string]: any;
+}
+
 export default function PostDetailModal({ postId, isOpen, onClose }: PostDetailModalProps) {
   const { data: post, isLoading } = useQuery({
     queryKey: ["post-detail", postId],
@@ -19,7 +24,8 @@ export default function PostDetailModal({ postId, isOpen, onClose }: PostDetailM
     queryFn: async () => {
       if (!postId) return null;
       
-      const { data, error } = await supabase
+      // Fetch post with profile data
+      const { data: postData, error: postError } = await supabase
         .from("posts")
         .select(`
           *,
@@ -28,12 +34,31 @@ export default function PostDetailModal({ postId, isOpen, onClose }: PostDetailM
         .eq("id", postId)
         .single();
         
-      if (error) throw error;
-      return data;
+      if (postError) throw postError;
+
+      // Fetch likes count
+      const { count: likesCount } = await supabase
+        .from("post_likes")
+        .select("*", { count: "exact", head: true })
+        .eq("post_id", postId);
+
+      // Fetch comments count
+      const { count: commentsCount } = await supabase
+        .from("comments")
+        .select("*", { count: "exact", head: true })
+        .eq("post_id", postId);
+
+      return {
+        ...postData,
+        likes_count: likesCount || 0,
+        comments_count: commentsCount || 0
+      };
     }
   });
 
   if (!isOpen) return null;
+
+  const locationData = post?.location as LocationData | null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -89,9 +114,9 @@ export default function PostDetailModal({ postId, isOpen, onClose }: PostDetailM
             )}
 
             {/* Location */}
-            {post.location && (
+            {locationData?.name && (
               <div className="text-sm text-gray-600">
-                📍 {post.location.name || "Vị trí"}
+                📍 {locationData.name}
               </div>
             )}
 
@@ -99,11 +124,11 @@ export default function PostDetailModal({ postId, isOpen, onClose }: PostDetailM
             <div className="flex items-center gap-4 pt-2 border-t">
               <div className="flex items-center gap-1 text-sm text-gray-600">
                 <Heart className="w-4 h-4" />
-                <span>{post.likes_count || 0} lượt thích</span>
+                <span>{post.likes_count} lượt thích</span>
               </div>
               <div className="flex items-center gap-1 text-sm text-gray-600">
                 <MessageCircle className="w-4 h-4" />
-                <span>{post.comments_count || 0} bình luận</span>
+                <span>{post.comments_count} bình luận</span>
               </div>
             </div>
           </div>

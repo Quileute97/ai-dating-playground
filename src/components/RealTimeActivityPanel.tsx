@@ -14,9 +14,28 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
   const { data: activities, isLoading } = useRecentActivities(userId);
   const navigate = useNavigate();
 
-  const handleActivityClick = (activityUserId: string) => {
+  const handleUserClick = (e: React.MouseEvent, activityUserId: string) => {
+    e.stopPropagation();
     if (activityUserId) {
       navigate(`/profile/${activityUserId}`);
+    }
+  };
+
+  const handleActivityClick = (activity: any) => {
+    // Navigate to related post based on activity type
+    if (activity.type === "like" && activity.id.startsWith("likepost-")) {
+      // For post likes, we could navigate to the specific post
+      // For now, navigate to main timeline where posts are displayed
+      navigate("/");
+    } else if (activity.type === "comment") {
+      // For comments, navigate to main timeline
+      navigate("/");
+    } else if (activity.type === "friend") {
+      // For friend activities, navigate to user profile
+      navigate(`/profile/${activity.user_id}`);
+    } else {
+      // Default: navigate to main page
+      navigate("/");
     }
   };
 
@@ -34,7 +53,7 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
           <Card
             key={a.id}
             className={`flex items-center gap-3 py-2 px-3 shadow-sm border-l-4 border-purple-200 relative cursor-pointer hover:bg-gray-50 transition-colors`}
-            onClick={() => handleActivityClick(a.user_id)}
+            onClick={() => handleActivityClick(a)}
           >
             {a.type === "like" ? (
               <Heart className="w-6 h-6 text-pink-500" />
@@ -46,10 +65,19 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
             <img
               src={a.user_avatar || "/placeholder.svg"}
               alt={a.user_name || "user"}
-              className="w-7 h-7 rounded-full object-cover border border-purple-100"
+              className="w-7 h-7 rounded-full object-cover border border-purple-100 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={(e) => handleUserClick(e, a.user_id)}
             />
             <div className="flex-1">
-              <span className="text-sm text-gray-700">{a.text}</span>
+              <span 
+                className="text-sm text-gray-700 cursor-pointer hover:text-purple-600 transition-colors"
+                onClick={(e) => handleUserClick(e, a.user_id)}
+              >
+                {a.user_name || "Ai đó"}
+              </span>
+              <span className="text-sm text-gray-700 ml-1">
+                {a.text.replace(a.user_name || "Ai đó", "").trim()}
+              </span>
               <div className="text-[11px] text-gray-400">{a.created_at && new Date(a.created_at).toLocaleString("vi-VN")}</div>
             </div>
           </Card>

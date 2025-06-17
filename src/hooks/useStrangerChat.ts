@@ -20,7 +20,7 @@ export function useStrangerChat(currentUserId: string | null) {
 
   // Lắng nghe tin nhắn realtime
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || !currentUserId) return;
 
     console.log("📨 Setting up realtime for conversation:", conversationId);
 
@@ -39,22 +39,26 @@ export function useStrangerChat(currentUserId: string | null) {
           setMessages(prev => {
             // Tránh duplicate
             if (prev.some(m => m.id === newMessage.id)) return prev;
-            return [...prev, newMessage];
+            return [...prev, newMessage].sort((a, b) => 
+              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
           });
         }
       })
       .subscribe();
 
     return () => {
+      console.log("🔌 Cleaning up realtime subscription for:", conversationId);
       supabase.removeChannel(channel);
     };
-  }, [conversationId]);
+  }, [conversationId, currentUserId]);
 
   // Load tin nhắn khi có conversation
   useEffect(() => {
     if (!conversationId) return;
 
     const loadMessages = async () => {
+      console.log("📥 Loading messages for conversation:", conversationId);
       const { data, error } = await supabase
         .from('messages')
         .select('*')
@@ -66,6 +70,7 @@ export function useStrangerChat(currentUserId: string | null) {
         return;
       }
 
+      console.log("✅ Loaded messages:", data?.length || 0);
       setMessages(data || []);
     };
 
@@ -73,9 +78,14 @@ export function useStrangerChat(currentUserId: string | null) {
   }, [conversationId]);
 
   const sendMessage = async (content: string) => {
-    if (!conversationId || !currentUserId || !content.trim()) return;
+    if (!conversationId || !currentUserId || !content.trim()) {
+      console.warn("❌ Cannot send message - missing data:", { conversationId, currentUserId, content: content.trim() });
+      return;
+    }
 
     try {
+      console.log("📤 Sending message:", { conversationId, content: content.trim() });
+      
       const { data, error } = await supabase
         .from('messages')
         .insert([{
@@ -98,7 +108,7 @@ export function useStrangerChat(currentUserId: string | null) {
         })
         .eq('id', conversationId);
 
-      console.log("✅ Message sent successfully");
+      console.log("✅ Message sent successfully:", data);
     } catch (error) {
       console.error("❌ Error sending message:", error);
       toast({
@@ -110,18 +120,19 @@ export function useStrangerChat(currentUserId: string | null) {
   };
 
   const setMatch = (convId: string, partner: string) => {
+    console.log("🎯 Setting match:", { convId, partner });
     setConversationId(convId);
     setPartnerId(partner);
     setIsMatched(true);
-    console.log("🎯 Match set:", { convId, partner });
+    setMessages([]); // Clear old messages
   };
 
   const resetMatch = () => {
+    console.log("🔄 Resetting match");
     setConversationId(null);
     setPartnerId(null);
     setIsMatched(false);
     setMessages([]);
-    console.log("🔄 Match reset");
   };
 
   return {

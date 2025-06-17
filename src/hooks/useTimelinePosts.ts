@@ -11,6 +11,7 @@ export function useTimelinePosts(userId?: string) {
   const { data: posts, isLoading, error } = useQuery({
     queryKey: ["timeline-posts"],
     queryFn: async () => {
+      console.log('🔄 Fetching timeline posts...');
       try {
         const { data, error } = await supabase
           .from("posts")
@@ -21,14 +22,21 @@ export function useTimelinePosts(userId?: string) {
             `
           )
           .order("created_at", { ascending: false });
-        if (error) throw error;
+        
+        console.log('📊 Posts fetched:', data?.length || 0, 'posts');
+        
+        if (error) {
+          console.error('❌ Error fetching posts:', error);
+          throw error;
+        }
         return data ?? [];
       } catch (error) {
-        console.error('Error fetching posts:', error);
+        console.error('❌ Error in posts query:', error);
+        // Return empty array instead of throwing to prevent UI crash
         return [];
       }
     },
-    retry: 3,
+    retry: 2,
     retryDelay: 1000,
   });
 
@@ -37,13 +45,13 @@ export function useTimelinePosts(userId?: string) {
     const setupChannel = () => {
       // Clean up existing channel first
       if (channelRef.current) {
-        console.log('Cleaning up existing posts channel');
+        console.log('🧹 Cleaning up existing posts channel');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
 
       const channelName = `posts-changes-${Date.now()}`;
-      console.log('Setting up posts channel:', channelName);
+      console.log('🔗 Setting up posts channel:', channelName);
 
       const channel = supabase
         .channel(channelName)
@@ -56,7 +64,7 @@ export function useTimelinePosts(userId?: string) {
           queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
         })
         .subscribe((status) => {
-          console.log('Posts subscription status:', status);
+          console.log('📡 Posts subscription status:', status);
         });
 
       channelRef.current = channel;
@@ -68,7 +76,7 @@ export function useTimelinePosts(userId?: string) {
     return () => {
       clearTimeout(timer);
       if (channelRef.current) {
-        console.log('Cleaning up posts channel on unmount');
+        console.log('🧹 Cleaning up posts channel on unmount');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
@@ -84,27 +92,27 @@ export function useTimelinePosts(userId?: string) {
       media_type?: string;
       location?: any;
     }) => {
-      console.log('Creating post with values:', values);
+      console.log('✍️ Creating post with values:', values);
       const { data, error } = await supabase.from("posts").insert([values]).select("*").single();
       if (error) {
-        console.error('Error creating post:', error);
+        console.error('❌ Error creating post:', error);
         throw error;
       }
       return data;
     },
     onSuccess: () => {
-      console.log('Post created successfully');
+      console.log('✅ Post created successfully');
       queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
     },
     onError: (error) => {
-      console.error('Failed to create post:', error);
+      console.error('❌ Failed to create post:', error);
     }
   });
 
   // Xóa bài post
   const deletePostMutation = useMutation({
     mutationFn: async (postId: string) => {
-      console.log('Deleting post with ID:', postId);
+      console.log('🗑️ Deleting post with ID:', postId);
       
       // Kiểm tra quyền xóa - chỉ chủ bài viết mới được xóa
       const { data: post, error: fetchError } = await supabase
@@ -114,7 +122,7 @@ export function useTimelinePosts(userId?: string) {
         .single();
         
       if (fetchError) {
-        console.error('Error fetching post:', fetchError);
+        console.error('❌ Error fetching post:', fetchError);
         throw new Error("Không tìm thấy bài viết");
       }
 
@@ -132,18 +140,24 @@ export function useTimelinePosts(userId?: string) {
         .eq("id", postId);
         
       if (error) {
-        console.error('Error deleting post:', error);
+        console.error('❌ Error deleting post:', error);
         throw error;
       }
       
-      console.log('Post deleted successfully');
+      console.log('✅ Post deleted successfully');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
     },
     onError: (error) => {
-      console.error('Failed to delete post:', error);
+      console.error('❌ Failed to delete post:', error);
     }
+  });
+
+  console.log('🔍 Timeline posts hook state:', { 
+    postsCount: posts?.length || 0, 
+    isLoading, 
+    hasError: !!error 
   });
 
   return {

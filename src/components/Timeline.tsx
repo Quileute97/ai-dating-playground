@@ -36,10 +36,34 @@ const TimelineContent = ({ user }: TimelineProps) => {
   const { comments } = useTimelineComments();
   const { isPostLiked, getPostLikeCount, toggleLike, isToggling } = useTimelinePostLikes(user?.id);
 
-  console.log('🔄 Timeline render - posts:', posts, 'user:', user, 'error:', postsError);
+  console.log('🔄 Timeline render - posts:', posts?.length || 0, 'user:', user?.id, 'loading:', postsLoading, 'error:', postsError);
+
+  // Debug: Log posts data
+  React.useEffect(() => {
+    console.log('📊 Posts data changed:', {
+      postsLength: posts?.length || 0,
+      posts: posts?.slice(0, 2), // Log first 2 posts for debugging
+      isLoading: postsLoading,
+      error: postsError
+    });
+  }, [posts, postsLoading, postsError]);
+
+  // Show loading state
+  if (postsLoading) {
+    console.log('⏳ Timeline showing loading state');
+    return (
+      <div className="h-full bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center py-8">
+          <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải timeline...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show error state if there's a persistent error
   if (postsError && !postsLoading) {
+    console.log('❌ Timeline showing error state:', postsError);
     return (
       <div className="h-full bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center">
         <Card className="p-8 max-w-md text-center">
@@ -193,6 +217,8 @@ const TimelineContent = ({ user }: TimelineProps) => {
     ? posts?.filter((post) => post.content && post.content.includes(`#${hashtagFilter}`)) || []
     : posts || [];
 
+  console.log('📋 Filtered posts:', filteredPosts.length, 'hashtag filter:', hashtagFilter);
+
   if (postsLoading) {
     return (
       <div className="h-full bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center">
@@ -244,6 +270,7 @@ const TimelineContent = ({ user }: TimelineProps) => {
           </Card>
         )}
 
+        {/* Create Post Dialog */}
         <Dialog open={showCreatePost} onOpenChange={setShowCreatePost}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -385,10 +412,17 @@ const TimelineContent = ({ user }: TimelineProps) => {
 
         {/* Timeline Posts */}
         <div className="space-y-6">
-          {filteredPosts.length === 0 ? (
+          {!posts || filteredPosts.length === 0 ? (
             <Card className="p-8 text-center">
-              <p className="text-gray-500">Chưa có bài viết nào.</p>
-              {user && (
+              <p className="text-gray-500">
+                {!posts ? "Đang tải bài viết..." : "Chưa có bài viết nào."}
+              </p>
+              {user && !posts && (
+                <p className="text-sm text-gray-400 mt-2">
+                  Nếu không tải được, vui lòng thử tải lại trang.
+                </p>
+              )}
+              {user && posts && filteredPosts.length === 0 && (
                 <Button
                   onClick={() => setShowCreatePost(true)}
                   variant="outline"
@@ -538,6 +572,7 @@ const TimelineContent = ({ user }: TimelineProps) => {
 };
 
 const Timeline = ({ user }: TimelineProps) => {
+  console.log('🏁 Timeline wrapper render - user:', user?.id);
   return (
     <TimelineErrorBoundary>
       <TimelineContent user={user} />

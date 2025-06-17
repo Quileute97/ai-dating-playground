@@ -25,38 +25,49 @@ export function useRealtimeSubscription({
   const isSubscribedRef = useRef(false);
   const mountedRef = useRef(true);
   const retryCountRef = useRef(0);
-  const maxRetries = 3;
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const maxRetries = 5;
+  const baseRetryDelay = 2000;
 
   const cleanup = useCallback(() => {
-    if (channelRef.current) {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    
+    if (channelRef.current && isSubscribedRef.current) {
       console.log(`🧹 Cleaning up channel: ${channelName}`);
       try {
+        channelRef.current.unsubscribe();
         supabase.removeChannel(channelRef.current);
       } catch (error) {
-        console.warn('Error removing channel:', error);
+        console.warn('Error cleaning up channel:', error);
       }
       channelRef.current = null;
       isSubscribedRef.current = false;
     }
   }, [channelName]);
 
-  const setupSubscription = useCallback(() => {
-    if (!enabled || !mountedRef.current) return;
-    
-    // Prevent multiple subscriptions
-    if (isSubscribedRef.current) {
-      console.log(`⚠️ Already subscribed to ${channelName}, skipping`);
+  const setupSubscription = useCallback(async () => {
+    if (!enabled || !mountedRef.current || isSubscribedRef.current) {
       return;
     }
 
+    // Clean up any existing subscription first
     cleanup();
 
     try {
-      console.log(`🔗 Setting up subscription: ${channelName}`);
+      console.log(`🔗 Setting up subscription attempt ${retryCountRef.current + 1}: ${channelName}`);
       
+      // Create unique channel name with timestamp to avoid conflicts
       const uniqueChannelName = `${channelName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      let channelBuilder = supabase.channel(uniqueChannelName);
+      const channel = supabase.channel(uniqueChannelName, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: uniqueChannelName }
+        }
+      });
       
       const changeConfig: any = {
         event: '*',
@@ -68,44 +79,65 @@ export function useRealtimeSubscription({
         changeConfig.filter = filter;
       }
       
-      channelBuilder = channelBuilder.on('postgres_changes', changeConfig, (payload) => {
+      channel.on('postgres_changes', changeConfig, (payload) => {
         if (!mountedRef.current) return;
         
         console.log(`📡 Realtime update for ${table}:`, payload);
         queryClient.invalidateQueries({ queryKey });
       });
 
-      const channel = channelBuilder.subscribe((status) => {
-        if (!mountedRef.current) return;
-        
-        console.log(`📡 Subscription status for ${channelName}:`, status);
-        
-        if (status === 'SUBSCRIBED') {
-          isSubscribedRef.current = true;
-          retryCountRef.current = 0;
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          isSubscribedRef.current = false;
+      channelRef.current = channel;
+
+      const subscribePromise = new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Subscription timeout'));
+        }, 10000); // 10 second timeout
+
+        channel.subscribe((status, err) => {
+          clearTimeout(timeout);
           
-          // Retry logic
-          if (retryCountRef.current < maxRetries && mountedRef.current) {
-            retryCountRef.current++;
-            console.log(`🔄 Retrying subscription ${retryCountRef.current}/${maxRetries} for ${channelName}`);
-            setTimeout(() => {
-              if (mountedRef.current) {
-                setupSubscription();
-              }
-            }, 1000 * retryCountRef.current);
-          } else if (onError) {
-            onError(new Error(`Failed to subscribe to ${channelName} after ${maxRetries} attempts`));
+          if (!mountedRef.current) {
+            resolve(status);
+            return;
           }
-        }
+          
+          console.log(`📡 Subscription status for ${channelName}:`, status, err);
+          
+          if (status === 'SUBSCRIBED') {
+            isSubscribedRef.current = true;
+            retryCountRef.current = 0;
+            resolve(status);
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || err) {
+            isSubscribedRef.current = false;
+            reject(new Error(err?.message || `Subscription failed with status: ${status}`));
+          }
+        });
       });
 
-      channelRef.current = channel;
+      await subscribePromise;
+      console.log(`✅ Successfully subscribed to ${channelName}`);
+
     } catch (error) {
       console.error(`❌ Error setting up subscription for ${channelName}:`, error);
-      if (onError) {
-        onError(error as Error);
+      isSubscribedRef.current = false;
+      
+      // Retry logic with exponential backoff
+      if (retryCountRef.current < maxRetries && mountedRef.current) {
+        retryCountRef.current++;
+        const delay = baseRetryDelay * Math.pow(2, retryCountRef.current - 1);
+        
+        console.log(`🔄 Retrying subscription ${retryCountRef.current}/${maxRetries} for ${channelName} in ${delay}ms`);
+        
+        retryTimeoutRef.current = setTimeout(() => {
+          if (mountedRef.current) {
+            setupSubscription();
+          }
+        }, delay);
+      } else {
+        console.error(`💥 Max retries exceeded for ${channelName}`);
+        if (onError) {
+          onError(new Error(`Failed to subscribe to ${channelName} after ${maxRetries} attempts`));
+        }
       }
     }
   }, [channelName, table, filter, queryKey, enabled, cleanup, queryClient, onError]);
@@ -114,8 +146,8 @@ export function useRealtimeSubscription({
     mountedRef.current = true;
     
     if (enabled) {
-      // Small delay to ensure proper cleanup
-      const timer = setTimeout(setupSubscription, 100);
+      // Add small delay to prevent rapid reconnections
+      const timer = setTimeout(setupSubscription, 500);
       return () => clearTimeout(timer);
     }
     

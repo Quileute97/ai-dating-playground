@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -176,7 +175,17 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
           avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
           bio: 'Xin chào! Tôi đang tìm kiếm những kết nối ý nghĩa.',
           interests: [],
+          album: [],
+          height: 170,
+          job: null,
+          education: null,
+          location_name: null,
+          lat: null,
+          lng: null,
           is_dating_active: true,
+          last_active: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          tai_khoan_hoat_dong: true,
           dating_preferences: {
             age_range: { min: 18, max: 35 },
             distance: 50,

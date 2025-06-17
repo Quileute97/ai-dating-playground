@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,19 +11,25 @@ import Timeline from "./Timeline";
 import MainTabs from "./MainTabs";
 import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
 import DatingAppModals from "./DatingAppModals";
+import DatingProfileButton from "./DatingProfileButton";
 import RequireLogin from "./RequireLogin";
 import DatingAppLayout from "./DatingAppLayout";
 import { useDatingAppUser } from "./hooks/useDatingAppUser";
+import { useDatingProfile } from "@/hooks/useDatingProfile";
 
 const DatingApp = () => {
   // User/session quản lý bằng custom hook
   const { user, setUser, session, setSession, anonId } = useDatingAppUser();
+  
+  // Dating profile hook
+  const { profile: datingProfile, updateProfile: updateDatingProfile } = useDatingProfile(user?.id);
 
   const [activeTab, setActiveTab] = useState("chat");
   const [showFilters, setShowFilters] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showDatingProfile, setShowDatingProfile] = useState(false);
   const [showAIConfig, setShowAIConfig] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [isFirstTime, setIsFirstTime] = useState(true);
@@ -152,16 +159,22 @@ const DatingApp = () => {
         {/* User Info */}
         <div className="flex items-center gap-2">
           {user ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowProfile(true)}
-              className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
-            >
-              <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full object-cover mr-2" />
-              <span className="hidden sm:inline">{user.name}</span>
-              <User className="w-4 h-4 sm:hidden" />
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowProfile(true)}
+                className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
+              >
+                <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full object-cover mr-2" />
+                <span className="hidden sm:inline">{user.name}</span>
+                <User className="w-4 h-4 sm:hidden" />
+              </Button>
+              <DatingProfileButton
+                user={{ ...user, ...datingProfile }}
+                onUpdateProfile={handleUpdateProfile}
+              />
+            </>
           ) : (
             <Button
               variant="outline"
@@ -229,13 +242,15 @@ const DatingApp = () => {
         setShowFilters={setShowFilters}
         showProfile={showProfile}
         setShowProfile={setShowProfile}
+        showDatingProfile={showDatingProfile}
+        setShowDatingProfile={setShowDatingProfile}
         showAIConfig={showAIConfig}
         setShowAIConfig={setShowAIConfig}
         showAdminLogin={showAdminLogin}
         setShowAdminLogin={setShowAdminLogin}
         showAuth={showAuth}
         setShowAuth={setShowAuth}
-        user={user}
+        user={{ ...user, ...datingProfile }}
         onUpdateProfile={handleUpdateProfile}
         handleApplyFilters={handleApplyFilters}
         onAIConfigClose={() => setShowAIConfig(false)}

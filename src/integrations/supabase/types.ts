@@ -319,11 +319,18 @@ export type Database = {
           avatar: string | null
           bio: string | null
           created_at: string | null
+          dating_preferences: Json | null
+          education: string | null
           gender: string | null
+          height: number | null
           id: string
           interests: Json | null
+          is_dating_active: boolean | null
+          job: string | null
+          last_active: string | null
           lat: number | null
           lng: number | null
+          location_name: string | null
           name: string | null
           tai_khoan_hoat_dong: boolean | null
         }
@@ -333,11 +340,18 @@ export type Database = {
           avatar?: string | null
           bio?: string | null
           created_at?: string | null
+          dating_preferences?: Json | null
+          education?: string | null
           gender?: string | null
+          height?: number | null
           id: string
           interests?: Json | null
+          is_dating_active?: boolean | null
+          job?: string | null
+          last_active?: string | null
           lat?: number | null
           lng?: number | null
+          location_name?: string | null
           name?: string | null
           tai_khoan_hoat_dong?: boolean | null
         }
@@ -347,11 +361,18 @@ export type Database = {
           avatar?: string | null
           bio?: string | null
           created_at?: string | null
+          dating_preferences?: Json | null
+          education?: string | null
           gender?: string | null
+          height?: number | null
           id?: string
           interests?: Json | null
+          is_dating_active?: boolean | null
+          job?: string | null
+          last_active?: string | null
           lat?: number | null
           lng?: number | null
+          location_name?: string | null
           name?: string | null
           tai_khoan_hoat_dong?: boolean | null
         }

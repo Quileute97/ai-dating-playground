@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -153,7 +154,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
       
       console.log("✅ User authenticated:", user.id);
       
-      // Lấy info profile từ bảng profiles nếu có
+      // Lấy info profile từ bảng profiles nếu có, nếu không có sẽ được tạo tự động bởi trigger
       console.log("📋 Fetching user profile...");
       const { data: profiles, error: pErr } = await supabase
         .from('profiles')
@@ -163,15 +164,31 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
       
       console.log("📊 Profile data:", { profiles, error: pErr });
       
+      // Nếu chưa có profile, có thể do trigger chưa chạy, tạo tạm thời
+      let finalProfile = profiles;
+      if (pErr && pErr.code === 'PGRST116') {
+        console.log("🔄 Creating temporary profile...");
+        finalProfile = {
+          id: user.id,
+          name: user.email?.split('@')[0] || 'User',
+          age: 25,
+          gender: 'other',
+          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+          bio: 'Xin chào! Tôi đang tìm kiếm những kết nối ý nghĩa.',
+          interests: [],
+          is_dating_active: true,
+          dating_preferences: {
+            age_range: { min: 18, max: 35 },
+            distance: 50,
+            gender_preference: 'all'
+          }
+        };
+      }
+      
       const userData = {
         ...user,
-        ...(profiles || {}),
+        ...finalProfile,
         email: user.email,
-        avatar: profiles?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-        name: profiles?.name || user.email?.split('@')[0] || 'User',
-        age: profiles?.age,
-        gender: profiles?.gender,
-        interests: []
       };
       
       console.log("👤 Final user data:", userData);
@@ -235,7 +252,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
       console.log("✅ Registration successful for user:", data.user?.id);
       
       setInfo(
-        'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản trước khi đăng nhập.'
+        'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản trước khi đăng nhập. Sau khi xác nhận, hệ thống sẽ tự động tạo hồ sơ hẹn hò cho bạn.'
       );
       setIsLoading(false);
       
@@ -339,7 +356,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
             <Card>
               <CardHeader>
                 <CardTitle>Tạo tài khoản</CardTitle>
-                <CardDescription>Điền thông tin để bắt đầu</CardDescription>
+                <CardDescription>Điền thông tin để bắt đầu. Hệ thống sẽ tự động tạo hồ sơ hẹn hò cho bạn!</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleRegister} className="space-y-4">
@@ -437,7 +454,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
                       'Tạo tài khoản'
                     )}
                   </Button>
-                  <div className="text-xs text-gray-500 mt-2">Sau khi đăng ký, bạn cần kiểm tra email để xác nhận tài khoản trước khi đăng nhập.</div>
+                  <div className="text-xs text-gray-500 mt-2">Sau khi đăng ký, bạn cần kiểm tra email để xác nhận tài khoản. Hệ thống sẽ tự động tạo hồ sơ hẹn hò cho bạn!</div>
                 </form>
               </CardContent>
             </Card>

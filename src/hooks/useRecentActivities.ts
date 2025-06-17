@@ -13,6 +13,7 @@ export interface Activity {
   user_id: string;
   user_name: string | null;
   user_avatar: string | null;
+  post_id?: string; // Thêm field này để lưu ID bài viết
   isNew?: boolean;
 }
 
@@ -56,17 +57,17 @@ export function useRecentActivities(userId: string | undefined) {
         .order("created_at", { ascending: false })
         .limit(5);
 
-      // Lấy hoạt động like bài post gần đây
+      // Lấy hoạt động like bài post gần đây - bao gồm post_id
       const { data: postLikes } = await supabase
         .from("post_likes")
         .select("id, user_id, post_id, created_at, profiles:user_id(name,avatar)")
         .order("created_at", { ascending: false })
         .limit(5);
 
-      // Lấy bình luận mới trên bài post của bạn hoặc bạn bè
+      // Lấy bình luận mới trên bài post của bạn hoặc bạn bè - bao gồm post_id
       const { data: comments } = await supabase
         .from("comments")
-        .select("id, user_id, content, created_at, profiles:user_id(name,avatar)")
+        .select("id, user_id, post_id, content, created_at, profiles:user_id(name,avatar)")
         .order("created_at", { ascending: false })
         .limit(5);
 
@@ -101,7 +102,7 @@ export function useRecentActivities(userId: string | undefined) {
         });
       });
 
-      // Like bài post
+      // Like bài post - bao gồm post_id
       postLikes?.forEach((l: any) => {
         all.push({
           id: "likepost-" + l.id,
@@ -112,10 +113,11 @@ export function useRecentActivities(userId: string | undefined) {
           user_id: l.user_id,
           user_name: l.profiles?.name || null,
           user_avatar: l.profiles?.avatar || null,
+          post_id: l.post_id, // Lưu post_id
         });
       });
 
-      // Bình luận
+      // Bình luận - bao gồm post_id
       comments?.forEach((c: any) => {
         all.push({
           id: "comment-" + c.id,
@@ -126,6 +128,7 @@ export function useRecentActivities(userId: string | undefined) {
           user_id: c.user_id,
           user_name: c.profiles?.name || null,
           user_avatar: c.profiles?.avatar || null,
+          post_id: c.post_id, // Lưu post_id
         });
       });
 

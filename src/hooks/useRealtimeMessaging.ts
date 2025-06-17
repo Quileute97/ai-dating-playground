@@ -41,24 +41,36 @@ export function useRealtimeMessaging(currentUserId?: string) {
     queryFn: async () => {
       if (!currentUserId) return [];
 
-      const { data, error } = await supabase
+      // Get messages with profile information
+      const { data: messages, error } = await supabase
         .from("timeline_messages")
-        .select(`
-          *,
-          sender_profile:sender_id(id, name, avatar),
-          receiver_profile:receiver_id(id, name, avatar)
-        `)
+        .select("*")
         .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
+      // Get unique partner IDs
+      const partnerIds = new Set<string>();
+      messages?.forEach((msg: any) => {
+        const partnerId = msg.sender_id === currentUserId ? msg.receiver_id : msg.sender_id;
+        partnerIds.add(partnerId);
+      });
+
+      // Get profiles for all partners
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, name, avatar")
+        .in("id", Array.from(partnerIds));
+
+      if (profilesError) throw profilesError;
+
       // Group messages by conversation partner
       const conversationMap = new Map<string, ChatConversation>();
       
-      data?.forEach((msg: any) => {
+      messages?.forEach((msg: any) => {
         const partnerId = msg.sender_id === currentUserId ? msg.receiver_id : msg.sender_id;
-        const partnerProfile = msg.sender_id === currentUserId ? msg.receiver_profile : msg.sender_profile;
+        const partnerProfile = profiles?.find(p => p.id === partnerId);
         
         if (!conversationMap.has(partnerId)) {
           conversationMap.set(partnerId, {
@@ -84,18 +96,30 @@ export function useRealtimeMessaging(currentUserId?: string) {
       queryFn: async () => {
         if (!currentUserId || !partnerId) return [];
 
-        const { data, error } = await supabase
+        const { data: messages, error } = await supabase
           .from("timeline_messages")
-          .select(`
-            *,
-            sender_profile:sender_id(id, name, avatar),
-            receiver_profile:receiver_id(id, name, avatar)
-          `)
+          .select("*")
           .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${currentUserId})`)
           .order("created_at", { ascending: true });
 
         if (error) throw error;
-        return data as TimelineMessage[];
+
+        // Get profiles for sender and receiver
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, name, avatar")
+          .in("id", [currentUserId, partnerId]);
+
+        if (profilesError) throw profilesError;
+
+        // Attach profile information to messages
+        const messagesWithProfiles = messages?.map((msg: any) => ({
+          ...msg,
+          sender_profile: profiles?.find(p => p.id === msg.sender_id),
+          receiver_profile: profiles?.find(p => p.id === msg.receiver_id)
+        }));
+
+        return messagesWithProfiles as TimelineMessage[];
       }
     });
   };

@@ -11,6 +11,23 @@ interface TimelineChatListProps {
   currentUserId: string;
 }
 
+interface Friend {
+  id: string;
+  user_id: string;
+  friend_id: string;
+  status: string;
+  user_profile?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  friend_profile?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+}
+
 export default function TimelineChatList({ currentUserId }: TimelineChatListProps) {
   const [selectedChat, setSelectedChat] = useState<{
     partnerId: string;
@@ -19,7 +36,10 @@ export default function TimelineChatList({ currentUserId }: TimelineChatListProp
   } | null>(null);
 
   const { conversations, conversationsLoading } = useRealtimeMessaging(currentUserId);
-  const { data: friends } = useFriendList(currentUserId);
+  const { data: friendsData } = useFriendList(currentUserId);
+
+  // Type the friends data properly
+  const friends: Friend[] = friendsData || [];
 
   const openChat = (partnerId: string, partnerName: string, partnerAvatar: string) => {
     setSelectedChat({ partnerId, partnerName, partnerAvatar });
@@ -95,7 +115,9 @@ export default function TimelineChatList({ currentUserId }: TimelineChatListProp
               <p className="text-sm text-gray-500 mb-2">Bạn bè</p>
               {friends.slice(0, 5).map((friend) => {
                 const friendId = friend.user_id === currentUserId ? friend.friend_id : friend.user_id;
-                const friendProfile = friend.user_id === currentUserId ? friend.friend_profile : friend.user_profile;
+                const friendProfile = friend.user_id === currentUserId 
+                  ? (friend as any).friend_profile 
+                  : (friend as any).user_profile;
                 
                 return (
                   <Card

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,6 @@ import { ImageIcon, MapPin, Smile, Send, Heart, MessageCircle, Share, MoreHorizo
 import { useTimelinePosts } from "@/hooks/useTimelinePosts";
 import { useTimelineComments } from "@/hooks/useTimelineComments";
 import { usePostLikes } from "@/hooks/usePostLikes";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -88,9 +88,14 @@ export default function Timeline() {
     setMedia(file);
 
     try {
-      const { publicURL, type } = await uploadTimelineMedia(file);
-      setMediaURL(publicURL);
-      setMediaType(type);
+      const result = await uploadTimelineMedia(file);
+      if (typeof result === 'string') {
+        setMediaURL(result);
+        setMediaType(file.type.startsWith('image/') ? 'image' : 'video');
+      } else {
+        setMediaURL(result.publicURL);
+        setMediaType(result.type);
+      }
     } catch (error: any) {
       toast({
         title: "Lỗi tải lên media",

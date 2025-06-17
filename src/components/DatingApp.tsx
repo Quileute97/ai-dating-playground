@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -120,7 +121,6 @@ const DatingApp = () => {
           <ChatInterface
             user={user}
             isAdminMode={isAdminAuthenticated}
-            matchmaking={matchmaking}
             anonId={anonId}
           />
         );

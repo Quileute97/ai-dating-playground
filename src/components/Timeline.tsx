@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
@@ -120,6 +121,7 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
   const { posts, isLoading, createPost, creating, refetch, deletePost, deleting } = useTimelinePosts(userId);
   const { profile } = useDatingProfile(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
+  const { toast } = useToast();
 
   // Xử lý đăng post mới (KHÔNG truyền sticker)
   const handlePostSubmit = async (
@@ -139,8 +141,18 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
   const handleDeletePost = async (postId: string) => {
     try {
       await deletePost(postId);
+      toast({
+        title: "Đã xóa bài viết",
+        description: "Bài viết của bạn đã được xóa thành công.",
+      });
+      refetch();
     } catch (error) {
       console.error("Error deleting post:", error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa bài viết. Vui lòng thử lại.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -383,14 +395,14 @@ const PostItem: React.FC<{
         {isPostOwner && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem 
                 onClick={() => setShowDeleteDialog(true)}
-                className="text-red-600 focus:text-red-600"
+                className="text-red-600 focus:text-red-600 cursor-pointer"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Xóa bài viết
@@ -404,6 +416,7 @@ const PostItem: React.FC<{
       <div className="text-base text-gray-900 mb-2 whitespace-pre-line leading-relaxed min-h-[18px]" style={{ wordBreak: 'break-word' }}>
         {renderContent(post.content, onHashtagClick)}
       </div>
+      
       {/* Media */}
       {post.media_url && post.media_type === "image" && (
         <div className="relative flex items-center justify-center mt-2 mb-3">
@@ -425,6 +438,7 @@ const PostItem: React.FC<{
           />
         </div>
       )}
+      
       {/* Actions */}
       <div className="flex items-center gap-4 mt-2 mb-2">
         <Button
@@ -448,6 +462,7 @@ const PostItem: React.FC<{
           <span className="ml-1">{comments?.length ?? 0}</span>
         </Button>
       </div>
+      
       {/* Danh sách bình luận */}
       {comments && comments.length > 0 && (
         <div className="space-y-1.5 border-t pt-3 mt-2">
@@ -466,6 +481,7 @@ const PostItem: React.FC<{
           ))}
         </div>
       )}
+      
       {/* Input bình luận */}
       <form className="flex items-center gap-2 mt-1" onSubmit={handleCommentSubmit}>
         <Input
@@ -513,5 +529,3 @@ const renderContent = (content: string, onHashtagClick: (tag: string) => void) =
 };
 
 export default Timeline;
-
-// ... keep existing code (cuối file, export, lưu ý refactor)

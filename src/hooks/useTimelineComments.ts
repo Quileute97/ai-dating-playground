@@ -1,10 +1,11 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export function useTimelineComments(postId?: string) {
   const queryClient = useQueryClient();
+  const channelRef = useRef<any>(null);
 
   // Lấy tất cả comment của postId truyền vào
   const { data: comments, isLoading, error } = useQuery({
@@ -29,8 +30,14 @@ export function useTimelineComments(postId?: string) {
   useEffect(() => {
     if (!postId) return;
 
+    // Clean up existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const channel = supabase
-      .channel(`comments-${postId}`)
+      .channel(`comments-${postId}-${Date.now()}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -42,8 +49,13 @@ export function useTimelineComments(postId?: string) {
       })
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [postId, queryClient]);
 

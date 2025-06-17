@@ -1,10 +1,11 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export function useTimelinePostLikes(userId?: string) {
   const queryClient = useQueryClient();
+  const channelRef = useRef<any>(null);
 
   // Get all post likes for timeline posts
   const { data: allLikes = [], isLoading } = useQuery({
@@ -23,8 +24,14 @@ export function useTimelinePostLikes(userId?: string) {
   useEffect(() => {
     if (!userId) return;
 
+    // Clean up existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const channel = supabase
-      .channel('timeline-post-likes')
+      .channel(`timeline-post-likes-${userId}-${Date.now()}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -35,8 +42,13 @@ export function useTimelinePostLikes(userId?: string) {
       })
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [userId, queryClient]);
 

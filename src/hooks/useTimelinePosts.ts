@@ -1,10 +1,11 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export function useTimelinePosts(userId?: string) {
   const queryClient = useQueryClient();
+  const channelRef = useRef<any>(null);
 
   // Lấy tất cả bài post (sắp xếp mới nhất trước)
   const { data: posts, isLoading, error } = useQuery({
@@ -26,8 +27,14 @@ export function useTimelinePosts(userId?: string) {
 
   // Realtime subscription cho posts
   useEffect(() => {
+    // Clean up existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const channel = supabase
-      .channel('posts-changes')
+      .channel(`posts-changes-${Date.now()}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -38,8 +45,13 @@ export function useTimelinePosts(userId?: string) {
       })
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [queryClient]);
 

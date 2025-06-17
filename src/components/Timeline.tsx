@@ -19,6 +19,29 @@ interface TimelineProps {
   user?: any;
 }
 
+// Utility function to detect and render links
+const renderTextWithLinks = (text: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  
+  return parts.map((part, index) => {
+    if (urlRegex.test(part)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 underline break-all"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function Timeline({ user }: TimelineProps) {
   const { posts, isLoading, createPost, creating, deletePost, deleting } = useTimelinePosts(user?.id);
   const [content, setContent] = useState("");
@@ -134,7 +157,7 @@ export default function Timeline({ user }: TimelineProps) {
               className="w-8 h-8 rounded-full object-cover"
             />
             <Textarea
-              placeholder="Hôm nay bạn thế nào?"
+              placeholder="Hôm nay bạn thế nào? Chia sẻ link website..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="resize-none border-none focus-visible:ring-0 shadow-none"
@@ -235,7 +258,11 @@ export default function Timeline({ user }: TimelineProps) {
                     )}
                   </div>
                 )}
-                <div className="p-4">{post.content}</div>
+                <div className="p-4">
+                  <div className="whitespace-pre-wrap break-words">
+                    {renderTextWithLinks(post.content)}
+                  </div>
+                </div>
                 <div className="flex justify-between items-center p-4 border-t">
                   <div className="flex items-center space-x-4">
                     <PostActions postId={post.id} userId={user?.id} />
@@ -334,7 +361,9 @@ function Comments({ postId, userId }: { postId: string; userId?: string }) {
               />
               <div>
                 <div className="text-sm font-semibold">{comment.profiles?.name}</div>
-                <div className="text-sm text-gray-500">{comment.content}</div>
+                <div className="text-sm text-gray-500 whitespace-pre-wrap break-words">
+                  {renderTextWithLinks(comment.content)}
+                </div>
                 <div className="text-xs text-gray-400">{new Date(comment.created_at).toLocaleString()}</div>
               </div>
             </div>
@@ -343,7 +372,7 @@ function Comments({ postId, userId }: { postId: string; userId?: string }) {
       )}
       <div className="flex items-center space-x-2">
         <Textarea
-          placeholder="Thêm bình luận..."
+          placeholder="Thêm bình luận... (có thể chứa link)"
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
           className="resize-none border-none focus-visible:ring-0 shadow-none"

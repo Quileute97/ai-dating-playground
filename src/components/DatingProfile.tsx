@@ -1,19 +1,18 @@
+
 import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, Edit, Save, X, Heart, MapPin, Briefcase, GraduationCap, Ruler, Settings, Loader2, ImagePlus } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
+import { Heart, Edit, Save, X } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { uploadAvatar } from '@/utils/uploadAvatar';
 import { uploadAlbumImage } from '@/utils/uploadAlbumImage';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import BasicInfoSection from './dating-profile/BasicInfoSection';
+import BioSection from './dating-profile/BioSection';
+import InterestsSection from './dating-profile/InterestsSection';
+import AlbumSection from './dating-profile/AlbumSection';
+import PreferencesSection from './dating-profile/PreferencesSection';
 
 interface DatingProfileProps {
   isOpen: boolean;
@@ -135,27 +134,6 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
     }
   };
 
-  const addInterest = (interest: string) => {
-    if (interest && !profileData.interests.includes(interest)) {
-      setProfileData({
-        ...profileData,
-        interests: [...profileData.interests, interest]
-      });
-    }
-  };
-
-  const removeInterest = (interest: string) => {
-    setProfileData({
-      ...profileData,
-      interests: profileData.interests.filter(i => i !== interest)
-    });
-  };
-
-  const removeAlbumImage = (index: number) => {
-    const newAlbum = profileData.album.filter((_, idx) => idx !== index);
-    setProfileData({ ...profileData, album: newAlbum });
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -186,356 +164,43 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Avatar và Thông tin cơ bản */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Thông tin cơ bản</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <img
-                    src={profileData.avatar || '/placeholder.svg'}
-                    alt={profileData.name}
-                    className="w-20 h-20 rounded-full object-cover border-2 border-pink-200"
-                  />
-                  {isUploading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
-                      <Loader2 className="w-6 h-6 text-white animate-spin" />
-                    </div>
-                  )}
-                  {isEditing && (
-                    <>
-                      <Button
-                        size="sm"
-                        className="absolute -bottom-1 -right-1 rounded-full w-6 h-6 p-0 bg-pink-500 hover:bg-pink-600"
-                        onClick={() => avatarInputRef.current?.click()}
-                        disabled={isUploading}
-                      >
-                        <Camera className="w-3 h-3" />
-                      </Button>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        ref={avatarInputRef}
-                        className="hidden"
-                        onChange={handleAvatarUpload}
-                      />
-                    </>
-                  )}
-                </div>
-                
-                <div className="flex-1 grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tên</Label>
-                    {isEditing ? (
-                      <Input
-                        value={profileData.name}
-                        onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                      />
-                    ) : (
-                      <p className="font-medium">{profileData.name}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tuổi</Label>
-                    {isEditing ? (
-                      <Input
-                        type="number"
-                        value={profileData.age}
-                        onChange={(e) => setProfileData({ ...profileData, age: parseInt(e.target.value) })}
-                      />
-                    ) : (
-                      <p className="font-medium">{profileData.age}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
+          <BasicInfoSection
+            profileData={profileData}
+            setProfileData={setProfileData}
+            isEditing={isEditing}
+            isUploading={isUploading}
+            avatarInputRef={avatarInputRef}
+            onAvatarUpload={handleAvatarUpload}
+          />
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Giới tính</Label>
-                  {isEditing ? (
-                    <Select value={profileData.gender} onValueChange={(value) => setProfileData({ ...profileData, gender: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Nam</SelectItem>
-                        <SelectItem value="female">Nữ</SelectItem>
-                        <SelectItem value="other">Khác</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <p className="font-medium">
-                      {profileData.gender === 'male' ? 'Nam' : profileData.gender === 'female' ? 'Nữ' : 'Khác'}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    <Ruler className="w-4 h-4" />
-                    Chiều cao (cm)
-                  </Label>
-                  {isEditing ? (
-                    <Input
-                      type="number"
-                      value={profileData.height}
-                      onChange={(e) => setProfileData({ ...profileData, height: parseInt(e.target.value) })}
-                    />
-                  ) : (
-                    <p className="font-medium">{profileData.height} cm</p>
-                  )}
-                </div>
-              </div>
+          <BioSection
+            profileData={profileData}
+            setProfileData={setProfileData}
+            isEditing={isEditing}
+          />
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    <Briefcase className="w-4 h-4" />
-                    Nghề nghiệp
-                  </Label>
-                  {isEditing ? (
-                    <Input
-                      value={profileData.job}
-                      onChange={(e) => setProfileData({ ...profileData, job: e.target.value })}
-                      placeholder="Ví dụ: Kỹ sư phần mềm"
-                    />
-                  ) : (
-                    <p className="font-medium">{profileData.job || 'Chưa cập nhật'}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1">
-                    <GraduationCap className="w-4 h-4" />
-                    Học vấn
-                  </Label>
-                  {isEditing ? (
-                    <Input
-                      value={profileData.education}
-                      onChange={(e) => setProfileData({ ...profileData, education: e.target.value })}
-                      placeholder="Ví dụ: Đại học Bách khoa"
-                    />
-                  ) : (
-                    <p className="font-medium">{profileData.education || 'Chưa cập nhật'}</p>
-                  )}
-                </div>
-              </div>
+          <InterestsSection
+            profileData={profileData}
+            setProfileData={setProfileData}
+            isEditing={isEditing}
+          />
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  Khu vực
-                </Label>
-                {isEditing ? (
-                  <Input
-                    value={profileData.location_name}
-                    onChange={(e) => setProfileData({ ...profileData, location_name: e.target.value })}
-                    placeholder="Ví dụ: Quận 1, TP.HCM"
-                  />
-                ) : (
-                  <p className="font-medium">{profileData.location_name || 'Chưa cập nhật'}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <AlbumSection
+            profileData={profileData}
+            setProfileData={setProfileData}
+            isEditing={isEditing}
+            isUploading={isUploading}
+            albumInputRef={albumInputRef}
+            onAlbumUpload={handleAlbumUpload}
+          />
 
-          {/* Giới thiệu */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Giới thiệu bản thân</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={profileData.bio}
-                  onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                  placeholder="Hãy viết vài dòng để người khác hiểu về bạn..."
-                  className="min-h-[100px]"
-                />
-              ) : (
-                <p className="text-gray-600">{profileData.bio}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Sở thích */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Sở thích</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isEditing && (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Thêm sở thích..."
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        addInterest((e.target as HTMLInputElement).value);
-                        (e.target as HTMLInputElement).value = '';
-                      }
-                    }}
-                  />
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {profileData.interests.map((interest: string, idx: number) => (
-                  <Badge key={idx} variant="secondary" className="flex items-center gap-1">
-                    {interest}
-                    {isEditing && (
-                      <X 
-                        className="w-3 h-3 cursor-pointer hover:text-red-500" 
-                        onClick={() => removeInterest(interest)}
-                      />
-                    )}
-                  </Badge>
-                ))}
-                {profileData.interests.length === 0 && (
-                  <p className="text-gray-400 text-sm">Chưa có sở thích nào</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Album ảnh */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Album ảnh</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isEditing && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => albumInputRef.current?.click()}
-                    size="sm"
-                    className="bg-pink-500 hover:bg-pink-600"
-                    disabled={isUploading}
-                  >
-                    <ImagePlus className="w-4 h-4 mr-1" />
-                    Thêm ảnh vào album
-                  </Button>
-                  {isUploading && <Loader2 className="w-4 h-4 animate-spin text-pink-500" />}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={albumInputRef}
-                    className="hidden"
-                    multiple
-                    onChange={handleAlbumUpload}
-                  />
-                </div>
-              )}
-              {profileData.album && profileData.album.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {profileData.album.map((img: string, idx: number) => (
-                    <div key={idx} className="relative group">
-                      <img
-                        src={img}
-                        alt={`Ảnh ${idx + 1}`}
-                        className="rounded-lg object-cover w-full h-24 border"
-                      />
-                      {isEditing && (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => removeAlbumImage(idx)}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-400 text-sm">Chưa có ảnh nào</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Tùy chọn tìm kiếm */}
           {isEditing && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
-                  Tùy chọn tìm kiếm
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Độ tuổi mong muốn: {profileData.dating_preferences.age_range.min} - {profileData.dating_preferences.age_range.max}</Label>
-                  <div className="px-2">
-                    <Slider
-                      value={[profileData.dating_preferences.age_range.min, profileData.dating_preferences.age_range.max]}
-                      onValueChange={([min, max]) => 
-                        setProfileData({
-                          ...profileData,
-                          dating_preferences: {
-                            ...profileData.dating_preferences,
-                            age_range: { min, max }
-                          }
-                        })
-                      }
-                      min={18}
-                      max={60}
-                      step={1}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Khoảng cách tối đa: {profileData.dating_preferences.distance} km</Label>
-                  <div className="px-2">
-                    <Slider
-                      value={[profileData.dating_preferences.distance]}
-                      onValueChange={([distance]) => 
-                        setProfileData({
-                          ...profileData,
-                          dating_preferences: {
-                            ...profileData.dating_preferences,
-                            distance
-                          }
-                        })
-                      }
-                      min={5}
-                      max={200}
-                      step={5}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Giới tính quan tâm</Label>
-                  <Select 
-                    value={profileData.dating_preferences.gender_preference} 
-                    onValueChange={(value) => 
-                      setProfileData({
-                        ...profileData,
-                        dating_preferences: {
-                          ...profileData.dating_preferences,
-                          gender_preference: value
-                        }
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả</SelectItem>
-                      <SelectItem value="male">Nam</SelectItem>
-                      <SelectItem value="female">Nữ</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+            <PreferencesSection
+              profileData={profileData}
+              setProfileData={setProfileData}
+            />
           )}
 
-          {/* Save Button */}
           {isEditing && (
             <Button
               onClick={handleSave}

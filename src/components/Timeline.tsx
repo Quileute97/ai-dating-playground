@@ -1,8 +1,8 @@
-
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageIcon, MapPin, Smile, Send, Heart, MessageCircle, Share, MoreHorizontal, Trash2 } from "lucide-react";
 import { useTimelinePosts } from "@/hooks/useTimelinePosts";
 import { useTimelineComments } from "@/hooks/useTimelineComments";
@@ -124,7 +124,6 @@ export default function Timeline({ user }: TimelineProps) {
     try {
       const result = await uploadTimelineMedia(file);
       console.log('✅ Media uploaded successfully:', result);
-      // uploadTimelineMedia returns a string (the public URL)
       setMediaURL(result);
       setMediaType(file.type.startsWith('image/') ? 'image' : 'video');
     } catch (error: any) {
@@ -154,159 +153,166 @@ export default function Timeline({ user }: TimelineProps) {
   }
 
   return (
-    <div className="flex max-w-7xl mx-auto gap-4">
+    <div className="flex h-screen max-w-7xl mx-auto">
       {/* Real-time Activity Panel - Left Side */}
       <RealTimeActivityPanel userId={user?.id} />
 
-      {/* Main Timeline Content */}
-      <main className="flex-1 max-w-2xl mx-auto p-4 space-y-6">
-        {/* Post Creation Form */}
-        <Card className="bg-white shadow-sm">
-          <div className="flex items-center space-x-2 p-4">
-            <img
-              src={user?.avatar || "/placeholder.svg"}
-              alt={user?.name || "User"}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-            <Textarea
-              placeholder="Hôm nay bạn thế nào? Chia sẻ link website..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="resize-none border-none focus-visible:ring-0 shadow-none"
-            />
-          </div>
-          {mediaURL && (
-            <div className="relative">
-              {mediaType === "image" ? (
-                <img src={mediaURL} alt="Uploaded" className="w-full object-cover max-h-96" />
-              ) : (
-                <video src={mediaURL} controls className="w-full object-cover max-h-96" />
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-2 right-2 bg-black/20 hover:bg-black/40 rounded-full"
-                onClick={clearMedia}
-              >
-                <Trash2 className="h-4 w-4 text-white" />
-              </Button>
-            </div>
-          )}
-          <div className="flex justify-between items-center p-4 border-t">
-            <div className="flex items-center space-x-2">
-              <input
-                type="file"
-                id="media-upload"
-                className="hidden"
-                onChange={handleMediaUpload}
-                accept="image/*, video/*"
+      {/* Main Timeline Content - with ScrollArea */}
+      <div className="flex-1 max-w-2xl mx-auto flex flex-col">
+        {/* Post Creation Form - Fixed at top */}
+        <div className="p-4 bg-white border-b border-gray-100 sticky top-0 z-10">
+          <Card className="bg-white shadow-sm">
+            <div className="flex items-center space-x-2 p-4">
+              <img
+                src={user?.avatar || "/placeholder.svg"}
+                alt={user?.name || "User"}
+                className="w-8 h-8 rounded-full object-cover"
               />
-              <Button variant="ghost" size="icon" asChild>
-                <label htmlFor="media-upload">
-                  <ImageIcon className="h-5 w-5 text-gray-500" />
-                </label>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleLocationSelect}>
-                <MapPin className="h-5 w-5 text-gray-500" />
-              </Button>
-              <Button variant="ghost" size="icon">
-                <Smile className="h-5 w-5 text-gray-500" />
+              <Textarea
+                placeholder="Hôm nay bạn thế nào? Chia sẻ link website..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="resize-none border-none focus-visible:ring-0 shadow-none"
+              />
+            </div>
+            {mediaURL && (
+              <div className="relative">
+                {mediaType === "image" ? (
+                  <img src={mediaURL} alt="Uploaded" className="w-full object-cover max-h-96" />
+                ) : (
+                  <video src={mediaURL} controls className="w-full object-cover max-h-96" />
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 bg-black/20 hover:bg-black/40 rounded-full"
+                  onClick={clearMedia}
+                >
+                  <Trash2 className="h-4 w-4 text-white" />
+                </Button>
+              </div>
+            )}
+            <div className="flex justify-between items-center p-4 border-t">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="file"
+                  id="media-upload"
+                  className="hidden"
+                  onChange={handleMediaUpload}
+                  accept="image/*, video/*"
+                />
+                <Button variant="ghost" size="icon" asChild>
+                  <label htmlFor="media-upload">
+                    <ImageIcon className="h-5 w-5 text-gray-500" />
+                  </label>
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleLocationSelect}>
+                  <MapPin className="h-5 w-5 text-gray-500" />
+                </Button>
+                <Button variant="ghost" size="icon">
+                  <Smile className="h-5 w-5 text-gray-500" />
+                </Button>
+              </div>
+              <Button onClick={handleCreatePost} disabled={creating}>
+                {creating ? "Đang đăng..." : "Đăng"}
+                <Send className="w-4 h-4 ml-2" />
               </Button>
             </div>
-            <Button onClick={handleCreatePost} disabled={creating}>
-              {creating ? "Đang đăng..." : "Đăng"}
-              <Send className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-        </Card>
+          </Card>
+        </div>
 
-        {/* Posts Rendering */}
-        {isLoading ? (
-          <div className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-40 w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {posts && posts.length > 0 ? (
-              posts.map((post) => (
-                <Card key={post.id} className="bg-white shadow-sm">
-                  <div className="flex items-start justify-between p-4">
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={post.profiles?.avatar || "/placeholder.svg"}
-                        alt={post.profiles?.name || "User"}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                      <div>
-                        <div className="font-semibold">{post.profiles?.name || "User"}</div>
-                        <div className="text-xs text-gray-500">{new Date(post.created_at).toLocaleString()}</div>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                          if (confirm("Bạn có chắc chắn muốn xóa bài viết này?")) {
-                            deletePost(post.id);
-                          }
-                        }} disabled={deleting}>
-                          {deleting ? "Đang xóa..." : "Xóa"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  {post.media_url && (
-                    <div className="relative">
-                      {post.media_type === "image" ? (
-                        <img src={post.media_url} alt="Post media" className="w-full object-cover max-h-96" />
-                      ) : (
-                        <video src={post.media_url} controls className="w-full object-cover max-h-96" />
-                      )}
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <div className="whitespace-pre-wrap break-words">
-                      {renderTextWithLinks(post.content || "")}
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center p-4 border-t">
-                    <div className="flex items-center space-x-4">
-                      <PostActions postId={post.id} userId={user?.id} />
-                    </div>
-                    <div>
-                      <Button variant="outline" size="sm">
-                        <Share className="w-4 h-4 mr-2" />
-                        Chia sẻ
-                      </Button>
-                    </div>
-                  </div>
-                  <Collapsible className="w-full">
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="justify-start rounded-none p-4 w-full focus-visible:ring-0 focus-visible:ring-offset-0">
-                        Xem bình luận
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pl-4">
-                      <Comments postId={post.id} userId={user?.id} />
-                    </CollapsibleContent>
-                  </Collapsible>
-                </Card>
-              ))
+        {/* Scrollable Posts Content */}
+        <ScrollArea className="flex-1">
+          <div className="p-4 space-y-6">
+            {/* Posts Rendering */}
+            {isLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-40 w-full" />
+                ))}
+              </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <p>Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ!</p>
+              <div className="space-y-6 pb-6">
+                {posts && posts.length > 0 ? (
+                  posts.map((post) => (
+                    <Card key={post.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between p-4">
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={post.profiles?.avatar || "/placeholder.svg"}
+                            alt={post.profiles?.name || "User"}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                          <div>
+                            <div className="font-semibold">{post.profiles?.name || "User"}</div>
+                            <div className="text-xs text-gray-500">{new Date(post.created_at).toLocaleString()}</div>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              if (confirm("Bạn có chắc chắn muốn xóa bài viết này?")) {
+                                deletePost(post.id);
+                              }
+                            }} disabled={deleting}>
+                              {deleting ? "Đang xóa..." : "Xóa"}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {post.media_url && (
+                        <div className="relative">
+                          {post.media_type === "image" ? (
+                            <img src={post.media_url} alt="Post media" className="w-full object-cover max-h-96" />
+                          ) : (
+                            <video src={post.media_url} controls className="w-full object-cover max-h-96" />
+                          )}
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <div className="whitespace-pre-wrap break-words">
+                          {renderTextWithLinks(post.content || "")}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center p-4 border-t">
+                        <div className="flex items-center space-x-4">
+                          <PostActions postId={post.id} userId={user?.id} />
+                        </div>
+                        <div>
+                          <Button variant="outline" size="sm">
+                            <Share className="w-4 h-4 mr-2" />
+                            Chia sẻ
+                          </Button>
+                        </div>
+                      </div>
+                      <Collapsible className="w-full">
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" className="justify-start rounded-none p-4 w-full focus-visible:ring-0 focus-visible:ring-offset-0">
+                            Xem bình luận
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pl-4">
+                          <Comments postId={post.id} userId={user?.id} />
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ!</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </main>
+        </ScrollArea>
+      </div>
 
       {/* Timeline Chat List - Right Side */}
       <TimelineChatList currentUserId={user?.id || ""} />

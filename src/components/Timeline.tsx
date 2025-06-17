@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Heart, MessageCircle, Share, Plus, MapPin, Smile, Hash, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -227,7 +226,6 @@ const TimelineContent = ({ user }: TimelineProps) => {
           </Card>
         )}
 
-        {/* Create Post Modal */}
         <Dialog open={showCreatePost} onOpenChange={setShowCreatePost}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>

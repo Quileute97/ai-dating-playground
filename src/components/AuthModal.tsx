@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -81,14 +82,17 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
 
   // Utility: Cleanup all Supabase Auth keys in localStorage and sessionStorage
   const cleanupAuthState = () => {
+    console.log("🧹 Cleaning up auth state...");
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
         localStorage.removeItem(key);
+        console.log("🗑️ Removed localStorage key:", key);
       }
     });
     Object.keys(sessionStorage).forEach(key => {
       if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
         sessionStorage.removeItem(key);
+        console.log("🗑️ Removed sessionStorage key:", key);
       }
     });
   };
@@ -99,52 +103,84 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
     setIsLoading(true);
     setError('');
     setInfo('');
+    
+    console.log("🔐 Attempting login for:", loginData.email);
+    
     // Làm sạch storage, logout toàn cục trước khi login
     cleanupAuthState();
     try {
-      // Bắt buộc signOut toàn cục
+      console.log("🔄 Signing out globally...");
       await supabase.auth.signOut({ scope: 'global' });
     } catch (err) {
-      // Ignore errors here – may be logout stale session
+      console.log("⚠️ Logout error (ignored):", err);
     }
+    
     try {
+      console.log("📧 Signing in with email/password...");
       const { data, error: loginError } = await supabase.auth.signInWithPassword({
         email: loginData.email,
         password: loginData.password,
       });
+      
+      console.log("📊 Login response:", { data, error: loginError });
+      
       if (loginError) {
-        setError('Sai email hoặc mật khẩu.');
+        console.error("❌ Login error:", loginError);
+        if (loginError.message?.includes('Invalid login credentials')) {
+          setError('Sai email hoặc mật khẩu. Vui lòng kiểm tra lại hoặc xác nhận email nếu chưa làm.');
+        } else if (loginError.message?.includes('Email not confirmed')) {
+          setError('Email chưa được xác nhận. Vui lòng kiểm tra hộp thư và click vào link xác nhận.');
+        } else {
+          setError(loginError.message || 'Đăng nhập thất bại.');
+        }
         setIsLoading(false);
         return;
       }
+      
       const user = data.user;
       if (!user) {
         setError('Không thể xác thực user!');
         setIsLoading(false);
         return;
       }
+      
+      console.log("✅ User authenticated:", user.id);
+      
       // Lấy info profile từ bảng profiles nếu có
+      console.log("📋 Fetching user profile...");
       const { data: profiles, error: pErr } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
-      onLogin({
+      
+      console.log("📊 Profile data:", { profiles, error: pErr });
+      
+      const userData = {
         ...user,
         ...(profiles || {}),
         email: user.email,
-        avatar: profiles?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', // fallback
-        name: profiles?.name || user.email,
+        avatar: profiles?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+        name: profiles?.name || user.email?.split('@')[0] || 'User',
         age: profiles?.age,
         gender: profiles?.gender,
         interests: []
-      });
+      };
+      
+      console.log("👤 Final user data:", userData);
+      
+      onLogin(userData);
       setIsLoading(false);
       setError('');
       onClose();
-      // Force reload page để nhận session/rols cập nhật
-      window.location.href = "/";
+      
+      // Force reload page để nhận session/roles cập nhật
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
+      
     } catch (ex: any) {
+      console.error("💥 Exception during login:", ex);
       setError('Có lỗi xảy ra: ' + ex.message);
       setIsLoading(false);
     }
@@ -156,8 +192,13 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
     setIsLoading(true);
     setError('');
     setInfo('');
+    
+    console.log("📝 Attempting registration for:", registerData.email);
+    
     try {
       const redirectUrl = `${window.location.origin}/`;
+      console.log("🔗 Redirect URL:", redirectUrl);
+      
       const { data, error: signupError } = await supabase.auth.signUp({
         email: registerData.email,
         password: registerData.password,
@@ -165,22 +206,34 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
           emailRedirectTo: redirectUrl,
           data: {
             name: registerData.name,
-            age: registerData.age,
+            age: parseInt(registerData.age),
             gender: registerData.gender,
-            // Tùy bạn có map interests sang meta hay không
           }
         }
       });
+      
+      console.log("📊 Signup response:", { data, error: signupError });
+      
       if (signupError) {
-        setError(signupError.message || 'Đăng ký thất bại.');
+        console.error("❌ Signup error:", signupError);
+        if (signupError.message?.includes('User already registered')) {
+          setError('Email này đã được đăng ký. Vui lòng đăng nhập hoặc sử dụng email khác.');
+        } else {
+          setError(signupError.message || 'Đăng ký thất bại.');
+        }
         setIsLoading(false);
         return;
       }
+      
+      console.log("✅ Registration successful for user:", data.user?.id);
+      
       setInfo(
         'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản trước khi đăng nhập.'
       );
       setIsLoading(false);
+      
     } catch (ex: any) {
+      console.error("💥 Exception during registration:", ex);
       setError('Có lỗi xảy ra: ' + ex.message);
       setIsLoading(false);
     }

@@ -1,16 +1,35 @@
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, MapPin, Briefcase, GraduationCap, Ruler, Clock } from "lucide-react";
+import { Heart, MapPin, Briefcase, GraduationCap, Ruler, Clock, UserPlus, MessageCircle, Album, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSendFriendRequest, useFriendList, useSentFriendRequests } from "@/hooks/useFriends";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showAlbumModal, setShowAlbumModal] = useState(false);
+  const { toast } = useToast();
+  
+  // Friend hooks
+  const sendFriendRequest = useSendFriendRequest();
+  const { data: friends } = useFriendList(currentUser?.id);
+  const { data: sentRequests } = useSentFriendRequests(currentUser?.id);
+
+  useEffect(() => {
+    // Get current user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUser(user);
+    });
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -25,6 +44,35 @@ const UserProfilePage: React.FC = () => {
         setLoading(false);
       });
   }, [userId]);
+
+  const handleSendFriendRequest = async () => {
+    if (!currentUser || !userId) return;
+    
+    try {
+      await sendFriendRequest.mutateAsync({
+        user_id: currentUser.id,
+        friend_id: userId,
+      });
+      toast({
+        title: "Đã gửi lời mời kết bạn",
+        description: `Lời mời kết bạn đã được gửi đến ${profile?.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể gửi lời mời kết bạn. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendMessage = () => {
+    // Navigate to chat or open chat interface
+    toast({
+      title: "Tính năng đang phát triển",
+      description: "Tính năng nhắn tin sẽ sớm được cập nhật",
+    });
+  };
 
   if (loading) {
     return (
@@ -57,6 +105,15 @@ const UserProfilePage: React.FC = () => {
     }
   };
 
+  // Check if already friends or request sent
+  const isAlreadyFriend = friends?.some(f => 
+    (f.user_id === currentUser?.id && f.friend_id === userId) ||
+    (f.friend_id === currentUser?.id && f.user_id === userId)
+  );
+  
+  const isRequestSent = sentRequests?.some(r => r.friend_id === userId);
+  const isOwnProfile = currentUser?.id === userId;
+
   return (
     <div className="min-h-screen flex justify-center items-start bg-gradient-to-br from-purple-50 via-pink-50 to-blue-100 py-10">
       <Card className="max-w-md w-full mx-auto">
@@ -85,6 +142,41 @@ const UserProfilePage: React.FC = () => {
             <div className="mt-2">
               {getDatingStatus()}
             </div>
+
+            {/* Action Buttons */}
+            {!isOwnProfile && currentUser && (
+              <div className="flex gap-2 mt-4 w-full">
+                <Button
+                  onClick={handleSendFriendRequest}
+                  disabled={isAlreadyFriend || isRequestSent || sendFriendRequest.isPending}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600"
+                  size="sm"
+                >
+                  <UserPlus className="w-4 h-4 mr-1" />
+                  {isAlreadyFriend ? "Đã kết bạn" : isRequestSent ? "Đã gửi lời mời" : "Kết bạn"}
+                </Button>
+                <Button
+                  onClick={handleSendMessage}
+                  variant="outline"
+                  className="flex-1"
+                  size="sm"
+                >
+                  <MessageCircle className="w-4 h-4 mr-1" />
+                  Nhắn tin
+                </Button>
+                {profile.album && Array.isArray(profile.album) && profile.album.length > 0 && (
+                  <Button
+                    onClick={() => setShowAlbumModal(true)}
+                    variant="outline"
+                    className="flex-1"
+                    size="sm"
+                  >
+                    <Album className="w-4 h-4 mr-1" />
+                    Album
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -143,7 +235,8 @@ const UserProfilePage: React.FC = () => {
                     key={idx}
                     src={img}
                     alt={`Ảnh ${idx + 1}`}
-                    className="rounded-lg object-cover w-full h-20 border"
+                    className="rounded-lg object-cover w-full h-20 border cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => setShowAlbumModal(true)}
                   />
                 ))}
               </div>
@@ -162,6 +255,36 @@ const UserProfilePage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Album Modal */}
+      <Dialog open={showAlbumModal} onOpenChange={setShowAlbumModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Album ảnh của {profile.name}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAlbumModal(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4">
+            {profile.album?.map((img: string, idx: number) => (
+              <div key={idx} className="aspect-square">
+                <img
+                  src={img}
+                  alt={`Ảnh ${idx + 1}`}
+                  className="w-full h-full object-cover rounded-lg border"
+                />
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

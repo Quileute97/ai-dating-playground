@@ -8,7 +8,7 @@ export function useTimelinePosts(userId?: string) {
   const queryClient = useQueryClient();
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
 
-  // Lấy tất cả bài post (sắp xếp mới nhất trước)
+  // Fetch all posts (sorted newest first)
   const { data: posts, isLoading, error, refetch } = useQuery({
     queryKey: ["timeline-posts"],
     queryFn: async () => {
@@ -33,14 +33,17 @@ export function useTimelinePosts(userId?: string) {
         return data ?? [];
       } catch (error) {
         console.error('❌ Error in posts query:', error);
+        // Don't throw error, return empty array to allow graceful degradation
         return [];
       }
     },
-    retry: 2,
-    retryDelay: 1000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    refetchOnWindowFocus: false, // Prevent constant refetching
   });
 
-  // Realtime subscription cho posts với error handling
+  // Realtime subscription for posts with error handling
   useRealtimeSubscription({
     channelName: 'timeline-posts',
     table: 'posts',
@@ -52,7 +55,7 @@ export function useTimelinePosts(userId?: string) {
     }
   });
 
-  // Thêm bài post mới
+  // Create new post
   const createPostMutation = useMutation({
     mutationFn: async (values: {
       content: string;
@@ -78,12 +81,12 @@ export function useTimelinePosts(userId?: string) {
     }
   });
 
-  // Xóa bài post
+  // Delete post
   const deletePostMutation = useMutation({
     mutationFn: async (postId: string) => {
       console.log('🗑️ Deleting post with ID:', postId);
       
-      // Kiểm tra quyền xóa - chỉ chủ bài viết mới được xóa
+      // Check deletion permissions - only post owner can delete
       const { data: post, error: fetchError } = await supabase
         .from("posts")
         .select("user_id")
@@ -95,14 +98,14 @@ export function useTimelinePosts(userId?: string) {
         throw new Error("Không tìm thấy bài viết");
       }
 
-      // Lấy user hiện tại
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user || post.user_id !== user.id) {
         throw new Error("Bạn không có quyền xóa bài viết này");
       }
 
-      // Xóa bài viết
+      // Delete post
       const { error } = await supabase
         .from("posts")
         .delete()
@@ -127,7 +130,8 @@ export function useTimelinePosts(userId?: string) {
     postsCount: posts?.length || 0, 
     isLoading, 
     hasError: !!error,
-    subscriptionError
+    subscriptionError,
+    errorMessage: error?.message
   });
 
   return {

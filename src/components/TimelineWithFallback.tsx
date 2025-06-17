@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
-import { Heart, MessageCircle, Share, Plus, MapPin, Smile, Hash, X, RefreshCw, AlertCircle } from "lucide-react";
+import { Heart, MessageCircle, Share, Plus, MapPin, Smile, Hash, X, RefreshCw, AlertCircle, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,7 +51,12 @@ const TimelineWithFallback = ({ user }: TimelineWithFallbackProps) => {
     subscriptionError: likesSubscriptionError
   } = useTimelinePostLikes(user?.id);
 
-  console.log('🔄 Timeline render - posts:', posts?.length || 0, 'user:', user?.id, 'loading:', postsLoading);
+  console.log('🔄 Timeline render:', { 
+    postsCount: posts?.length || 0, 
+    userId: user?.id || 'not authenticated', 
+    postsLoading,
+    hasUser: !!user
+  });
 
   // Memoize filtered posts to prevent unnecessary re-renders
   const filteredPosts = useMemo(() => {
@@ -63,19 +68,19 @@ const TimelineWithFallback = ({ user }: TimelineWithFallbackProps) => {
 
   // Memoize handlers to prevent re-renders
   const handleCreatePost = useCallback(async () => {
-    if (!newPost.trim() && !selectedFile && !selectedSticker && !selectedLocation) {
+    if (!user?.id) {
       toast({
-        title: "Nội dung không được để trống!",
-        description: "Vui lòng nhập nội dung hoặc chọn ảnh/video.",
+        title: "Cần đăng nhập!",
+        description: "Vui lòng đăng nhập để đăng bài viết.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!user?.id) {
+    if (!newPost.trim() && !selectedFile && !selectedSticker && !selectedLocation) {
       toast({
-        title: "Lỗi đăng nhập!",
-        description: "Vui lòng đăng nhập để đăng bài viết.",
+        title: "Nội dung không được để trống!",
+        description: "Vui lòng nhập nội dung hoặc chọn ảnh/video.",
         variant: "destructive",
       });
       return;
@@ -283,7 +288,29 @@ const TimelineWithFallback = ({ user }: TimelineWithFallbackProps) => {
         </div>
       )}
 
-      {/* Chat List Toggle */}
+      {/* Auth Status Banner for non-authenticated users */}
+      {!user && (
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mx-4 mb-4">
+          <div className="flex">
+            <User className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
+            <div>
+              <p className="text-sm text-blue-700">
+                Bạn đang xem timeline ở chế độ khách. Đăng nhập để tương tác và đăng bài.
+              </p>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => window.location.href = '/auth'}
+                className="text-blue-700 p-0 h-auto"
+              >
+                Đăng nhập ngay
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chat List Toggle - only show if authenticated */}
       {user && (
         <Button
           variant="outline"
@@ -297,7 +324,7 @@ const TimelineWithFallback = ({ user }: TimelineWithFallbackProps) => {
       )}
 
       <div className="max-w-2xl mx-auto p-4 space-y-6">
-        {/* Create Post Button */}
+        {/* Create Post Button - only show if authenticated */}
         {user && (
           <Card className="p-4">
             <Button
@@ -335,6 +362,15 @@ const TimelineWithFallback = ({ user }: TimelineWithFallbackProps) => {
                   className="mt-4"
                 >
                   Tạo bài viết đầu tiên
+                </Button>
+              )}
+              {!user && !hashtagFilter && (
+                <Button
+                  onClick={() => window.location.href = '/auth'}
+                  variant="outline"
+                  className="mt-4"
+                >
+                  Đăng nhập để tạo bài viết
                 </Button>
               )}
               {hashtagFilter && (
@@ -408,12 +444,12 @@ const TimelineWithFallback = ({ user }: TimelineWithFallbackProps) => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleLike(post.id)}
-                        disabled={isToggling}
+                        disabled={isToggling || !user}
                         className={`${
-                          isPostLiked(post.id) ? "text-red-500" : "text-gray-600"
-                        } hover:text-red-500`}
+                          user && isPostLiked(post.id) ? "text-red-500" : "text-gray-600"
+                        } hover:text-red-500 ${!user ? 'opacity-50' : ''}`}
                       >
-                        <Heart className={`w-4 h-4 mr-1 ${isPostLiked(post.id) ? "fill-current" : ""}`} />
+                        <Heart className={`w-4 h-4 mr-1 ${user && isPostLiked(post.id) ? "fill-current" : ""}`} />
                         {getPostLikeCount(post.id)}
                       </Button>
                       
@@ -431,6 +467,7 @@ const TimelineWithFallback = ({ user }: TimelineWithFallbackProps) => {
                         variant="ghost"
                         size="sm"
                         className="text-gray-600 hover:text-green-500"
+                        disabled={!user}
                       >
                         <Share className="w-4 h-4 mr-1" />
                         Chia sẻ
@@ -455,145 +492,147 @@ const TimelineWithFallback = ({ user }: TimelineWithFallbackProps) => {
         </div>
       </div>
 
-      {/* Create Post Dialog */}
-      <Dialog open={showCreatePost} onOpenChange={setShowCreatePost}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Tạo bài viết mới</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Textarea
-              placeholder="Bạn đang nghĩ gì?"
-              value={newPost}
-              onChange={(e) => setNewPost(e.target.value)}
-              className="resize-none"
-            />
+      {/* Create Post Dialog - only render if authenticated */}
+      {user && (
+        <Dialog open={showCreatePost} onOpenChange={setShowCreatePost}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Tạo bài viết mới</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                placeholder="Bạn đang nghĩ gì?"
+                value={newPost}
+                onChange={(e) => setNewPost(e.target.value)}
+                className="resize-none"
+              />
 
-            {/* Media Preview */}
-            {selectedFile && (
-              <div className="relative">
-                {selectedFile.type.startsWith("image/") ? (
-                  <img
-                    src={URL.createObjectURL(selectedFile)}
-                    alt="Preview"
-                    className="w-full rounded-lg max-h-96 object-cover"
-                  />
-                ) : (
-                  <video
-                    src={URL.createObjectURL(selectedFile)}
-                    controls
-                    className="w-full rounded-lg max-h-96 object-cover"
-                  />
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 bg-black/20 hover:bg-black/50 text-white rounded-full"
-                  onClick={() => setSelectedFile(null)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-
-            {/* Sticker Preview */}
-            {selectedSticker && (
-              <div className="text-6xl">{selectedSticker.emoji}</div>
-            )}
-
-            {/* Location Preview */}
-            {selectedLocation && (
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-gray-500" />
-                {selectedLocation.name}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSelectedLocation(null)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <label htmlFor="media-upload">
-                  <Input
-                    type="file"
-                    id="media-upload"
-                    accept="image/*, video/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setSelectedFile(file);
-                      }
-                    }}
-                  />
-                  <Button variant="outline" size="icon">
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </label>
-
-                <Button variant="outline" size="icon" onClick={() => setShowStickerPicker(!showStickerPicker)}>
-                  <Smile className="w-4 h-4" />
-                </Button>
-
-                <Button variant="outline" size="icon" onClick={() => setShowLocationPicker(!showLocationPicker)}>
-                  <MapPin className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <Button onClick={handleCreatePost} className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
-                Đăng
-              </Button>
-            </div>
-
-            {/* Sticker Picker */}
-            {showStickerPicker && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {["💖", "😂", "🔥", "💯", "👏", "😎", "🤯", "🤔"].map((emoji) => (
+              {/* Media Preview */}
+              {selectedFile && (
+                <div className="relative">
+                  {selectedFile.type.startsWith("image/") ? (
+                    <img
+                      src={URL.createObjectURL(selectedFile)}
+                      alt="Preview"
+                      className="w-full rounded-lg max-h-96 object-cover"
+                    />
+                  ) : (
+                    <video
+                      src={URL.createObjectURL(selectedFile)}
+                      controls
+                      className="w-full rounded-lg max-h-96 object-cover"
+                    />
+                  )}
                   <Button
-                    key={emoji}
                     variant="ghost"
-                    className="text-4xl"
-                    onClick={() => {
-                      setSelectedSticker({ emoji });
-                      setShowStickerPicker(false);
-                    }}
+                    size="icon"
+                    className="absolute top-2 right-2 bg-black/20 hover:bg-black/50 text-white rounded-full"
+                    onClick={() => setSelectedFile(null)}
                   >
-                    {emoji}
+                    <X className="w-4 h-4" />
                   </Button>
-                ))}
-              </div>
-            )}
+                </div>
+              )}
 
-            {/* Location Picker */}
-            {showLocationPicker && (
-              <div className="mt-2">
-                <Input type="text" placeholder="Tìm kiếm địa điểm..." />
-                <div className="flex flex-col gap-1 mt-2">
-                  {["Hà Nội", "Hồ Chí Minh", "Đà Nẵng"].map((location) => (
+              {/* Sticker Preview */}
+              {selectedSticker && (
+                <div className="text-6xl">{selectedSticker.emoji}</div>
+              )}
+
+              {/* Location Preview */}
+              {selectedLocation && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-gray-500" />
+                  {selectedLocation.name}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedLocation(null)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="media-upload">
+                    <Input
+                      type="file"
+                      id="media-upload"
+                      accept="image/*, video/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setSelectedFile(file);
+                        }
+                      }}
+                    />
+                    <Button variant="outline" size="icon">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </label>
+
+                  <Button variant="outline" size="icon" onClick={() => setShowStickerPicker(!showStickerPicker)}>
+                    <Smile className="w-4 h-4" />
+                  </Button>
+
+                  <Button variant="outline" size="icon" onClick={() => setShowLocationPicker(!showLocationPicker)}>
+                    <MapPin className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <Button onClick={handleCreatePost} className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+                  Đăng
+                </Button>
+              </div>
+
+              {/* Sticker Picker */}
+              {showStickerPicker && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {["💖", "😂", "🔥", "💯", "👏", "😎", "🤯", "🤔"].map((emoji) => (
                     <Button
-                      key={location}
-                      variant="outline"
-                      className="justify-start"
+                      key={emoji}
+                      variant="ghost"
+                      className="text-4xl"
                       onClick={() => {
-                        setSelectedLocation({ name: location });
-                        setShowLocationPicker(false);
+                        setSelectedSticker({ emoji });
+                        setShowStickerPicker(false);
                       }}
                     >
-                      <MapPin className="w-4 h-4 mr-2" />
-                      {location}
+                      {emoji}
                     </Button>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+              )}
+
+              {/* Location Picker */}
+              {showLocationPicker && (
+                <div className="mt-2">
+                  <Input type="text" placeholder="Tìm kiếm địa điểm..." />
+                  <div className="flex flex-col gap-1 mt-2">
+                    {["Hà Nội", "Hồ Chí Minh", "Đà Nẵng"].map((location) => (
+                      <Button
+                        key={location}
+                        variant="outline"
+                        className="justify-start"
+                        onClick={() => {
+                          setSelectedLocation({ name: location });
+                          setShowLocationPicker(false);
+                        }}
+                      >
+                        <MapPin className="w-4 h-4 mr-2" />
+                        {location}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Post Detail Modal */}
       <PostDetailModal
@@ -610,7 +649,7 @@ const TimelineWithFallback = ({ user }: TimelineWithFallbackProps) => {
         user={user}
       />
 
-      {/* Chat List */}
+      {/* Chat List - only render if authenticated */}
       {user && (
         <SimpleTimelineChatList
           currentUserId={user.id}

@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 export function useTimelinePosts(userId?: string) {
   const queryClient = useQueryClient();
   const channelRef = useRef<any>(null);
+  const isSubscribedRef = useRef(false);
 
   // Lấy tất cả bài post (sắp xếp mới nhất trước)
   const { data: posts, isLoading, error } = useQuery({
@@ -32,7 +33,6 @@ export function useTimelinePosts(userId?: string) {
         return data ?? [];
       } catch (error) {
         console.error('❌ Error in posts query:', error);
-        // Return empty array instead of throwing to prevent UI crash
         return [];
       }
     },
@@ -42,12 +42,19 @@ export function useTimelinePosts(userId?: string) {
 
   // Realtime subscription cho posts
   useEffect(() => {
+    // Chỉ setup nếu chưa subscribe
+    if (isSubscribedRef.current) {
+      console.log('⚠️ Already subscribed to posts channel, skipping');
+      return;
+    }
+
     const setupChannel = () => {
       // Clean up existing channel first
       if (channelRef.current) {
         console.log('🧹 Cleaning up existing posts channel');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
+        isSubscribedRef.current = false;
       }
 
       const channelName = `posts-changes-${Date.now()}`;
@@ -65,6 +72,11 @@ export function useTimelinePosts(userId?: string) {
         })
         .subscribe((status) => {
           console.log('📡 Posts subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            isSubscribedRef.current = true;
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            isSubscribedRef.current = false;
+          }
         });
 
       channelRef.current = channel;
@@ -79,6 +91,7 @@ export function useTimelinePosts(userId?: string) {
         console.log('🧹 Cleaning up posts channel on unmount');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
+        isSubscribedRef.current = false;
       }
     };
   }, [queryClient]);

@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 export function useTimelinePostLikes(userId?: string) {
   const queryClient = useQueryClient();
   const channelRef = useRef<any>(null);
+  const isSubscribedRef = useRef(false);
 
   // Get all post likes for timeline posts
   const { data: allLikes = [], isLoading } = useQuery({
@@ -31,12 +32,19 @@ export function useTimelinePostLikes(userId?: string) {
   useEffect(() => {
     if (!userId) return;
 
+    // Chỉ setup nếu chưa subscribe
+    if (isSubscribedRef.current) {
+      console.log('⚠️ Already subscribed to post likes channel, skipping');
+      return;
+    }
+
     const setupChannel = () => {
       // Clean up existing channel first
       if (channelRef.current) {
         console.log('Cleaning up existing post likes channel');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
+        isSubscribedRef.current = false;
       }
 
       const channelName = `timeline-post-likes-${userId}-${Date.now()}`;
@@ -54,6 +62,11 @@ export function useTimelinePostLikes(userId?: string) {
         })
         .subscribe((status) => {
           console.log('Post likes subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            isSubscribedRef.current = true;
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            isSubscribedRef.current = false;
+          }
         });
 
       channelRef.current = channel;
@@ -68,6 +81,7 @@ export function useTimelinePostLikes(userId?: string) {
         console.log('Cleaning up post likes channel on unmount');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
+        isSubscribedRef.current = false;
       }
     };
   }, [userId, queryClient]);

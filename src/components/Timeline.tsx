@@ -32,11 +32,29 @@ const TimelineContent = ({ user }: TimelineProps) => {
   const [showChatList, setShowChatList] = useState(false);
 
   const { toast } = useToast();
-  const { posts, isLoading: postsLoading, createPost, deletePost } = useTimelinePosts();
+  const { posts, isLoading: postsLoading, createPost, deletePost, error: postsError } = useTimelinePosts();
   const { comments } = useTimelineComments();
   const { isPostLiked, getPostLikeCount, toggleLike, isToggling } = useTimelinePostLikes(user?.id);
 
-  console.log('🔄 Timeline render - posts:', posts, 'user:', user);
+  console.log('🔄 Timeline render - posts:', posts, 'user:', user, 'error:', postsError);
+
+  // Show error state if there's a persistent error
+  if (postsError && !postsLoading) {
+    return (
+      <div className="h-full bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center">
+        <Card className="p-8 max-w-md text-center">
+          <X className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-4">Lỗi tải dữ liệu</h2>
+          <p className="text-gray-600 mb-6">
+            Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại.
+          </p>
+          <Button onClick={() => window.location.reload()} className="w-full">
+            Tải lại
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   const handleCreatePost = async () => {
     if (!newPost.trim() && !selectedFile && !selectedSticker && !selectedLocation) {

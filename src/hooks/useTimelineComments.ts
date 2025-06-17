@@ -12,47 +12,67 @@ export function useTimelineComments(postId?: string) {
     queryKey: ["timeline-comments", postId],
     queryFn: async () => {
       if (!postId) return [];
-      const { data, error } = await supabase
-        .from("comments")
-        .select(`
-          *,
-          profiles: user_id (id, name, avatar)
-        `)
-        .eq("post_id", postId)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const { data, error } = await supabase
+          .from("comments")
+          .select(`
+            *,
+            profiles: user_id (id, name, avatar)
+          `)
+          .eq("post_id", postId)
+          .order("created_at", { ascending: true });
+        if (error) throw error;
+        return data ?? [];
+      } catch (error) {
+        console.error('Error fetching comments:', error);
+        return [];
+      }
     },
     enabled: !!postId,
+    retry: 3,
+    retryDelay: 1000,
   });
 
   // Realtime subscription cho comments
   useEffect(() => {
     if (!postId) return;
 
-    // Clean up existing channel
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
+    const setupChannel = () => {
+      // Clean up existing channel first
+      if (channelRef.current) {
+        console.log('Cleaning up existing comments channel');
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
 
-    const channel = supabase
-      .channel(`comments-${postId}-${Date.now()}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'comments',
-        filter: `post_id=eq.${postId}`
-      }, (payload) => {
-        console.log('💬 Comments realtime update:', payload);
-        queryClient.invalidateQueries({ queryKey: ["timeline-comments", postId] });
-      })
-      .subscribe();
+      const channelName = `comments-${postId}-${Date.now()}`;
+      console.log('Setting up comments channel:', channelName);
 
-    channelRef.current = channel;
+      const channel = supabase
+        .channel(channelName)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'comments',
+          filter: `post_id=eq.${postId}`
+        }, (payload) => {
+          console.log('💬 Comments realtime update:', payload);
+          queryClient.invalidateQueries({ queryKey: ["timeline-comments", postId] });
+        })
+        .subscribe((status) => {
+          console.log('Comments subscription status:', status);
+        });
+
+      channelRef.current = channel;
+    };
+
+    // Small delay to ensure proper cleanup
+    const timer = setTimeout(setupChannel, 100);
 
     return () => {
+      clearTimeout(timer);
       if (channelRef.current) {
+        console.log('Cleaning up comments channel on unmount');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
@@ -68,6 +88,9 @@ export function useTimelineComments(postId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline-comments", postId] });
+    },
+    onError: (error) => {
+      console.error('Error creating comment:', error);
     }
   });
 

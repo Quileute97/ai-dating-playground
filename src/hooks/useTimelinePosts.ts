@@ -11,44 +11,64 @@ export function useTimelinePosts(userId?: string) {
   const { data: posts, isLoading, error } = useQuery({
     queryKey: ["timeline-posts"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("posts")
-        .select(
-          `
-            *,
-            profiles: user_id (id, name, avatar)
-          `
-        )
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    }
+      try {
+        const { data, error } = await supabase
+          .from("posts")
+          .select(
+            `
+              *,
+              profiles: user_id (id, name, avatar)
+            `
+          )
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data ?? [];
+      } catch (error) {
+        console.error('Error fetching posts:', error);
+        return [];
+      }
+    },
+    retry: 3,
+    retryDelay: 1000,
   });
 
   // Realtime subscription cho posts
   useEffect(() => {
-    // Clean up existing channel
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
+    const setupChannel = () => {
+      // Clean up existing channel first
+      if (channelRef.current) {
+        console.log('Cleaning up existing posts channel');
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
 
-    const channel = supabase
-      .channel(`posts-changes-${Date.now()}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'posts'
-      }, (payload) => {
-        console.log('📊 Posts realtime update:', payload);
-        queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
-      })
-      .subscribe();
+      const channelName = `posts-changes-${Date.now()}`;
+      console.log('Setting up posts channel:', channelName);
 
-    channelRef.current = channel;
+      const channel = supabase
+        .channel(channelName)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'posts'
+        }, (payload) => {
+          console.log('📊 Posts realtime update:', payload);
+          queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
+        })
+        .subscribe((status) => {
+          console.log('Posts subscription status:', status);
+        });
+
+      channelRef.current = channel;
+    };
+
+    // Small delay to ensure proper cleanup
+    const timer = setTimeout(setupChannel, 100);
 
     return () => {
+      clearTimeout(timer);
       if (channelRef.current) {
+        console.log('Cleaning up posts channel on unmount');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }

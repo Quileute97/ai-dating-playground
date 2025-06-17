@@ -11,41 +11,61 @@ export function useTimelinePostLikes(userId?: string) {
   const { data: allLikes = [], isLoading } = useQuery({
     queryKey: ["timeline-all-post-likes"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("post_likes")
-        .select("post_id, user_id");
-      if (error) throw error;
-      return data || [];
+      try {
+        const { data, error } = await supabase
+          .from("post_likes")
+          .select("post_id, user_id");
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error('Error fetching post likes:', error);
+        return [];
+      }
     },
     enabled: !!userId,
+    retry: 3,
+    retryDelay: 1000,
   });
 
   // Realtime subscription for all post likes
   useEffect(() => {
     if (!userId) return;
 
-    // Clean up existing channel
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
+    const setupChannel = () => {
+      // Clean up existing channel first
+      if (channelRef.current) {
+        console.log('Cleaning up existing post likes channel');
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
 
-    const channel = supabase
-      .channel(`timeline-post-likes-${userId}-${Date.now()}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'post_likes'
-      }, (payload) => {
-        console.log('❤️ Timeline post likes update:', payload);
-        queryClient.invalidateQueries({ queryKey: ["timeline-all-post-likes"] });
-      })
-      .subscribe();
+      const channelName = `timeline-post-likes-${userId}-${Date.now()}`;
+      console.log('Setting up post likes channel:', channelName);
 
-    channelRef.current = channel;
+      const channel = supabase
+        .channel(channelName)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'post_likes'
+        }, (payload) => {
+          console.log('❤️ Timeline post likes update:', payload);
+          queryClient.invalidateQueries({ queryKey: ["timeline-all-post-likes"] });
+        })
+        .subscribe((status) => {
+          console.log('Post likes subscription status:', status);
+        });
+
+      channelRef.current = channel;
+    };
+
+    // Small delay to ensure proper cleanup
+    const timer = setTimeout(setupChannel, 100);
 
     return () => {
+      clearTimeout(timer);
       if (channelRef.current) {
+        console.log('Cleaning up post likes channel on unmount');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
@@ -72,6 +92,9 @@ export function useTimelinePostLikes(userId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline-all-post-likes"] });
+    },
+    onError: (error) => {
+      console.error('Error liking post:', error);
     }
   });
 
@@ -87,6 +110,9 @@ export function useTimelinePostLikes(userId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline-all-post-likes"] });
+    },
+    onError: (error) => {
+      console.error('Error unliking post:', error);
     }
   });
 

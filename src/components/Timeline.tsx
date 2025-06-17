@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Heart, MessageCircle, Share, Plus, MapPin, Smile, Hash, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,7 @@ const Timeline = ({ user }: TimelineProps) => {
 
   const { toast } = useToast();
   const { posts, isLoading: postsLoading, createPost, deletePost } = useTimelinePosts();
-  const { like: likePost, unlike: unlikePost, liked: hasLiked } = usePostLikes(undefined, user?.id);
+  const { liked, like, unlike } = usePostLikes(undefined, user?.id);
   const { comments } = useTimelineComments();
   const { conversations, markAsRead } = useTimelineMessaging(user?.id);
 
@@ -64,15 +63,10 @@ const Timeline = ({ user }: TimelineProps) => {
 
     if (selectedFile) {
       try {
+        // uploadTimelineMedia returns a string (the public URL)
         const uploadResult = await uploadTimelineMedia(selectedFile);
-        // Handle both string and object return types from upload function
-        if (typeof uploadResult === 'string') {
-          mediaUrl = uploadResult;
-          mediaType = selectedFile.type.startsWith('image/') ? 'image' : 'video';
-        } else {
-          mediaUrl = uploadResult?.publicUrl || uploadResult;
-          mediaType = uploadResult?.type || (selectedFile.type.startsWith('image/') ? 'image' : 'video');
-        }
+        mediaUrl = uploadResult;
+        mediaType = selectedFile.type.startsWith('image/') ? 'image' : 'video';
       } catch (uploadError) {
         toast({
           title: "Lỗi tải lên!",
@@ -129,10 +123,10 @@ const Timeline = ({ user }: TimelineProps) => {
 
   const handleLike = async (postId: string) => {
     try {
-      if (hasLiked) {
-        await unlikePost();
+      if (liked) {
+        await unlike();
       } else {
-        await likePost();
+        await like();
       }
     } catch (error) {
       toast({
@@ -412,12 +406,12 @@ const Timeline = ({ user }: TimelineProps) => {
                     )}
 
                     {/* Sticker */}
-                    {post.sticker && typeof post.sticker === 'object' && 'emoji' in post.sticker && (
+                    {post.sticker && typeof post.sticker === 'object' && (post.sticker as any).emoji && (
                       <div className="text-4xl mb-2">{(post.sticker as any).emoji}</div>
                     )}
 
                     {/* Location */}
-                    {post.location && typeof post.location === 'object' && 'name' in post.location && (
+                    {post.location && typeof post.location === 'object' && (post.location as any).name && (
                       <div className="flex items-center gap-1 text-sm text-gray-600 mb-2">
                         <MapPin className="w-4 h-4" />
                         {(post.location as any).name}
@@ -433,10 +427,10 @@ const Timeline = ({ user }: TimelineProps) => {
                         size="sm"
                         onClick={() => handleLike(post.id)}
                         className={`${
-                          hasLiked ? "text-red-500" : "text-gray-600"
+                          liked ? "text-red-500" : "text-gray-600"
                         } hover:text-red-500`}
                       >
-                        <Heart className={`w-4 h-4 mr-1 ${hasLiked ? "fill-current" : ""}`} />
+                        <Heart className={`w-4 h-4 mr-1 ${liked ? "fill-current" : ""}`} />
                         0
                       </Button>
                       
@@ -493,10 +487,16 @@ const Timeline = ({ user }: TimelineProps) => {
         user={user}
       />
 
-      {/* Chat List - Only render if user is logged in */}
-      {user && (
+      {/* Chat List */}
+      {user && showChatList && (
         <TimelineChatList
           currentUserId={user.id}
+          conversations={conversations}
+          onClose={() => setShowChatList(false)}
+          onSelectChat={(otherUserId, otherUserName, otherUserAvatar) => {
+            setSelectedChatUser({ id: otherUserId, name: otherUserName, avatar: otherUserAvatar });
+            setShowChatList(false);
+          }}
         />
       )}
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, Edit, Save, X, Heart, MapPin, Briefcase, GraduationCap, Ruler, Settings, Loader2 } from 'lucide-react';
+import { Camera, Edit, Save, X, Heart, MapPin, Briefcase, GraduationCap, Ruler, Settings, Loader2, ImagePlus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -14,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { uploadAvatar } from '@/utils/uploadAvatar';
 import { uploadAlbumImage } from '@/utils/uploadAlbumImage';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface DatingProfileProps {
   isOpen: boolean;
@@ -75,41 +75,64 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
       const updatedUser = { ...user, ...profileData };
       onUpdateProfile(updatedUser);
       setIsEditing(false);
+      toast.success('Cập nhật hồ sơ thành công!');
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      alert('Có lỗi khi cập nhật hồ sơ: ' + error.message);
+      toast.error('Có lỗi khi cập nhật hồ sơ: ' + error.message);
     }
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    console.log('Starting avatar upload:', file.name);
     setIsUploading(true);
+    
     try {
       const url = await uploadAvatar(file);
+      console.log('Avatar uploaded successfully:', url);
       setProfileData({ ...profileData, avatar: url });
+      toast.success('Tải ảnh đại diện thành công!');
     } catch (err: any) {
-      alert(err.message || "Đã có lỗi xảy ra khi upload ảnh đại diện!");
+      console.error('Avatar upload error:', err);
+      toast.error(err.message || "Đã có lỗi xảy ra khi upload ảnh đại diện!");
+    } finally {
+      setIsUploading(false);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
     }
-    setIsUploading(false);
   };
 
   const handleAlbumUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !files.length) return;
+    
+    console.log('Starting album upload, files count:', files.length);
     setIsUploading(true);
     const uploadedUrls: string[] = [];
+    
     try {
       for (const file of Array.from(files)) {
+        console.log('Uploading album image:', file.name);
         const url = await uploadAlbumImage(file);
+        console.log('Album image uploaded:', url);
         uploadedUrls.push(url);
       }
-      setProfileData({ ...profileData, album: [...profileData.album, ...uploadedUrls] });
+      
+      const newAlbum = [...profileData.album, ...uploadedUrls];
+      setProfileData({ ...profileData, album: newAlbum });
+      toast.success(`Tải thành công ${uploadedUrls.length} ảnh vào album!`);
     } catch (err: any) {
-      alert(err.message || "Đã có lỗi xảy ra khi upload ảnh!");
+      console.error('Album upload error:', err);
+      toast.error(err.message || "Đã có lỗi xảy ra khi upload ảnh!");
+    } finally {
+      setIsUploading(false);
+      if (albumInputRef.current) {
+        albumInputRef.current.value = "";
+      }
     }
-    setIsUploading(false);
-    if (albumInputRef.current) albumInputRef.current.value = "";
   };
 
   const addInterest = (interest: string) => {
@@ -126,6 +149,11 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
       ...profileData,
       interests: profileData.interests.filter(i => i !== interest)
     });
+  };
+
+  const removeAlbumImage = (index: number) => {
+    const newAlbum = profileData.album.filter((_, idx) => idx !== index);
+    setProfileData({ ...profileData, album: newAlbum });
   };
 
   return (
@@ -176,12 +204,13 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
                       <Loader2 className="w-6 h-6 text-white animate-spin" />
                     </div>
                   )}
-                  {isEditing && !isUploading && (
+                  {isEditing && (
                     <>
                       <Button
                         size="sm"
                         className="absolute -bottom-1 -right-1 rounded-full w-6 h-6 p-0 bg-pink-500 hover:bg-pink-600"
                         onClick={() => avatarInputRef.current?.click()}
+                        disabled={isUploading}
                       >
                         <Camera className="w-3 h-3" />
                       </Button>
@@ -195,6 +224,7 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
                     </>
                   )}
                 </div>
+                
                 <div className="flex-1 grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Tên</Label>
@@ -374,31 +404,47 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
             </CardHeader>
             <CardContent className="space-y-4">
               {isEditing && (
-                <Button
-                  onClick={() => albumInputRef.current?.click()}
-                  size="sm"
-                  className="bg-pink-500 hover:bg-pink-600"
-                >
-                  Thêm ảnh
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => albumInputRef.current?.click()}
+                    size="sm"
+                    className="bg-pink-500 hover:bg-pink-600"
+                    disabled={isUploading}
+                  >
+                    <ImagePlus className="w-4 h-4 mr-1" />
+                    Thêm ảnh vào album
+                  </Button>
+                  {isUploading && <Loader2 className="w-4 h-4 animate-spin text-pink-500" />}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={albumInputRef}
+                    className="hidden"
+                    multiple
+                    onChange={handleAlbumUpload}
+                  />
+                </div>
               )}
-              <input
-                type="file"
-                accept="image/*"
-                ref={albumInputRef}
-                className="hidden"
-                multiple
-                onChange={handleAlbumUpload}
-              />
               {profileData.album && profileData.album.length > 0 ? (
                 <div className="grid grid-cols-3 gap-2">
                   {profileData.album.map((img: string, idx: number) => (
-                    <img
-                      key={idx}
-                      src={img}
-                      alt={`Ảnh ${idx + 1}`}
-                      className="rounded-lg object-cover w-full h-24 border"
-                    />
+                    <div key={idx} className="relative group">
+                      <img
+                        src={img}
+                        alt={`Ảnh ${idx + 1}`}
+                        className="rounded-lg object-cover w-full h-24 border"
+                      />
+                      {isEditing && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeAlbumImage(idx)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
                   ))}
                 </div>
               ) : (

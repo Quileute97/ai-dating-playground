@@ -14,10 +14,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import RealTimeActivityPanel from "./RealTimeActivityPanel";
 import TimelineChatList from "./TimelineChatList";
-import { useUser } from "@/hooks/useUser";
 
-export default function Timeline() {
-  const { user } = useUser();
+interface TimelineProps {
+  user?: any;
+}
+
+export default function Timeline({ user }: TimelineProps) {
   const { posts, isLoading, createPost, creating, deletePost, deleting } = useTimelinePosts(user?.id);
   const [content, setContent] = useState("");
   const [media, setMedia] = useState<File | null>(null);

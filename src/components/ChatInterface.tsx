@@ -42,12 +42,6 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
 
   // Sync chat state với matchmaking state
   useEffect(() => {
-    console.log("🔄 Syncing chat with matchmaking:", {
-      isMatched: matchmaking.isMatched,
-      conversationId: matchmaking.conversationId,
-      partnerId: matchmaking.partnerId
-    });
-
     if (matchmaking.isMatched && matchmaking.conversationId && matchmaking.partnerId) {
       chat.setMatch(matchmaking.conversationId, matchmaking.partnerId);
     } else if (!matchmaking.isMatched) {
@@ -122,16 +116,8 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
     
-    console.log("📤 Sending message from ChatInterface:", inputValue.trim());
     await chat.sendMessage(inputValue);
     setInputValue('');
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
   };
 
   const handleApplyStrangerSettings = (settings: StrangerSettings) => {
@@ -313,7 +299,7 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Nhập tin nhắn..."
                 className="flex-1 border-purple-200 focus:border-purple-400"
-                onKeyPress={handleKeyPress}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 disabled={!chat.conversationId}
               />
               <Button

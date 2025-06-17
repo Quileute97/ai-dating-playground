@@ -27,6 +27,7 @@ const UserProfilePage: React.FC = () => {
   useEffect(() => {
     // Get current user
     supabase.auth.getUser().then(({ data: { user } }) => {
+      console.log('Current user:', user);
       setCurrentUser(user);
     });
   }, []);
@@ -40,6 +41,7 @@ const UserProfilePage: React.FC = () => {
       .eq("id", userId)
       .single()
       .then(({ data }) => {
+        console.log('Profile data:', data);
         setProfile(data);
         setLoading(false);
       });
@@ -114,6 +116,15 @@ const UserProfilePage: React.FC = () => {
   const isRequestSent = sentRequests?.some(r => r.friend_id === userId);
   const isOwnProfile = currentUser?.id === userId;
 
+  console.log('Render conditions:', {
+    currentUser: !!currentUser,
+    isOwnProfile,
+    isAlreadyFriend,
+    isRequestSent,
+    userId,
+    currentUserId: currentUser?.id
+  });
+
   return (
     <div className="min-h-screen flex justify-center items-start bg-gradient-to-br from-purple-50 via-pink-50 to-blue-100 py-10">
       <Card className="max-w-md w-full mx-auto">
@@ -143,8 +154,8 @@ const UserProfilePage: React.FC = () => {
               {getDatingStatus()}
             </div>
 
-            {/* Action Buttons */}
-            {!isOwnProfile && currentUser && (
+            {/* Action Buttons - Always show for non-own profiles */}
+            {!isOwnProfile && (
               <div className="flex gap-2 mt-4 w-full">
                 <Button
                   onClick={handleSendFriendRequest}
@@ -175,6 +186,13 @@ const UserProfilePage: React.FC = () => {
                     Album
                   </Button>
                 )}
+              </div>
+            )}
+
+            {/* Show message if own profile */}
+            {isOwnProfile && (
+              <div className="mt-4 text-center text-gray-500 text-sm">
+                Đây là hồ sơ của bạn
               </div>
             )}
           </div>

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { MessageCircle, Users } from "lucide-react";
-import { useTimelineMessaging } from "@/hooks/useTimelineMessaging";
+import { useRealtimeMessaging } from "@/hooks/useRealtimeMessaging";
 import { Skeleton } from "@/components/ui/skeleton";
 import TimelineChatModal from "./TimelineChatModal";
 import { useFriendList } from "@/hooks/useFriends";
@@ -35,12 +35,11 @@ export default function TimelineChatList({ currentUserId }: TimelineChatListProp
     partnerAvatar: string;
   } | null>(null);
 
-  const { conversations, conversationsLoading } = useTimelineMessaging(currentUserId);
+  const { conversations, conversationsLoading } = useRealtimeMessaging(currentUserId);
   const { data: friendsData } = useFriendList(currentUserId);
 
+  // Type the friends data properly
   const friends: Friend[] = friendsData || [];
-
-  console.log('💬 Timeline conversations:', conversations);
 
   const openChat = (partnerId: string, partnerName: string, partnerAvatar: string) => {
     setSelectedChat({ partnerId, partnerName, partnerAvatar });
@@ -55,7 +54,7 @@ export default function TimelineChatList({ currentUserId }: TimelineChatListProp
       <aside className="hidden lg:flex flex-col gap-2 w-[300px] max-w-xs min-w-[240px] pt-6 pr-4">
         <div className="flex items-center gap-2 mb-2">
           <MessageCircle className="w-5 h-5 text-blue-500" />
-          <h3 className="font-bold text-gray-700 text-base">Tin nhắn Timeline</h3>
+          <h3 className="font-bold text-gray-700 text-base">Tin nhắn</h3>
         </div>
 
         <div className="flex flex-col gap-2">

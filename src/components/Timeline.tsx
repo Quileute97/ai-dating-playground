@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Heart, MessageCircle, Share, Plus, MapPin, Smile, Hash, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,6 @@ import { useTimelineComments } from "@/hooks/useTimelineComments";
 import PostDetailModal from "./PostDetailModal";
 import HashtagPostsModal from "./HashtagPostsModal";
 import SimpleTimelineChatList from "./SimpleTimelineChatList";
-import TimelineChatModal from "./TimelineChatModal";
-import { useTimelineMessaging } from "@/hooks/useTimelineMessaging";
 
 interface TimelineProps {
   user?: any;
@@ -31,13 +30,11 @@ const Timeline = ({ user }: TimelineProps) => {
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [hashtagFilter, setHashtagFilter] = useState<string | null>(null);
   const [showChatList, setShowChatList] = useState(false);
-  const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
 
   const { toast } = useToast();
   const { posts, isLoading: postsLoading, createPost, deletePost } = useTimelinePosts();
   const { liked, like, unlike } = usePostLikes(undefined, user?.id);
   const { comments } = useTimelineComments();
-  const { conversations, markAsRead } = useTimelineMessaging(user?.id);
 
   const handleCreatePost = async () => {
     if (!newPost.trim() && !selectedFile && !selectedSticker && !selectedLocation) {
@@ -63,7 +60,6 @@ const Timeline = ({ user }: TimelineProps) => {
 
     if (selectedFile) {
       try {
-        // uploadTimelineMedia returns a string (the public URL)
         const uploadResult = await uploadTimelineMedia(selectedFile);
         mediaUrl = uploadResult;
         mediaType = selectedFile.type.startsWith('image/') ? 'image' : 'video';
@@ -138,6 +134,8 @@ const Timeline = ({ user }: TimelineProps) => {
   };
 
   const renderContentWithHashtags = (text: string) => {
+    if (!text) return text;
+    
     const hashtagRegex = /#(\w+)/g;
     const parts = [];
     let match;
@@ -163,8 +161,8 @@ const Timeline = ({ user }: TimelineProps) => {
   };
 
   const filteredPosts = hashtagFilter
-    ? posts.filter((post) => post.content && post.content.includes(`#${hashtagFilter}`))
-    : posts;
+    ? posts?.filter((post) => post.content && post.content.includes(`#${hashtagFilter}`)) || []
+    : posts || [];
 
   return (
     <div className="h-full bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 relative">
@@ -178,11 +176,6 @@ const Timeline = ({ user }: TimelineProps) => {
         >
           <MessageCircle className="w-4 h-4 mr-2" />
           Tin nhắn
-          {conversations.filter(c => c.unread_count > 0).length > 0 && (
-            <span className="ml-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              {conversations.filter(c => c.unread_count > 0).length}
-            </span>
-          )}
         </Button>
       )}
 
@@ -332,7 +325,6 @@ const Timeline = ({ user }: TimelineProps) => {
                 <div className="mt-2">
                   <Input type="text" placeholder="Tìm kiếm địa điểm..." />
                   <div className="flex flex-col gap-1 mt-2">
-                    {/* Mocked Locations */}
                     {["Hà Nội", "Hồ Chí Minh", "Đà Nẵng"].map((location) => (
                       <Button
                         key={location}
@@ -441,7 +433,7 @@ const Timeline = ({ user }: TimelineProps) => {
                         className="text-gray-600 hover:text-blue-500"
                       >
                         <MessageCircle className="w-4 h-4 mr-1" />
-                        {comments.filter(c => c.post_id === post.id).length}
+                        {comments?.filter(c => c.post_id === post.id).length || 0}
                       </Button>
                       
                       <Button
@@ -493,18 +485,6 @@ const Timeline = ({ user }: TimelineProps) => {
           currentUserId={user.id}
           isOpen={showChatList}
           onClose={() => setShowChatList(false)}
-        />
-      )}
-
-      {/* Chat Modal */}
-      {selectedChatUser && (
-        <TimelineChatModal
-          isOpen={!!selectedChatUser}
-          onClose={() => setSelectedChatUser(null)}
-          partnerId={selectedChatUser.id}
-          partnerName={selectedChatUser.name}
-          partnerAvatar={selectedChatUser.avatar}
-          currentUserId={user?.id}
         />
       )}
     </div>

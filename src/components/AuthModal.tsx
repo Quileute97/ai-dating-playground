@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -21,13 +20,21 @@ function ForgotPasswordDialog({ open, onClose }: { open: boolean; onClose: () =>
     setError("");
     setInfo("");
     setLoading(true);
+    
+    // Sửa lại URL redirect để đúng với route /reset-password
+    const redirectUrl = `${window.location.origin}/reset-password`;
+    console.log("🔗 Reset password redirect URL:", redirectUrl);
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/reset-password"
+      redirectTo: redirectUrl
     });
+    
     if (error) {
+      console.error("❌ Reset password error:", error);
       setError(error.message || "Không thể gửi email đặt lại mật khẩu.");
     } else {
-      setInfo("Nếu email đúng, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu trong hộp thư.");
+      console.log("✅ Reset password email sent successfully");
+      setInfo("Email đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư và click vào link để đặt lại mật khẩu.");
     }
     setLoading(false);
   };

@@ -8,13 +8,6 @@ import {
   createConversation 
 } from "@/services/strangerMatchmakingService";
 
-/**
- * STATE REPAIR: 
- * Nếu có phát hiện match thì LUÔN cập nhật lại state (kể cả giống giá trị cũ)
- * Không dừng polling trước khi update state
- * Thêm logs để dễ debug.
- */
-
 export function useStrangerMatchmaking() {
   const [isInQueue, setIsInQueue] = useState(false);
   const [isMatched, setIsMatched] = useState(false);
@@ -42,7 +35,6 @@ export function useStrangerMatchmaking() {
       const existingMatch = await checkForExistingMatch(userId);
       if (existingMatch) {
         console.log("✅ [MATCHMAKING] Found existing recent match:", existingMatch);
-        // FORCE UPDATE state
         setPartnerId(existingMatch.partnerId ?? null);
         setConversationId(existingMatch.conversationId ?? null);
         setIsMatched(true);
@@ -56,17 +48,17 @@ export function useStrangerMatchmaking() {
       setIsInQueue(true);
       setIsMatched(false);
 
-      // Start aggressive polling
+      // Start polling
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
       }
       
       isPollingRef.current = true;
-      console.log("🔄 [MATCHMAKING] Starting aggressive polling...");
+      console.log("🔄 [MATCHMAKING] Starting polling...");
 
       const pollForMatch = async () => {
         if (!isPollingRef.current || !userIdRef.current) {
-          console.log("❌ [MATCHMAKING] Polling stopped - no user or polling disabled");
+          console.log("❌ [MATCHMAKING] Polling stopped");
           return;
         }
 
@@ -74,43 +66,34 @@ export function useStrangerMatchmaking() {
         console.log("🔍 [MATCHMAKING] Polling round for user:", currentUserId);
         
         try {
-          // ALWAYS check backend first - this is critical for second user
-          console.log("🔍 [MATCHMAKING] Checking backend for existing match...");
+          // Check backend first
           const backendMatch = await checkForExistingMatch(currentUserId);
           
           if (backendMatch && backendMatch.partnerId && backendMatch.conversationId) {
-            console.log("🎯 [MATCHMAKING] ✅ BACKEND MATCH FOUND!", {
-              partnerId: backendMatch.partnerId,
-              conversationId: backendMatch.conversationId,
-              currentUser: currentUserId
-            });
+            console.log("🎯 [MATCHMAKING] ✅ BACKEND MATCH FOUND!", backendMatch);
             
-            // FORCE UPDATE state even if values are old
             setPartnerId(backendMatch.partnerId);
             setConversationId(backendMatch.conversationId);
             setIsMatched(true);
             setIsInQueue(false);
-            // Dừng polling ngay lập tức sau khi cập nhật state
             isPollingRef.current = false;
             if (pollingRef.current) {
               clearInterval(pollingRef.current);
               pollingRef.current = null;
             }
             
-            // Leave queue
             await leaveStrangerQueue(currentUserId);
-            console.log("🎯 [MATCHMAKING] ✅ MATCH COMPLETE - UI should update now!");
+            console.log("🎯 [MATCHMAKING] ✅ MATCH COMPLETE!");
             return;
           }
 
-          // If no existing match, try to create new match
-          console.log("🔍 [MATCHMAKING] No backend match, looking for new partner...");
+          // Look for new partner
+          console.log("🔍 [MATCHMAKING] Looking for new partner...");
           const partner = await findMatch(currentUserId);
           
           if (partner) {
             console.log("👥 [MATCHMAKING] Found potential partner:", partner);
             
-            // Stop polling to prevent race conditions
             isPollingRef.current = false;
             if (pollingRef.current) {
               clearInterval(pollingRef.current);
@@ -119,19 +102,13 @@ export function useStrangerMatchmaking() {
             
             const result = await createConversation(currentUserId, partner);
             if (result && result.conversationId) {
-              console.log("🎉 [MATCHMAKING] ✅ NEW CONVERSATION CREATED!", {
-                conversationId: result.conversationId,
-                partner: partner,
-                currentUser: currentUserId
-              });
+              console.log("🎉 [MATCHMAKING] ✅ NEW CONVERSATION CREATED!", result);
               
-              // FORCE UPDATE state
               setPartnerId(partner);
               setConversationId(result.conversationId);
               setIsMatched(true);
               setIsInQueue(false);
               
-              // Leave queue
               await leaveStrangerQueue(currentUserId);
               console.log("🎉 [MATCHMAKING] ✅ NEW MATCH COMPLETE!");
               return;
@@ -148,12 +125,11 @@ export function useStrangerMatchmaking() {
         }
       };
 
-      // Start immediate polling
       pollForMatch();
       
       pollingRef.current = window.setInterval(() => {
-        pollForMatch(); // Chạy polling liên tục mỗi 1.5s
-      }, 1500);
+        pollForMatch();
+      }, 2000);
 
     } catch (err) {
       console.error("❌ [MATCHMAKING] Error starting queue:", err);
@@ -212,19 +188,6 @@ export function useStrangerMatchmaking() {
       }
     };
   }, []);
-
-  // Enhanced debug logging: log mọi lần update state
-  useEffect(() => {
-    console.log("📊 [MATCHMAKING STATE]", {
-      isInQueue,
-      isMatched,
-      partnerId,
-      conversationId,
-      error,
-      isPolling: isPollingRef.current,
-      timestamp: new Date().toISOString()
-    });
-  }, [isInQueue, isMatched, partnerId, conversationId, error]);
 
   return {
     isInQueue,

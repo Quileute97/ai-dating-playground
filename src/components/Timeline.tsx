@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useUser } from "@/hooks/useUser";
 
 interface TimelineProps {
   user?: any;
@@ -52,7 +53,9 @@ const renderTextWithLinks = (text: string) => {
   });
 };
 
-export default function Timeline({ user }: TimelineProps) {
+export default function Timeline() {
+  const { user, isLoading: userLoading } = useUser();
+  
   console.log('🎯 Timeline component rendered with user:', user);
 
   const { posts, isLoading, createPost, creating, deletePost, deleting } = useTimelinePosts(user?.id);
@@ -350,7 +353,20 @@ function PostCard({
   isDetailView = false
 }: any) {
   const { comments } = useTimelineComments(post.id);
-  const { isLiked, likeCount, toggleLike } = usePostLikes(post.id, user?.id);
+  const { liked, likeCount, like, unlike, isToggling } = usePostLikes(post.id, user?.id);
+
+  const handleToggleLike = async () => {
+    if (isToggling) return;
+    try {
+      if (liked) {
+        await unlike();
+      } else {
+        await like();
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
+  };
 
   return (
     <Card 
@@ -431,11 +447,12 @@ function PostCard({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                toggleLike();
+                handleToggleLike();
               }}
-              className={`hover:bg-red-50 ${isLiked ? 'text-red-500' : 'text-gray-500'}`}
+              className={`hover:bg-red-50 ${liked ? 'text-red-500' : 'text-gray-500'}`}
+              disabled={isToggling}
             >
-              <Heart className={`w-4 h-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
+              <Heart className={`w-4 h-4 mr-1 ${liked ? 'fill-current' : ''}`} />
               {likeCount}
             </Button>
             <Button

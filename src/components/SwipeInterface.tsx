@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo } from 'react';
-import { Heart, X, Zap, ArrowLeft, Crown } from 'lucide-react';
+import { Heart, X, Zap, ArrowLeft, Crown, MessageCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +10,9 @@ import { useUpgradeStatus } from './hooks/useUpgradeStatus';
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import NearbyFeatureBanner from "@/components/NearbyFeatureBanner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Send } from "lucide-react";
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -19,9 +23,12 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [matches, setMatches] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
-  const [dailyMatches, setDailyMatches] = useState(0); // số lượt match thật sự đã sử dụng
+  const [matchedUser, setMatchedUser] = useState<any>(null);
+  const [dailyMatches, setDailyMatches] = useState(0);
   const [isGoldActive, setIsGoldActive] = useState(false);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatMessage, setChatMessage] = useState("");
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
   const { data: goldUpgrade, isLoading: goldLoading } = useUpgradeStatus(user?.id, 'gold');
@@ -30,16 +37,17 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
 
   // Lấy profile thật từ Supabase, trừ user hiện tại
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, null, 1000);
-  // Xử lý để loại bỏ user hiện tại, và profile chưa đủ thông tin cơ bản, cũng kiêm tra bản ghi bị null
+  
+  // Xử lý để loại bỏ user hiện tại, và profile chưa đủ thông tin cơ bản
   const availableProfiles = useMemo(() =>
     profiles
       .filter(p => p.id !== user?.id && p.name && p.avatar)
       .map(p => ({
         ...p,
         images: [p.avatar!],
-        bio: "Người dùng thật trên hệ thống.",
-        distance: p.lat && p.lng ? 0 : null, // có thể bổ sung nếu có vị trí, tạm fix 0,
-        interests: [],
+        bio: p.bio || "Người dùng thật trên hệ thống.",
+        distance: p.lat && p.lng ? 0 : null,
+        interests: p.interests || [],
       })), [profiles, user?.id]
   );
 
@@ -50,6 +58,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
 
   const handleSwipe = async (direction: 'left' | 'right' | 'super') => {
     if (!currentProfile) return;
+    
     // Giới hạn lượt swipe nếu chưa phải Gold
     if (!isGoldActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
       toast({
@@ -64,14 +73,18 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     setSwipeDirection(direction === 'super' ? 'right' : direction);
 
     if (direction === 'right' || direction === 'super') {
-      // Gọi API Supabase lưu like và kiểm tra match thật sự
       try {
         const res = await likeUser(currentProfile.id);
         if (!isGoldActive) setDailyMatches(prev => prev + 1);
+        
         if (res.matched) {
           setMatches(prev => prev + 1);
+          setMatchedUser(currentProfile);
           setShowMatch(true);
-          setTimeout(() => setShowMatch(false), 3000);
+          setTimeout(() => {
+            setShowMatch(false);
+            setShowChatModal(true);
+          }, 3000);
           toast({
             title: "It's a Match! 💖",
             description: `Bạn và ${currentProfile.name} đã thích nhau!`,
@@ -97,6 +110,19 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       );
       setSwipeDirection(null);
     }, 300);
+  };
+
+  const handleSendMessage = () => {
+    if (!chatMessage.trim()) return;
+    
+    toast({
+      title: "Tin nhắn đã gửi! 💌",
+      description: `Bạn đã gửi tin nhắn cho ${matchedUser?.name}`,
+    });
+    
+    setChatMessage("");
+    setShowChatModal(false);
+    setMatchedUser(null);
   };
 
   const handleGoldUpgrade = () => {
@@ -157,12 +183,13 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       )}
 
       {/* Match Notification */}
-      {showMatch && (
+      {showMatch && matchedUser && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-pink-500/90 to-purple-500/90 backdrop-blur-sm">
           <div className="text-center text-white animate-pulse">
             <Heart className="w-20 h-20 mx-auto mb-4 text-red-300" />
             <h2 className="text-3xl font-bold mb-2">It's a Match! 💖</h2>
-            <p className="text-lg">Bạn và {currentProfile.name} đã thích nhau!</p>
+            <p className="text-lg">Bạn và {matchedUser.name} đã thích nhau!</p>
+            <p className="text-sm mt-2 opacity-80">Sẽ mở cửa sổ chat trong giây lát...</p>
           </div>
         </div>
       )}
@@ -193,8 +220,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             {/* Profile Info Overlay */}
             <div className="absolute bottom-4 left-4 right-4 text-white">
               <h2 className="text-2xl font-bold">
-                {currentProfile.name}
+                {currentProfile.name}, {currentProfile.age || 25}
               </h2>
+              {currentProfile.job && (
+                <p className="text-sm opacity-90">{currentProfile.job}</p>
+              )}
             </div>
           </div>
 
@@ -247,7 +277,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           </Button>
         </div>
 
-        {/* Upgrade Banner: chỉ hiện nếu chưa có upgrade hoặc bị rejected */}
+        {/* Upgrade Banner */}
         {!isGoldActive && !goldLoading && (
           remainingMatches <= 3 && (
             <Card className="mt-4 p-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
@@ -270,19 +300,17 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           )
         )}
 
-        {/* Nearby Upgrade tracker: chỉ hiện nếu chưa có nearby hoặc bị rejected/pending */}
-        {
-          !isGoldActive && !nearbyLoading && (
-            <NearbyFeatureBanner
-              upgradeStatus={nearbyUpgrade?.status}
-              nearbyLoading={nearbyLoading}
-              hasExpandedRange={nearbyUpgrade?.status === "approved"}
-              onClickUpgrade={handleNearbyUpgrade}
-              onClickExpand={handleNearbyUpgrade}
-              disableExpand={!!nearbyUpgrade && nearbyUpgrade.status === "approved"}
-            />
-          )
-        }
+        {/* Nearby Upgrade Banner */}
+        {!isGoldActive && !nearbyLoading && (
+          <NearbyFeatureBanner
+            upgradeStatus={nearbyUpgrade?.status}
+            nearbyLoading={nearbyLoading}
+            hasExpandedRange={nearbyUpgrade?.status === "approved"}
+            onClickUpgrade={handleNearbyUpgrade}
+            onClickExpand={handleNearbyUpgrade}
+            disableExpand={!!nearbyUpgrade && nearbyUpgrade.status === "approved"}
+          />
+        )}
 
         {/* Stats */}
         <div className="text-center text-sm text-gray-600 mt-2">
@@ -290,18 +318,73 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         </div>
       </div>
 
-      {/* PayOS Modal chung: Chọn loại package dựa trên mở modal từ đâu */}
+      {/* Match Chat Modal */}
+      <Dialog open={showChatModal} onOpenChange={setShowChatModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-pink-500" />
+              Gửi tin nhắn cho {matchedUser?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg">
+              <img
+                src={matchedUser?.avatar || "/placeholder.svg"}
+                alt={matchedUser?.name}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+              <div>
+                <h3 className="font-semibold">{matchedUser?.name}</h3>
+                <p className="text-sm text-gray-600">Bạn đã match với nhau! 💖</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tin nhắn đầu tiên:</label>
+              <Input
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                placeholder="Chào bạn! Rất vui được match với bạn 😊"
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    handleSendMessage();
+                  }
+                }}
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowChatModal(false)}
+                className="flex-1"
+              >
+                Để sau
+              </Button>
+              <Button
+                onClick={handleSendMessage}
+                disabled={!chatMessage.trim()}
+                className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Gửi
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* PayOS Modal */}
       <PayOSModal
         isOpen={showPayOSModal}
         onClose={() => setShowPayOSModal(false)}
         onSuccess={
-          // Nếu đang nâng cấp Nearby thì chỉ close, nếu Gold thì chạy handleGoldUpgrade
           nearbyUpgrade?.status !== "approved"
             ? () => setShowPayOSModal(false)
             : handleGoldUpgrade
         }
         packageType={
-          // Xác định packageType: Nếu mở từ NearbyFeatureBanner thì là "nearby", mặc định là "gold" nếu chưa có nearbyUpgrade hoặc đang là gold modal
           (!nearbyUpgrade || (nearbyUpgrade.status && nearbyUpgrade.status !== "approved" && nearbyUpgrade.status !== "pending"))
             ? "nearby"
             : "gold"

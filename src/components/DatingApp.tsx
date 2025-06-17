@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,12 +13,20 @@ import DatingAppModals from "./DatingAppModals";
 import DatingProfileButton from "./DatingProfileButton";
 import RequireLogin from "./RequireLogin";
 import DatingAppLayout from "./DatingAppLayout";
-import { useDatingAppUser } from "./hooks/useDatingAppUser";
+import { useUser } from "@/hooks/useUser";
 import { useDatingProfile } from "@/hooks/useDatingProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from "uuid";
+
+// Regex kiểm tra UUID v4
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const DatingApp = () => {
-  // User/session quản lý bằng custom hook
-  const { user, setUser, session, setSession, anonId } = useDatingAppUser();
+  // Sử dụng useUser centralized thay vì useDatingAppUser
+  const { user, isLoading: userLoading, isAuthenticated } = useUser();
+  
+  // Anonymous ID cho chat với người lạ khi chưa đăng nhập
+  const [anonId, setAnonId] = useState<string | null>(null);
   
   // Dating profile hook
   const { profile: datingProfile, updateProfile: updateDatingProfile } = useDatingProfile(user?.id);
@@ -42,19 +49,31 @@ const DatingApp = () => {
   // Kết nối matchmaking - không truyền tham số
   const matchmaking = useStrangerMatchmaking();
 
+  // Tạo anonymous ID khi chưa đăng nhập
+  useEffect(() => {
+    if (!user) {
+      let storedAnonId = localStorage.getItem("anon_stranger_id");
+      // Nếu không đúng UUID hợp lệ, hoặc không tồn tại, tạo mới
+      if (!storedAnonId || !UUID_REGEX.test(storedAnonId)) {
+        storedAnonId = uuidv4();
+        localStorage.setItem("anon_stranger_id", storedAnonId);
+        console.log("[DatingApp] Đã tạo/ghi đè anon_stranger_id mới:", storedAnonId);
+      }
+      setAnonId(storedAnonId);
+    }
+  }, [user]);
+
   // Kiểm tra quyền admin mỗi khi user thay đổi
   useEffect(() => {
     if (user) {
-      import("@/integrations/supabase/client").then(({ supabase }) => {
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("role", "admin")
-          .then(({ data }) => {
-            setIsAdminAuthenticated(data && data.length > 0);
-          });
-      });
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .then(({ data }) => {
+          setIsAdminAuthenticated(data && data.length > 0);
+        });
     } else {
       setIsAdminAuthenticated(false);
     }
@@ -68,26 +87,17 @@ const DatingApp = () => {
     { id: "timeline", label: "Timeline", icon: Star, color: "from-yellow-400 to-pink-500" },
   ];
 
-  const handleLogin = (userData: any) => {
-    setUser(userData);
-    setShowAuth(false);
-    if (isFirstTime) {
-      setTimeout(() => setShowAIConfig(true), 500);
-    }
-  };
-
   const handleLogout = async () => {
-    setUser(null);
     setIsAdminMode(false);
     setIsAdminAuthenticated(false);
     setActiveTab("chat");
     matchmaking.reset();
-    const { supabase } = await import("@/integrations/supabase/client");
     await supabase.auth.signOut();
   };
 
   const handleUpdateProfile = (updatedUser: any) => {
-    setUser(updatedUser);
+    // Profile updates are handled by the useUser hook automatically
+    console.log("Profile updated:", updatedUser);
   };
 
   const handleApplyFilters = (filters: any) => {
@@ -113,7 +123,6 @@ const DatingApp = () => {
   };
 
   const handleAdminLogin = (loggedInUser: any) => {
-    setUser(loggedInUser);
     setIsAdminMode(true);
     setIsAdminAuthenticated(true);
   };
@@ -141,6 +150,9 @@ const DatingApp = () => {
         return null;
     }
   };
+
+  // Combine user info with dating profile for display
+  const combinedUser = user ? { ...user, ...datingProfile } : null;
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
@@ -171,7 +183,7 @@ const DatingApp = () => {
                 <User className="w-4 h-4 sm:hidden" />
               </Button>
               <DatingProfileButton
-                user={{ ...user, ...datingProfile }}
+                user={combinedUser}
                 onUpdateProfile={handleUpdateProfile}
               />
             </>
@@ -226,7 +238,7 @@ const DatingApp = () => {
 
       {/* Main Layout (side panels + content) */}
       <DatingAppLayout
-        user={user}
+        user={combinedUser}
         isAdminMode={isAdminMode}
         isLeftPanelOpen={isLeftPanelOpen}
         setIsLeftPanelOpen={setIsLeftPanelOpen}
@@ -250,12 +262,17 @@ const DatingApp = () => {
         setShowAdminLogin={setShowAdminLogin}
         showAuth={showAuth}
         setShowAuth={setShowAuth}
-        user={{ ...user, ...datingProfile }}
+        user={combinedUser}
         onUpdateProfile={handleUpdateProfile}
         handleApplyFilters={handleApplyFilters}
         onAIConfigClose={() => setShowAIConfig(false)}
         onAdminLogin={handleAdminLogin}
-        onAuthLogin={handleLogin}
+        onAuthLogin={() => {
+          setShowAuth(false);
+          if (isFirstTime) {
+            setTimeout(() => setShowAIConfig(true), 500);
+          }
+        }}
       />
     </div>
   );

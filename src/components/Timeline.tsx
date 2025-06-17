@@ -12,7 +12,7 @@ import { usePostLikes } from "@/hooks/usePostLikes";
 import { useTimelineComments } from "@/hooks/useTimelineComments";
 import PostDetailModal from "./PostDetailModal";
 import HashtagPostsModal from "./HashtagPostsModal";
-import TimelineChatList from "./TimelineChatList";
+import SimpleTimelineChatList from "./SimpleTimelineChatList";
 import TimelineChatModal from "./TimelineChatModal";
 import { useTimelineMessaging } from "@/hooks/useTimelineMessaging";
 
@@ -488,15 +488,11 @@ const Timeline = ({ user }: TimelineProps) => {
       />
 
       {/* Chat List */}
-      {user && showChatList && (
-        <TimelineChatList
+      {user && (
+        <SimpleTimelineChatList
           currentUserId={user.id}
-          conversations={conversations}
+          isOpen={showChatList}
           onClose={() => setShowChatList(false)}
-          onSelectChat={(otherUserId, otherUserName, otherUserAvatar) => {
-            setSelectedChatUser({ id: otherUserId, name: otherUserName, avatar: otherUserAvatar });
-            setShowChatList(false);
-          }}
         />
       )}
 

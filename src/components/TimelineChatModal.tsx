@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, X } from "lucide-react";
-import { useRealtimeMessaging } from "@/hooks/useRealtimeMessaging";
+import { useTimelineMessaging } from "@/hooks/useTimelineMessaging";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface TimelineChatModalProps {
@@ -27,7 +27,7 @@ export default function TimelineChatModal({
 }: TimelineChatModalProps) {
   const [messageText, setMessageText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { sendMessage, sendingMessage, getMessages } = useRealtimeMessaging(currentUserId);
+  const { sendMessage, sendingMessage, getMessages, markAsRead } = useTimelineMessaging(currentUserId);
   
   const { data: messages, isLoading } = getMessages(partnerId || "");
 
@@ -39,6 +39,13 @@ export default function TimelineChatModal({
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    if (isOpen && partnerId) {
+      // Mark messages as read when opening chat
+      markAsRead(partnerId);
+    }
+  }, [isOpen, partnerId, markAsRead]);
+
   const handleSendMessage = async () => {
     if (!messageText.trim() || !partnerId || sendingMessage) return;
 
@@ -49,7 +56,7 @@ export default function TimelineChatModal({
       });
       setMessageText("");
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("Error sending timeline message:", error);
     }
   };
 
@@ -61,6 +68,8 @@ export default function TimelineChatModal({
   };
 
   if (!isOpen || !partnerId) return null;
+
+  console.log('💬 Timeline chat modal - messages:', messages);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -134,7 +143,7 @@ export default function TimelineChatModal({
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Nhập tin nhắn..."
+              placeholder="Nhập tin nhắn timeline..."
               className="flex-1"
               disabled={sendingMessage}
             />

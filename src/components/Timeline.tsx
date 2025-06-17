@@ -1,4 +1,3 @@
-
 import React, { useState, ChangeEvent } from "react";
 import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -63,54 +62,6 @@ const demoUser = {
   name: "Bạn",
   avatar: "https://source.unsplash.com/random/56x56?face"
 };
-const initialPosts: Post[] = [
-  {
-    id: 1,
-    user: {
-      name: "Hà Linh",
-      avatar: "https://randomuser.me/api/portraits/women/45.jpg"
-    },
-    content: "Chào mọi người, hôm nay trời đẹp quá! ☀️",
-    createdAt: "2 giờ trước",
-    likes: 2,
-    liked: false,
-    comments: [
-      {
-        id: 1,
-        user: {
-          name: "Tuấn Anh",
-          avatar: "https://randomuser.me/api/portraits/men/22.jpg"
-        },
-        content: "Đúng rồi đó, đi cafe không bạn?",
-        createdAt: "1 giờ trước"
-      }
-    ],
-    locationEnabled: true,
-    location: {
-      lat: 21.028511,
-      lng: 105.804817,
-      formatted: "Hà Nội",
-    },
-    media: {
-      type: "image",
-      url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&w=400&q=60",
-    },
-    sticker: STICKERS[0],
-  },
-  {
-    id: 2,
-    user: {
-      name: "Minh Nhật",
-      avatar: "https://randomuser.me/api/portraits/men/33.jpg"
-    },
-    content: "Có ai muốn join team chạy bộ vào sáng mai không?",
-    createdAt: "4 giờ trước",
-    likes: 1,
-    liked: false,
-    comments: [],
-    locationEnabled: false
-  }
-];
 
 // === Helper để detect và render hashtag ===
 const parseHashtags = (content: string, onHashtagClick: (tag: string) => void) => {
@@ -146,10 +97,12 @@ const parseHashtags = (content: string, onHashtagClick: (tag: string) => void) =
 import { useTimelinePosts } from "@/hooks/useTimelinePosts";
 import { useTimelineComments } from "@/hooks/useTimelineComments";
 import { usePostLikes } from "@/hooks/usePostLikes";
+import { useDatingProfile } from "@/hooks/useDatingProfile";
 
 const Timeline: React.FC<{ user: any }> = ({ user }) => {
   const userId = user?.id;
   const { posts, isLoading, createPost, creating, refetch } = useTimelinePosts(userId);
+  const { profile } = useDatingProfile(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
 
   // Xử lý đăng post mới (KHÔNG truyền sticker)
@@ -171,7 +124,7 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
     <div className="max-w-lg mx-auto py-6 h-full flex flex-col animate-fade-in">
       {/* CHỈ HIỂN THỊ PostForm NẾU ĐÃ ĐĂNG NHẬP */}
       {user && (
-        <PostForm user={user} onCreate={handlePostSubmit} posting={creating} />
+        <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
       )}
       <div className="flex-1 overflow-y-auto space-y-3 mt-2">
         {isLoading && (
@@ -201,9 +154,10 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
 // BỎ sticker liên quan UI/state
 const PostForm: React.FC<{
   user: any;
+  userProfile: any;
   onCreate: (data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">) => Promise<void>;
   posting: boolean;
-}> = ({ user, onCreate, posting }) => {
+}> = ({ user, userProfile, onCreate, posting }) => {
   const [content, setContent] = React.useState("");
   const [media, setMedia] = React.useState<MediaFile | null>(null);
   // const [sticker, setSticker] = React.useState<typeof STICKERS[number] | null>(null); // BỎ sticker
@@ -211,6 +165,10 @@ const PostForm: React.FC<{
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+  // Lấy avatar từ profile hoặc fallback
+  const currentAvatar = userProfile?.avatar || user?.avatar || demoUser.avatar;
+  const currentName = userProfile?.name || user?.name || demoUser.name;
 
   // BỎ handleStickerInsert
 
@@ -238,8 +196,8 @@ const PostForm: React.FC<{
     if ((!content.trim() && !media) || uploadingMedia) return;
     await onCreate({
       user: {
-        name: user?.name ?? demoUser.name,
-        avatar: user?.avatar ?? demoUser.avatar
+        name: currentName,
+        avatar: currentAvatar
       },
       content: content.trim(),
       media: media ?? undefined,
@@ -253,7 +211,7 @@ const PostForm: React.FC<{
   return (
     <Card className="mb-6 p-4">
       <form onSubmit={handleSubmit} className="flex gap-3 flex-col sm:flex-row items-start">
-        <img src={user?.avatar || demoUser.avatar} alt={user?.name || demoUser.name} className="w-10 h-10 rounded-full object-cover" />
+        <img src={currentAvatar} alt={currentName} className="w-10 h-10 rounded-full object-cover" />
         <div className="flex-1 w-full flex flex-col gap-2">
           <div className="relative">
             <Textarea

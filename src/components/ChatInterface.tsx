@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Heart, Settings, Users, Bot, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';

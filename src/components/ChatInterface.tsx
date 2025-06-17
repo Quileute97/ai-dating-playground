@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Heart, Settings, Users, Bot, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -80,11 +81,12 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload: any) => {
+          console.log("📨 [CHAT] Received realtime message:", payload);
           if (payload.new) {
             const msg = payload.new;
-            // Xác định sender dựa trên trường sender, vì không còn sender_id
-            const senderUi: 'user' | 'stranger' =
-              msg.sender === 'real' ? 'user' : 'stranger';
+            // Xác định sender dựa trên sender_id
+            const currentUserId = user?.id || anonId;
+            const senderUi: 'user' | 'stranger' = msg.sender_id === currentUserId ? 'user' : 'stranger';
 
             setMessages(prev => {
               if (prev.some(m => m.id === msg.id)) return prev;
@@ -112,11 +114,12 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
         .order('created_at', { ascending: true });
 
       if (!data) return;
+      const currentUserId = user?.id || anonId;
       setMessages(
         data.map(msg => ({
           id: msg.id,
           text: msg.content,
-          sender: msg.sender === 'real' ? 'user' : 'stranger',
+          sender: msg.sender_id === currentUserId ? 'user' : 'stranger',
           timestamp: new Date(msg.created_at),
         }))
       );
@@ -125,40 +128,51 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
     return () => {
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line
-  }, [conversationId, user?.id]);
+  }, [conversationId, user?.id, anonId]);
 
   // =====
-  // New: Thay đổi hàm gửi message → lưu vào table messages trên Supabase
+  // Updated: Thay đổi hàm gửi message → lưu vào table messages trên Supabase với sender_id
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !conversationId || !user?.id) return;
+    if (!inputValue.trim() || !conversationId) return;
+
+    const currentUserId = user?.id || anonId;
+    if (!currentUserId) {
+      toast({
+        title: "Lỗi gửi tin nhắn!",
+        description: "Không xác định được người gửi",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const newMessageText = inputValue.trim();
     setInputValue('');
 
-    // Hiện tại: chỉ gửi message nếu có conversationId (đã match)
-    // Lưu message lên Supabase
-    // sender: 'real', sender_id: user.id
+    // Lưu message lên Supabase với sender_id
     const { data, error } = await supabase
       .from('messages')
       .insert([
         {
           conversation_id: conversationId,
           content: newMessageText,
-          sender: 'real',
-          sender_id: user.id,
+          sender: 'real', // Phân biệt với AI/fake user
+          sender_id: currentUserId,
         }
       ])
       .select()
       .single();
 
     if (error) {
+      console.error("❌ [CHAT] Error sending message:", error);
       toast({
         title: "Gửi tin nhắn thất bại!",
         description: "Có lỗi xảy ra khi gửi tin: " + error.message,
+        variant: "destructive"
       });
       return;
     }
+
+    console.log("✅ [CHAT] Message sent successfully:", data);
 
     // Tin nhắn sẽ hiển thị lập tức khi nhận được event realtime (do logic bên trên).
     // Tuy nhiên, để cảm giác chat tức thời, có thể append luôn vào UI, tránh chậm trễ hiển thị
@@ -358,7 +372,8 @@ const ChatInterface = ({ user, isAdminMode = false, matchmaking, anonId }: ChatI
           Partner: {matchmaking?.partnerId || 'none'} | 
           Conv: {matchmaking?.conversationId || 'none'} |
           UI-Stranger: {stranger ? 'yes' : 'no'} |
-          UI-Messages: {messages.length}
+          UI-Messages: {messages.length} |
+          UserId: {user?.id || anonId || 'none'}
         </div>
       )}
 

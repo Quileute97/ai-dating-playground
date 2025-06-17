@@ -1,6 +1,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface Activity {
   id: string;
@@ -16,7 +18,9 @@ export interface Activity {
 
 // Lấy các hoạt động của user hiện tại và bạn bè
 export function useRecentActivities(userId: string | undefined) {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["recent-activities", userId],
     enabled: !!userId,
     queryFn: async () => {
@@ -71,12 +75,11 @@ export function useRecentActivities(userId: string | undefined) {
 
       // Bạn mới
       newFriends?.forEach((f: any) => {
-        // Người invite
         all.push({
           id: "friend-" + f.id,
           type: "friend",
           text: `${f.profiles?.name || "Ai đó"} đã kết bạn`,
-          icon: null, // set ở UI
+          icon: null,
           created_at: f.created_at,
           user_id: f.user_id,
           user_name: f.profiles?.name || null,
@@ -137,4 +140,35 @@ export function useRecentActivities(userId: string | undefined) {
       return all;
     }
   });
+
+  // Realtime subscription cho activities
+  useEffect(() => {
+    if (!userId) return;
+
+    const channels = [
+      supabase.channel('activities-friends').on('postgres_changes', {
+        event: '*', schema: 'public', table: 'friends'
+      }, () => queryClient.invalidateQueries({ queryKey: ["recent-activities", userId] })),
+
+      supabase.channel('activities-user-likes').on('postgres_changes', {
+        event: '*', schema: 'public', table: 'user_likes'
+      }, () => queryClient.invalidateQueries({ queryKey: ["recent-activities", userId] })),
+
+      supabase.channel('activities-post-likes').on('postgres_changes', {
+        event: '*', schema: 'public', table: 'post_likes'
+      }, () => queryClient.invalidateQueries({ queryKey: ["recent-activities", userId] })),
+
+      supabase.channel('activities-comments').on('postgres_changes', {
+        event: '*', schema: 'public', table: 'comments'
+      }, () => queryClient.invalidateQueries({ queryKey: ["recent-activities", userId] }))
+    ];
+
+    channels.forEach(channel => channel.subscribe());
+
+    return () => {
+      channels.forEach(channel => supabase.removeChannel(channel));
+    };
+  }, [userId, queryClient]);
+
+  return query;
 }

@@ -1,6 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export function usePostLikes(postId?: string, userId?: string) {
   const queryClient = useQueryClient();
@@ -22,6 +23,28 @@ export function usePostLikes(postId?: string, userId?: string) {
     },
     enabled: !!postId,
   });
+
+  // Realtime subscription cho post likes
+  useEffect(() => {
+    if (!postId) return;
+
+    const channel = supabase
+      .channel(`post-likes-${postId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'post_likes',
+        filter: `post_id=eq.${postId}`
+      }, (payload) => {
+        console.log('❤️ Post likes realtime update:', payload);
+        queryClient.invalidateQueries({ queryKey: ["post-likes", postId] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [postId, queryClient]);
 
   // Like post
   const likeMutation = useMutation({
@@ -54,8 +77,7 @@ export function usePostLikes(postId?: string, userId?: string) {
     error,
     like: likeMutation.mutateAsync,
     unlike: unlikeMutation.mutateAsync,
-    isToggling:
-      likeMutation.isPending || unlikeMutation.isPending,
+    isToggling: likeMutation.isPending || unlikeMutation.isPending,
     refetch: () => queryClient.invalidateQueries({ queryKey: ["post-likes", postId] }),
   };
 }

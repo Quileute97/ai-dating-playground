@@ -1,6 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export function useTimelinePosts(userId?: string) {
   const queryClient = useQueryClient();
@@ -23,11 +24,30 @@ export function useTimelinePosts(userId?: string) {
     }
   });
 
+  // Realtime subscription cho posts
+  useEffect(() => {
+    const channel = supabase
+      .channel('posts-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'posts'
+      }, (payload) => {
+        console.log('📊 Posts realtime update:', payload);
+        queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   // Thêm bài post mới
   const createPostMutation = useMutation({
     mutationFn: async (values: {
       content: string;
-      user_id: string; // uuid
+      user_id: string;
       media_url?: string;
       media_type?: string;
       sticker?: any;
@@ -51,4 +71,3 @@ export function useTimelinePosts(userId?: string) {
     creating: createPostMutation.isPending,
   };
 }
-

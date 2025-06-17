@@ -1,6 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export interface Friend {
   id: string;
@@ -13,7 +14,9 @@ export interface Friend {
 
 // Lấy danh sách tất cả bạn bè (status = accepted)
 export function useFriendList(myId: string | undefined) {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["friends", myId],
     enabled: !!myId,
     queryFn: async () => {
@@ -27,6 +30,31 @@ export function useFriendList(myId: string | undefined) {
       return data as Friend[];
     }
   });
+
+  // Realtime subscription cho friends
+  useEffect(() => {
+    if (!myId) return;
+
+    const channel = supabase
+      .channel('friends-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'friends'
+      }, (payload) => {
+        console.log('👥 Friends realtime update:', payload);
+        queryClient.invalidateQueries({ queryKey: ["friends"] });
+        queryClient.invalidateQueries({ queryKey: ["sent-friend-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["received-friend-requests"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [myId, queryClient]);
+
+  return query;
 }
 
 // Danh sách lời mời gửi đi ("pending" và mình là user_id)
@@ -73,7 +101,6 @@ export function useSendFriendRequest() {
       user_id,
       friend_id,
     }: { user_id: string; friend_id: string }) => {
-      // UUID mới: truyền nguyên chuỗi uuid (không ép kiểu nữa)
       const { data, error } = await supabase
         .from("friends")
         .insert([{ user_id, friend_id }])
@@ -121,4 +148,3 @@ export function useDeleteFriend() {
     },
   });
 }
-

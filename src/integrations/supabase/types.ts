@@ -315,10 +315,13 @@ export type Database = {
       profiles: {
         Row: {
           age: number | null
+          album: Json | null
           avatar: string | null
+          bio: string | null
           created_at: string | null
           gender: string | null
           id: string
+          interests: Json | null
           lat: number | null
           lng: number | null
           name: string | null
@@ -326,10 +329,13 @@ export type Database = {
         }
         Insert: {
           age?: number | null
+          album?: Json | null
           avatar?: string | null
+          bio?: string | null
           created_at?: string | null
           gender?: string | null
           id: string
+          interests?: Json | null
           lat?: number | null
           lng?: number | null
           name?: string | null
@@ -337,10 +343,13 @@ export type Database = {
         }
         Update: {
           age?: number | null
+          album?: Json | null
           avatar?: string | null
+          bio?: string | null
           created_at?: string | null
           gender?: string | null
           id?: string
+          interests?: Json | null
           lat?: number | null
           lng?: number | null
           name?: string | null

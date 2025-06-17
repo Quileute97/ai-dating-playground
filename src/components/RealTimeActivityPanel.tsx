@@ -4,6 +4,7 @@ import { Heart, MessageCircle, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useRecentActivities } from "@/hooks/useRecentActivities";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
 
 interface PanelProps {
   userId?: string;
@@ -11,6 +12,13 @@ interface PanelProps {
 
 export default function RealTimeActivityPanel({ userId }: PanelProps) {
   const { data: activities, isLoading } = useRecentActivities(userId);
+  const navigate = useNavigate();
+
+  const handleActivityClick = (activityUserId: string) => {
+    if (activityUserId) {
+      navigate(`/profile/${activityUserId}`);
+    }
+  };
 
   return (
     <aside className="hidden lg:flex flex-col gap-2 w-[300px] max-w-xs min-w-[240px] pt-6 pl-4">
@@ -25,7 +33,8 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
         {activities?.map(a => (
           <Card
             key={a.id}
-            className={`flex items-center gap-3 py-2 px-3 shadow-sm border-l-4 border-purple-200 relative`}
+            className={`flex items-center gap-3 py-2 px-3 shadow-sm border-l-4 border-purple-200 relative cursor-pointer hover:bg-gray-50 transition-colors`}
+            onClick={() => handleActivityClick(a.user_id)}
           >
             {a.type === "like" ? (
               <Heart className="w-6 h-6 text-pink-500" />

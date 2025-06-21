@@ -29,7 +29,7 @@ interface ProfileData {
   avatar: string | null;
   age: number | null;
   bio?: string;
-  location?: string;
+  location_name?: string;
 }
 
 export default function FriendRequestDetailModal({ friendRequestId, isOpen, onClose }: FriendRequestDetailModalProps) {
@@ -61,7 +61,7 @@ export default function FriendRequestDetailModal({ friendRequestId, isOpen, onCl
       if (!friendRequest?.user_id) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, name, avatar, age, bio, location")
+        .select("id, name, avatar, age, bio, location_name")
         .eq("id", friendRequest.user_id)
         .single();
       if (error) throw error;
@@ -159,9 +159,9 @@ export default function FriendRequestDetailModal({ friendRequestId, isOpen, onCl
                         {senderProfile.age} tuổi
                       </Badge>
                     )}
-                    {senderProfile.location && (
+                    {senderProfile.location_name && (
                       <Badge variant="outline" className="text-sm">
-                        {senderProfile.location}
+                        {senderProfile.location_name}
                       </Badge>
                     )}
                   </div>

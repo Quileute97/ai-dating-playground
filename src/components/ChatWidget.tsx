@@ -54,20 +54,20 @@ export default function ChatWidget({
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      <Card className="w-80 bg-white shadow-2xl border-0 rounded-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+      <Card className="w-80 bg-white shadow-xl border border-gray-200 rounded-lg overflow-hidden">
+        {/* Header - Facebook style */}
+        <div className="flex items-center justify-between p-3 bg-white border-b border-gray-200">
           <button 
             onClick={handleUserClick}
-            className="flex items-center gap-2 min-w-0 hover:bg-white/10 rounded-lg p-2 transition-colors flex-1"
+            className="flex items-center gap-3 min-w-0 hover:bg-gray-50 rounded-lg p-2 transition-colors flex-1 -ml-2"
           >
             <img 
               src={userAvatar || '/placeholder.svg'} 
-              className="w-8 h-8 rounded-full object-cover border-2 border-white/30" 
+              className="w-8 h-8 rounded-full object-cover" 
             />
             <div className="min-w-0 text-left">
-              <div className="font-medium text-sm truncate hover:text-purple-100 transition-colors">{userName}</div>
-              <div className="text-xs text-purple-100">Đang hoạt động</div>
+              <div className="font-medium text-sm truncate hover:text-blue-600 transition-colors text-gray-900">{userName}</div>
+              <div className="text-xs text-green-600 font-medium">Đang hoạt động</div>
             </div>
           </button>
           <div className="flex gap-1">
@@ -75,7 +75,7 @@ export default function ChatWidget({
               variant="ghost"
               size="sm"
               onClick={() => setIsMinimized(!isMinimized)}
-              className="text-white hover:bg-white/20 p-1 h-auto rounded-full"
+              className="text-gray-500 hover:bg-gray-100 p-1 h-auto rounded-full"
             >
               <Minimize2 className="w-4 h-4" />
             </Button>
@@ -83,7 +83,7 @@ export default function ChatWidget({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-white hover:bg-white/20 p-1 h-auto rounded-full"
+              className="text-gray-500 hover:bg-gray-100 p-1 h-auto rounded-full"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -93,11 +93,11 @@ export default function ChatWidget({
         {/* Chat Body */}
         {!isMinimized && (
           <>
-            {/* Messages */}
-            <ScrollArea className="h-64 p-3 bg-gradient-to-b from-gray-50 to-white">
+            {/* Messages - Facebook style */}
+            <ScrollArea className="h-64 p-3 bg-gray-50">
               <div className="space-y-2">
                 {isLoading ? (
-                  <div className="text-center text-gray-400 text-sm">Đang tải...</div>
+                  <div className="text-center text-gray-400 text-sm py-4">Đang tải...</div>
                 ) : messages.length === 0 ? (
                   <div className="text-center text-gray-400 text-sm py-8">
                     <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -111,12 +111,12 @@ export default function ChatWidget({
                     >
                       <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
                         msg.sender_id === myUserId
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-br-md'
-                          : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-white border border-gray-200 text-gray-800 shadow-sm'
                       }`}>
                         <p className="break-words">{msg.content}</p>
                         <p className={`text-xs mt-1 ${
-                          msg.sender_id === myUserId ? 'text-purple-100' : 'text-gray-500'
+                          msg.sender_id === myUserId ? 'text-blue-100' : 'text-gray-500'
                         }`}>
                           {formatTime(msg.created_at)}
                         </p>
@@ -127,21 +127,21 @@ export default function ChatWidget({
               </div>
             </ScrollArea>
 
-            {/* Input */}
-            <div className="p-3 border-t bg-white">
-              <div className="flex gap-2">
+            {/* Input - Facebook style */}
+            <div className="p-3 border-t bg-white border-gray-200">
+              <div className="flex gap-2 items-center">
                 <Input
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Nhập tin nhắn..."
-                  className="flex-1 text-sm border-gray-200 focus:border-purple-400 rounded-full px-4"
+                  placeholder="Aa"
+                  className="flex-1 text-sm border-gray-300 focus:border-blue-500 rounded-full px-4 py-2 bg-gray-100 border-0 focus:bg-white focus:ring-1 focus:ring-blue-500"
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   disabled={sending}
                 />
                 <Button
                   onClick={handleSendMessage}
                   size="sm"
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full p-2 h-8 w-8"
+                  className="bg-blue-500 hover:bg-blue-600 rounded-full p-2 h-8 w-8 shadow-none"
                   disabled={!message.trim() || sending}
                 >
                   <Send className="w-4 h-4" />

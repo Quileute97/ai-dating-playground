@@ -429,6 +429,8 @@ export type Database = {
           approved_at: string | null
           bank_info: Json | null
           created_at: string | null
+          duration_days: number | null
+          expires_at: string | null
           id: string
           note: string | null
           price: number
@@ -442,6 +444,8 @@ export type Database = {
           approved_at?: string | null
           bank_info?: Json | null
           created_at?: string | null
+          duration_days?: number | null
+          expires_at?: string | null
           id?: string
           note?: string | null
           price: number
@@ -455,6 +459,8 @@ export type Database = {
           approved_at?: string | null
           bank_info?: Json | null
           created_at?: string | null
+          duration_days?: number | null
+          expires_at?: string | null
           id?: string
           note?: string | null
           price?: number

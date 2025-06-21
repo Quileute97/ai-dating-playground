@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -40,12 +39,31 @@ serve(async (req) => {
       const { orderCode, status } = webhookData.data;
       
       if (status === 'PAID') {
+        // Get the upgrade request to calculate expiry
+        const { data: upgradeRequest, error: fetchError } = await supabase
+          .from('upgrade_requests')
+          .select('*')
+          .eq('bank_info->orderCode', orderCode)
+          .single();
+
+        if (fetchError || !upgradeRequest) {
+          console.error('Error fetching upgrade request:', fetchError);
+          throw new Error('Upgrade request not found');
+        }
+
+        // Calculate expires_at based on duration_days
+        let expiresAt = null;
+        if (upgradeRequest.duration_days && upgradeRequest.duration_days > 0) {
+          expiresAt = new Date(Date.now() + upgradeRequest.duration_days * 24 * 60 * 60 * 1000).toISOString();
+        }
+
         // Update upgrade request status to approved
         const { data: updateResult, error } = await supabase
           .from('upgrade_requests')
           .update({
             status: 'approved',
             approved_at: new Date().toISOString(),
+            expires_at: expiresAt,
             note: 'Thanh toán thành công qua PayOS'
           })
           .eq('bank_info->orderCode', orderCode)

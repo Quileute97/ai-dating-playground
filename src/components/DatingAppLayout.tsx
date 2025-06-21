@@ -1,86 +1,88 @@
 
-import React, { useRef } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, Users, MessageCircle, User, Sparkles } from "lucide-react";
-import SwipeInterface from "./SwipeInterface";
-import Timeline, { TimelineRef } from "./Timeline";
-import NearbyMain from "./NearbyMain";
-import UserProfile from "./UserProfile";
+import React from "react";
 import RealTimeActivityPanel from "./RealTimeActivityPanel";
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import SidePanelToggle from "./SidePanelToggle";
+import ActiveFriendsWithChatPanel from "./ActiveFriendsWithChatPanel";
+import { useChatUserSelection } from "@/hooks/useChatUserSelection";
 
-interface LayoutProps {
+interface DatingAppLayoutProps {
   user: any;
-  activeTab: string;
-  onTabChange: (value: string) => void;
+  isAdminMode: boolean;
+  isLeftPanelOpen: boolean;
+  setIsLeftPanelOpen: (b: boolean) => void;
+  isRightPanelOpen: boolean;
+  setIsRightPanelOpen: (b: boolean) => void;
+  children: React.ReactNode;
 }
 
-export default function DatingAppLayout({ user, activeTab, onTabChange }: LayoutProps) {
-  const timelineRef = useRef<TimelineRef>(null);
-
-  const handleScrollToPost = (postId: string) => {
-    // Switch to timeline tab if not already active
-    if (activeTab !== "timeline") {
-      onTabChange("timeline");
-      // Wait for tab switch to complete before scrolling
-      setTimeout(() => {
-        timelineRef.current?.scrollToPost(postId);
-      }, 100);
-    } else {
-      timelineRef.current?.scrollToPost(postId);
-    }
-  };
+export default function DatingAppLayout({
+  user,
+  isAdminMode,
+  isLeftPanelOpen,
+  setIsLeftPanelOpen,
+  isRightPanelOpen,
+  setIsRightPanelOpen,
+  children
+}: DatingAppLayoutProps) {
+  const { selectedChatUserId, selectUserForChat } = useChatUserSelection();
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <Tabs value={activeTab} onValueChange={onTabChange} className="flex-1 flex flex-col">
-          <div className="bg-white/70 backdrop-blur-sm border-b border-white/20 px-4 py-2">
-            <TabsList className="grid w-full grid-cols-4 bg-white/50 backdrop-blur-sm">
-              <TabsTrigger value="dating" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                <Heart className="w-4 h-4" />
-                <span className="hidden sm:inline">Hẹn hò</span>
-              </TabsTrigger>
-              <TabsTrigger value="timeline" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                <MessageCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">Timeline</span>
-              </TabsTrigger>
-              <TabsTrigger value="nearby" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Gần bạn</span>
-              </TabsTrigger>
-              <TabsTrigger value="profile" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
-                <User className="w-4 h-4" />
-                <span className="hidden sm:inline">Hồ sơ</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1 overflow-hidden">
-              <TabsContent value="dating" className="mt-0 h-full">
-                <SwipeInterface user={user} />
-              </TabsContent>
-              <TabsContent value="timeline" className="mt-0 h-full">
-                <Timeline ref={timelineRef} user={user} />
-              </TabsContent>
-              <TabsContent value="nearby" className="mt-0 h-full">
-                <NearbyMain user={user} />
-              </TabsContent>
-              <TabsContent value="profile" className="mt-0 h-full">
-                <UserProfile user={user} />
-              </TabsContent>
+    <div className="flex-1 overflow-hidden relative">
+      <div className="h-full flex flex-row">
+        {/* LEFT: RealTimeActivityPanel (only nếu đã đăng nhập) */}
+        {!isAdminMode && user && (
+          isLeftPanelOpen ? (
+            <div className="relative flex-shrink-0">
+              <RealTimeActivityPanel userId={user?.id} />
+              <SidePanelToggle
+                isOpen={isLeftPanelOpen}
+                side="left"
+                onToggle={setIsLeftPanelOpen}
+              />
             </div>
-
-            {/* Right Panel - Activity Feed */}
-            <RealTimeActivityPanel 
-              userId={user?.id} 
-              onScrollToPost={handleScrollToPost}
-            />
+          ) : (
+            <div className="flex-shrink-0">
+              <SidePanelToggle
+                isOpen={isLeftPanelOpen}
+                side="left"
+                onToggle={setIsLeftPanelOpen}
+              />
+            </div>
+          )
+        )}
+        
+        {/* CENTER: main tab content - expanded to fill available space */}
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          <div className="h-full w-full overflow-auto">
+            {children}
           </div>
-        </Tabs>
+        </div>
+        
+        {/* RIGHT: ActiveFriendsWithChatPanel (chỉ user login) */}
+        {!isAdminMode && user && (
+          isRightPanelOpen ? (
+            <div className="relative flex-shrink-0">
+              <ActiveFriendsWithChatPanel 
+                myId={user.id}
+                selectedChatUserId={selectedChatUserId}
+                onChatUserChange={selectUserForChat}
+              />
+              <SidePanelToggle
+                isOpen={isRightPanelOpen}
+                side="right"
+                onToggle={setIsRightPanelOpen}
+              />
+            </div>
+          ) : (
+            <div className="flex-shrink-0">
+              <SidePanelToggle
+                isOpen={isRightPanelOpen}
+                side="right"
+                onToggle={setIsRightPanelOpen}
+              />
+            </div>
+          )
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
-import React, { useState, ChangeEvent, useRef, useImperativeHandle, forwardRef } from "react";
+
+import React, { useState, ChangeEvent } from "react";
 import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -113,35 +114,12 @@ import { useTimelineComments } from "@/hooks/useTimelineComments";
 import { usePostLikes } from "@/hooks/usePostLikes";
 import { useDatingProfile } from "@/hooks/useDatingProfile";
 
-export interface TimelineRef {
-  scrollToPost: (postId: string) => void;
-}
-
-const Timeline = forwardRef<TimelineRef, { user: any }>(({ user }, ref) => {
+const Timeline: React.FC<{ user: any }> = ({ user }) => {
   const userId = user?.id;
   const { posts, isLoading, createPost, creating, refetch, deletePost, deleting } = useTimelinePosts(userId);
   const { profile } = useDatingProfile(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
   const { toast } = useToast();
-  const postsContainerRef = useRef<HTMLDivElement>(null);
-
-  useImperativeHandle(ref, () => ({
-    scrollToPost: (postId: string) => {
-      const postElement = document.getElementById(`post-${postId}`);
-      if (postElement && postsContainerRef.current) {
-        postElement.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'nearest'
-        });
-        // Highlight the post briefly
-        postElement.classList.add('ring-2', 'ring-blue-400', 'ring-opacity-75');
-        setTimeout(() => {
-          postElement.classList.remove('ring-2', 'ring-blue-400', 'ring-opacity-75');
-        }, 2000);
-      }
-    }
-  }), []);
 
   const handlePostSubmit = async (
     data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">
@@ -180,7 +158,7 @@ const Timeline = forwardRef<TimelineRef, { user: any }>(({ user }, ref) => {
         <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
       )}
       
-      <div ref={postsContainerRef} className="flex-1 overflow-y-auto space-y-2 mt-3">
+      <div className="flex-1 overflow-y-auto space-y-2 mt-3">
         {isLoading && (
           <div className="text-center text-gray-500 pt-12">Đang tải timeline...</div>
         )}
@@ -209,9 +187,7 @@ const Timeline = forwardRef<TimelineRef, { user: any }>(({ user }, ref) => {
       )}
     </div>
   );
-});
-
-Timeline.displayName = "Timeline";
+};
 
 const PostForm: React.FC<{
   user: any;
@@ -375,10 +351,7 @@ const PostItem: React.FC<{
   const isPostOwner = user?.id === post.user_id;
 
   return (
-    <Card 
-      id={`post-${post.id}`}
-      className="rounded-xl shadow-sm border border-gray-200 mb-3 p-4 bg-white transition hover:shadow-md"
-    >
+    <Card className="rounded-xl shadow-sm border border-gray-200 mb-3 p-4 bg-white transition hover:shadow-md">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <img

@@ -10,6 +10,8 @@ import DatingPackageModal from "./DatingPackageModal";
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -26,12 +28,18 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
   
+  // Get user location
+  const { position: userLocation, loading: locationLoading } = useGeolocation();
+  
+  // Update user location in database
+  useUpdateProfileLocation(user?.id, userLocation);
+  
   // Use dating subscription hook
   const { isActive: isDatingActive, isLoading: datingLoading, subscription: datingSubscription } = useIsDatingActive(user?.id);
   const { likeUser, isProcessing } = useUserLike(user?.id);
 
   // Use real data from database with expanded range (50km for dating vs 5km for nearby)
-  const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, null, 50);
+  const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, 50);
   
   const availableProfiles = useMemo(() =>
     profiles
@@ -119,14 +127,16 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     handleSwipe(direction);
   };
 
-  if (profilesLoading) {
+  if (locationLoading || profilesLoading) {
     return (
       <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50">
         <Card className="p-8 text-center bg-white/70 backdrop-blur-sm">
           <div className="w-16 h-16 rounded-full mx-auto bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center mb-4">
             <Heart className="w-8 h-8 text-white animate-pulse" />
           </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tải danh sách người dùng...</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">
+            {locationLoading ? "Đang xác định vị trí..." : "Đang tải danh sách người dùng..."}
+          </h2>
         </Card>
       </div>
     );
@@ -138,7 +148,10 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         <Card className="p-8 text-center bg-white/70 backdrop-blur-sm">
           <Heart className="w-16 h-16 text-pink-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-800 mb-2">Hết người rồi!</h2>
-          <p className="text-gray-600">Hãy quay lại sau để gặp thêm người dùng mới</p>
+          <p className="text-gray-600 mb-4">Hãy quay lại sau để gặp thêm người dùng mới</p>
+          <p className="text-sm text-gray-500">
+            Tìm thấy {profiles.length} người dùng trong bán kính 50km
+          </p>
         </Card>
       </div>
     );

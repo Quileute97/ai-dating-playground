@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { CreditCard, X, Loader2, CheckCircle, BadgeCheck, ExternalLink } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -5,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { createPayOSPayment, generateOrderCode } from '@/services/payosService';
-import { useUpgradeRequest } from './useUpgradeRequest';
 
 interface PayOSModalProps {
   isOpen: boolean;
@@ -33,14 +33,11 @@ const PayOSModal = ({
   price,
   userId,
   userEmail,
-  bankInfo,
 }: PayOSModalProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'confirm' | 'processing' | 'success'>('confirm');
-  const [manualPaid, setManualPaid] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const { toast } = useToast();
-  const { submitUpgradeRequest } = useUpgradeRequest();
 
   const handlePayOSPayment = async () => {
     setIsProcessing(true);
@@ -92,41 +89,9 @@ const PayOSModal = ({
     }
   };
 
-  const handleManualPaid = async () => {
-    if (userId) {
-      const success = await submitUpgradeRequest({
-        user_id: userId,
-        user_email: userEmail,
-        type: packageType,
-        price,
-        bank_info: bankInfo
-      });
-
-      if (success) {
-        setManualPaid(true);
-        toast({
-          title: "Đã ghi nhận yêu cầu thanh toán",
-          description: "Yêu cầu nâng cấp đã được gửi. Vui lòng chờ admin duyệt!",
-        });
-        
-        setTimeout(() => {
-          onSuccess();
-          handleClose();
-        }, 1500);
-      } else {
-        toast({
-          title: "Lỗi",
-          description: "Không thể gửi yêu cầu nâng cấp. Vui lòng thử lại.",
-          variant: "destructive"
-        });
-      }
-    }
-  };
-
   const handleClose = () => {
     setPaymentStep('confirm');
     setIsProcessing(false);
-    setManualPaid(false);
     setCheckoutUrl(null);
     onClose();
   };
@@ -145,7 +110,7 @@ const PayOSModal = ({
           </DialogTitle>
         </DialogHeader>
 
-        {paymentStep === 'confirm' && !manualPaid && (
+        {paymentStep === 'confirm' && (
           <div className="space-y-4">
             <Card className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
               <div className="text-center">
@@ -165,26 +130,6 @@ const PayOSModal = ({
                 )}
               </div>
             </Card>
-            
-            {bankInfo && (
-              <div className="space-y-1 border p-3 rounded-lg bg-white shadow text-sm">
-                <div><span className="font-medium">Ngân hàng:</span> {bankInfo.bankName}</div>
-                <div><span className="font-medium">Số tài khoản:</span> {bankInfo.accountNumber}</div>
-                <div><span className="font-medium">Chủ TK:</span> {bankInfo.accountHolder}</div>
-                {bankInfo.qrUrl && (
-                  <div className="mt-1 flex flex-col items-center">
-                    <img 
-                      src={bankInfo.qrUrl}
-                      alt="QR chuyển khoản"
-                      className="w-28 h-28 object-contain rounded border"
-                    />
-                    <div className="mt-1 text-xs text-gray-400">
-                      Quét mã QR để chuyển khoản
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="flex flex-col gap-2">
               <Button 
@@ -196,32 +141,9 @@ const PayOSModal = ({
                 Thanh toán qua PayOS
               </Button>
               
-              {bankInfo && (
-                <Button 
-                  onClick={handleManualPaid}
-                  disabled={isProcessing || manualPaid}
-                  variant="secondary"
-                  className="w-full flex items-center justify-center gap-2 border border-green-400 text-green-700 font-semibold py-2"
-                >
-                  <BadgeCheck className="w-4 h-4" /> Đã chuyển khoản thủ công
-                </Button>
-              )}
-              
               <Button variant="outline" onClick={handleClose} className="w-full">
                 Hủy
               </Button>
-            </div>
-          </div>
-        )}
-
-        {manualPaid && (
-          <div className="text-center py-8 flex flex-col items-center">
-            <CheckCircle className="w-10 h-10 text-green-500 mb-2" />
-            <div className="font-semibold text-green-600 text-lg mb-1">
-              Đã gửi yêu cầu nâng cấp!
-            </div>
-            <div className="text-gray-500 text-sm mb-2">
-              Yêu cầu đã được gửi đến admin để duyệt.
             </div>
           </div>
         )}

@@ -22,7 +22,9 @@ const NearbyFeatureBanner: React.FC<NearbyFeatureBannerProps> = ({
   disableExpand,
 }) => {
   if (nearbyLoading) return null;
-  if (!upgradeStatus || upgradeStatus === "rejected")
+  
+  // Chỉ hiển thị banner nâng cấp khi chưa có upgrade hoặc bị reject
+  if (!upgradeStatus || upgradeStatus === "rejected") {
     return (
       <Card className="mt-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
         <div className="text-center">
@@ -41,21 +43,10 @@ const NearbyFeatureBanner: React.FC<NearbyFeatureBannerProps> = ({
         </div>
       </Card>
     );
+  }
 
-  if (upgradeStatus === "pending")
-    return (
-      <Card className="mt-4 p-4 bg-gradient-to-r from-yellow-500 to-orange-400 text-white">
-        <div className="text-center">
-          <Crown className="w-8 h-8 mx-auto mb-2" />
-          <h3 className="font-semibold mb-1">Yêu cầu mở rộng phạm vi đang chờ duyệt</h3>
-          <p className="text-sm opacity-90 mb-2">
-            Vui lòng chờ admin kiểm tra thanh toán. Khi duyệt xong, bạn sẽ tìm được nhiều người mới hơn!
-          </p>
-        </div>
-      </Card>
-    );
-  // approved
-  if (upgradeStatus === "approved")
+  // Khi đã approved - chỉ hiển thị nút mở rộng
+  if (upgradeStatus === "approved") {
     return (
       <Card className="mt-4 p-4 bg-gradient-to-r from-green-500 to-blue-500 text-white">
         <div className="text-center">
@@ -76,6 +67,7 @@ const NearbyFeatureBanner: React.FC<NearbyFeatureBannerProps> = ({
         </div>
       </Card>
     );
+  }
 
   return null;
 };

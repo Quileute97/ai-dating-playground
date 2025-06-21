@@ -1,139 +1,108 @@
 
-import React from "react";
-import HeaderAdManager from "./HeaderAdManager";
-import BankInfoManager from "./BankInfoManager";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import BankInfoManager from "./BankInfoManager";
+import { useBankInfo } from "@/hooks/useBankInfo";
 
-interface Props {
-  headerAdCode: string;
-  setHeaderAdCode: (v: string) => void;
-  onSaveHeaderAd: () => void;
-  bankInfo: {
-    bankName: string;
-    accountNumber: string;
-    accountHolder: string;
-    qrUrl: string;
+export default function AdminSettingsTab() {
+  const [qrImgUploading, setQrImgUploading] = useState(false);
+  const { toast } = useToast();
+  const { bankInfo, setBankInfo, refetch } = useBankInfo();
+
+  const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setQrImgUploading(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('https://api.imgur.com/3/image', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Client-ID 2bf31122a9f7095'
+        },
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const data = await response.json();
+      if (data.success) {
+        setBankInfo(prev => ({ ...prev, qrUrl: data.data.link }));
+      } else {
+        throw new Error('Invalid response');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Lỗi tải ảnh",
+        description: "Không thể tải ảnh QR lên. Vui lòng thử lại.",
+        variant: "destructive"
+      });
+    } finally {
+      setQrImgUploading(false);
+    }
   };
-  setBankInfo: (u: any) => void;
-  onSaveBankInfo: () => void;
-  qrImgUploading: boolean;
-  onQrUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  settings: any;
-  setSettings: (u: any) => void;
-  handleSaveSettings: () => void;
-}
 
-const AdminSettingsTab: React.FC<Props> = ({
-  headerAdCode, setHeaderAdCode, onSaveHeaderAd,
-  bankInfo, setBankInfo, onSaveBankInfo,
-  qrImgUploading, onQrUpload,
-  settings, setSettings,
-  handleSaveSettings,
-}) => (
-  <div className="space-y-6">
-    <div className="flex justify-between items-center">
-      <h2 className="text-xl font-semibold">Cài đặt hệ thống</h2>
-      <Button
-        onClick={handleSaveSettings}
-        className="bg-gradient-to-r from-green-500 to-blue-500"
-      >
-        <Save className="w-4 h-4 mr-2" />
-        Lưu cài đặt
-      </Button>
-    </div>
-    <div className="grid gap-6">
-      <HeaderAdManager
-        headerAdCode={headerAdCode}
-        setHeaderAdCode={setHeaderAdCode}
-        onSave={onSaveHeaderAd}
-      />
+  const saveBankInfo = async () => {
+    const { error } = await supabase
+      .from("bank_info")
+      .upsert([
+        {
+          id: 1,
+          bank_name: bankInfo.bankName,
+          account_number: bankInfo.accountNumber,
+          account_holder: bankInfo.accountHolder,
+          qr_url: bankInfo.qrUrl,
+        },
+      ]);
+
+    if (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể lưu thông tin ngân hàng",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Thành công",
+        description: "Đã lưu thông tin ngân hàng & QR"
+      });
+      refetch();
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Cài đặt hệ thống</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h3 className="font-semibold text-blue-800 mb-2">Thanh toán tự động</h3>
+              <p className="text-sm text-blue-600">
+                Hệ thống đã tích hợp PayOS để xử lý thanh toán tự động. 
+                Không cần duyệt thủ công nữa.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <BankInfoManager
         bankInfo={bankInfo}
         setBankInfo={setBankInfo}
-        onSave={onSaveBankInfo}
+        onSave={saveBankInfo}
         qrImgUploading={qrImgUploading}
-        onQrUpload={onQrUpload}
+        onQrUpload={handleQrUpload}
       />
-      {/* Thêm phần hiển thị Sitemap */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sơ đồ website (Sitemap)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div>
-            <label className="block text-sm font-medium mb-2">Link sitemap.xml</label>
-            <a
-              href="/sitemap.xml"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline break-all"
-            >
-              Xem sitemap.xml
-            </a>
-            <p className="text-xs text-muted-foreground mt-1">
-              Nếu bạn muốn cập nhật sitemap, hãy chỉnh sửa lại file <b>public/sitemap.xml</b>.<br />
-              Sitemap giúp Google hiểu cấu trúc web của bạn để index tốt hơn.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Cài đặt AI</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">API Key OpenAI</label>
-            <input
-              type="password"
-              placeholder="sk-..."
-              value={settings.openaiApiKey}
-              onChange={(e) => setSettings((prev: any) => ({ ...prev, openaiApiKey: e.target.value }))}
-              className="w-full p-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Timeout chat (giây)</label>
-            <input
-              type="number"
-              value={settings.chatTimeout}
-              onChange={(e) => setSettings((prev: any) => ({ ...prev, chatTimeout: parseInt(e.target.value) }))}
-              className="w-full p-2 border rounded-md"
-            />
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Cài đặt matching</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Tỉ lệ match với AI (%)</label>
-            <input
-              type="number"
-              value={settings.aiMatchRate}
-              onChange={(e) => setSettings((prev: any) => ({ ...prev, aiMatchRate: parseInt(e.target.value) }))}
-              min="0"
-              max="100"
-              className="w-full p-2 border rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Phạm vi tìm kiếm mặc định (km)</label>
-            <input
-              type="number"
-              value={settings.searchRadius}
-              onChange={(e) => setSettings((prev: any) => ({ ...prev, searchRadius: parseInt(e.target.value) }))}
-              className="w-full p-2 border rounded-md"
-            />
-          </div>
-        </CardContent>
-      </Card>
     </div>
-  </div>
-);
-
-export default AdminSettingsTab;
+  );
+}

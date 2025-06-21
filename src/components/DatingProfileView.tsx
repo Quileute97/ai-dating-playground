@@ -32,7 +32,7 @@ interface DatingProfileViewProps {
   };
   onClose: () => void;
   onSwipe: (direction: 'left' | 'right' | 'super') => void;
-  isGoldActive?: boolean;
+  isDatingActive?: boolean;
   dailyMatches?: number;
   maxFreeMatches?: number;
 }
@@ -41,11 +41,11 @@ const DatingProfileView = ({
   profile, 
   onClose, 
   onSwipe,
-  isGoldActive = false,
+  isDatingActive = false,
   dailyMatches = 0,
   maxFreeMatches = 10
 }: DatingProfileViewProps) => {
-  const canSwipeRight = isGoldActive || dailyMatches < maxFreeMatches;
+  const canSwipeRight = isDatingActive || dailyMatches < maxFreeMatches;
 
   return (
     <div className="h-full bg-gradient-to-br from-pink-50 to-purple-50 p-4">
@@ -202,7 +202,7 @@ const DatingProfileView = ({
         {/* Limit Warning */}
         {!canSwipeRight && (
           <div className="text-center text-sm text-red-600 mb-2">
-            Đã hết lượt match miễn phí! Nâng cấp GOLD để tiếp tục.
+            Đã hết lượt match miễn phí! Nâng cấp Premium để tiếp tục.
           </div>
         )}
       </div>

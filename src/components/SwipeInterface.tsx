@@ -4,13 +4,13 @@ import { Heart, X, Zap, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import PayOSModal from './PayOSModal';
 import { useBankInfo } from "@/hooks/useBankInfo";
-import { useUpgradeStatus } from './hooks/useUpgradeStatus';
-import { useUserLike } from "@/hooks/useUserLike";
-import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import DatingProfileView from "./DatingProfileView";
 import NearbyFeatureBanner from "@/components/NearbyFeatureBanner";
+import DatingPackageModal from "./DatingPackageModal";
+import { useUserLike } from "@/hooks/useUserLike";
+import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
+import { useDatingSubscription } from "@/hooks/useDatingSubscription";
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -22,13 +22,13 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [matches, setMatches] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
   const [dailyMatches, setDailyMatches] = useState(0);
-  const [isGoldActive, setIsGoldActive] = useState(false);
-  const [showPayOSModal, setShowPayOSModal] = useState(false);
+  const [showDatingPackageModal, setShowDatingPackageModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
-  const { data: goldUpgrade, isLoading: goldLoading } = useUpgradeStatus(user?.id, 'gold');
-  const { data: nearbyUpgrade, isLoading: nearbyLoading } = useUpgradeStatus(user?.id, 'nearby');
+  
+  // Use dating subscription hook instead of upgrade status
+  const { isActive: isDatingActive, isLoading: datingLoading, subscription: datingSubscription } = useDatingSubscription(user?.id);
   const { likeUser, isProcessing } = useUserLike(user?.id);
 
   // Use real data from database with expanded range (50km for dating vs 5km for nearby)
@@ -55,23 +55,16 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const remainingMatches = maxFreeMatches - dailyMatches;
   const currentProfile = availableProfiles[currentProfileIndex];
 
-  // Check if user has Gold upgrade
-  React.useEffect(() => {
-    if (goldUpgrade?.status === 'approved') {
-      setIsGoldActive(true);
-    }
-  }, [goldUpgrade]);
-
   const handleSwipe = async (direction: 'left' | 'right' | 'super') => {
     if (!currentProfile) return;
     
-    if (!isGoldActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
+    if (!isDatingActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
       toast({
         title: "Đã hết lượt match miễn phí!",
-        description: "Nâng cấp GOLD để có không giới hạn lượt match",
+        description: "Nâng cấp Premium để có không giới hạn lượt match",
         variant: "destructive"
       });
-      setShowPayOSModal(true);
+      setShowDatingPackageModal(true);
       return;
     }
 
@@ -80,7 +73,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     if (direction === 'right' || direction === 'super') {
       try {
         const res = await likeUser(currentProfile.id);
-        if (!isGoldActive) setDailyMatches(prev => prev + 1);
+        if (!isDatingActive) setDailyMatches(prev => prev + 1);
         if (res.matched) {
           setMatches(prev => prev + 1);
           setShowMatch(true);
@@ -127,18 +120,6 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     handleSwipe(direction);
   };
 
-  const handleGoldUpgrade = () => {
-    setIsGoldActive(true);
-    toast({
-      title: "Chào mừng thành viên GOLD! 👑",
-      description: "Bạn đã có quyền truy cập không giới hạn!",
-    });
-  };
-
-  const handleNearbyUpgrade = () => {
-    setShowPayOSModal(true);
-  };
-
   if (profilesLoading) {
     return (
       <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50">
@@ -171,7 +152,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         profile={selectedProfile}
         onClose={handleCloseProfile}
         onSwipe={handleProfileSwipe}
-        isGoldActive={isGoldActive}
+        isDatingActive={isDatingActive}
         dailyMatches={dailyMatches}
         maxFreeMatches={maxFreeMatches}
       />
@@ -180,16 +161,16 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
 
   return (
     <div className="h-full bg-gradient-to-br from-pink-50 to-purple-50 p-4 relative overflow-hidden">
-      {/* Gold Member Badge */}
-      {isGoldActive && (
+      {/* Premium Member Badge */}
+      {isDatingActive && (
         <div className="absolute top-4 left-4 z-10 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
           <Crown className="w-4 h-4" />
-          GOLD
+          PREMIUM
         </div>
       )}
 
       {/* Daily Matches Counter */}
-      {!isGoldActive && (
+      {!isDatingActive && (
         <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
           {remainingMatches <= 3 && (
             <span className="text-red-500">⚠️ </span>
@@ -276,7 +257,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             size="icon"
             className="w-14 h-14 rounded-full border-blue-200 hover:bg-blue-50 hover:border-blue-300"
             onClick={() => handleSwipe('super')}
-            disabled={!isGoldActive && dailyMatches >= maxFreeMatches}
+            disabled={!isDatingActive && dailyMatches >= maxFreeMatches}
           >
             <Zap className="w-6 h-6 text-blue-500" />
           </Button>
@@ -286,19 +267,19 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             size="icon"
             className="w-14 h-14 rounded-full border-green-200 hover:bg-green-50 hover:border-green-300"
             onClick={() => handleSwipe('right')}
-            disabled={!isGoldActive && dailyMatches >= maxFreeMatches}
+            disabled={!isDatingActive && dailyMatches >= maxFreeMatches}
           >
             <Heart className="w-6 h-6 text-green-500" />
           </Button>
         </div>
 
         {/* Upgrade Banner */}
-        {!isGoldActive && !goldLoading && (
+        {!isDatingActive && !datingLoading && (
           remainingMatches <= 3 && (
             <Card className="mt-4 p-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
               <div className="text-center">
                 <Crown className="w-8 h-8 mx-auto mb-2" />
-                <h3 className="font-semibold mb-1">Nâng cấp GOLD</h3>
+                <h3 className="font-semibold mb-1">Nâng cấp Premium</h3>
                 <p className="text-sm opacity-90 mb-3">
                   Không giới hạn lượt match + nhiều tính năng khác
                 </p>
@@ -306,28 +287,14 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
                   variant="secondary" 
                   size="sm" 
                   className="text-orange-600"
-                  onClick={() => setShowPayOSModal(true)}
+                  onClick={() => setShowDatingPackageModal(true)}
                 >
-                  Nâng cấp ngay - 99,000 VNĐ
+                  Xem gói Premium
                 </Button>
               </div>
             </Card>
           )
         )}
-
-        {/* Nearby Upgrade tracker */}
-        {
-          !isGoldActive && !nearbyLoading && (
-            <NearbyFeatureBanner
-              upgradeStatus={nearbyUpgrade?.status}
-              nearbyLoading={nearbyLoading}
-              hasExpandedRange={nearbyUpgrade?.status === "approved"}
-              onClickUpgrade={handleNearbyUpgrade}
-              onClickExpand={handleNearbyUpgrade}
-              disableExpand={!!nearbyUpgrade && nearbyUpgrade.status === "approved"}
-            />
-          )
-        }
 
         {/* Stats */}
         <div className="text-center text-sm text-gray-600 mt-2">
@@ -335,30 +302,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         </div>
       </div>
 
-      {/* PayOS Modal */}
-      <PayOSModal
-        isOpen={showPayOSModal}
-        onClose={() => setShowPayOSModal(false)}
-        onSuccess={
-          nearbyUpgrade?.status !== "approved"
-            ? () => setShowPayOSModal(false)
-            : handleGoldUpgrade
-        }
-        packageType={
-          (!nearbyUpgrade || (nearbyUpgrade.status && nearbyUpgrade.status !== "approved" && nearbyUpgrade.status !== "pending"))
-            ? "nearby"
-            : "gold"
-        }
-        packageName={
-          (!nearbyUpgrade || (nearbyUpgrade.status && nearbyUpgrade.status !== "approved" && nearbyUpgrade.status !== "pending"))
-            ? "Gói Mở Rộng Quanh đây"
-            : "Gói GOLD"
-        }
-        price={
-          (!nearbyUpgrade || (nearbyUpgrade.status && nearbyUpgrade.status !== "approved" && nearbyUpgrade.status !== "pending"))
-            ? 49000
-            : 99000
-        }
+      {/* Dating Package Modal */}
+      <DatingPackageModal
+        isOpen={showDatingPackageModal}
+        onClose={() => setShowDatingPackageModal(false)}
+        currentUser={user}
         bankInfo={
           !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 
           ? bankInfoHook.bankInfo 

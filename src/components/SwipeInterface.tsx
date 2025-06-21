@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useBankInfo } from "@/hooks/useBankInfo";
 import DatingProfileView from "./DatingProfileView";
-import NearbyFeatureBanner from "@/components/NearbyFeatureBanner";
+import DatingFeatureBanner from "./DatingFeatureBanner";
 import DatingPackageModal from "./DatingPackageModal";
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
@@ -52,7 +52,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         ...p,
         images: [p.avatar!],
         bio: p.bio || "Chào bạn! Tôi đang tìm kiếm những kết nối thú vị trên ứng dụng này.",
-        distance: p.distance || Math.floor(Math.random() * 20) + 1, // Use real distance or random if not available
+        distance: p.distance || Math.floor(Math.random() * 20) + 1,
         interests: Array.isArray(p.interests) ? p.interests : [],
         age: p.age || 25,
         height: p.height,
@@ -158,7 +158,6 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       }
 
       if (result.checkoutUrl) {
-        // Redirect to PayOS checkout
         window.location.href = result.checkoutUrl;
       } else {
         toast({
@@ -209,7 +208,6 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     );
   }
 
-  // Show detailed profile view
   if (selectedProfile) {
     return (
       <DatingProfileView
@@ -337,28 +335,15 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           </Button>
         </div>
 
-        {/* Upgrade Banner - Reduced padding */}
-        {!isDatingActive && !datingLoading && (
-          remainingMatches <= 3 && (
-            <Card className="mt-4 p-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-              <div className="text-center">
-                <Crown className="w-8 h-8 mx-auto mb-1" />
-                <h3 className="font-semibold mb-0.5">Nâng cấp Premium</h3>
-                <p className="text-sm opacity-90 mb-1.5">
-                  Không giới hạn lượt match + nhiều tính năng khác
-                </p>
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  className="text-orange-600"
-                  onClick={() => setShowDatingPackageModal(true)}
-                >
-                  Xem gói Premium
-                </Button>
-              </div>
-            </Card>
-          )
-        )}
+        {/* Dating Feature Banner - Replace the old upgrade banner */}
+        <DatingFeatureBanner
+          isDatingActive={isDatingActive}
+          datingLoading={datingLoading}
+          onClickUpgrade={() => setShowDatingPackageModal(true)}
+          userId={user?.id}
+          dailyMatches={dailyMatches}
+          maxFreeMatches={maxFreeMatches}
+        />
 
         {/* Stats */}
         <div className="text-center text-sm text-gray-600 mt-2">

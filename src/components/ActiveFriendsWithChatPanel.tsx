@@ -19,7 +19,7 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
 
   // Chọn mặc định bạn bè đầu tiên (nếu có)
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
-  const [isChatMinimized, setIsChatMinimized] = useState(false);
+  const [isChatMinimized, setIsChatMinimized] = useState(true); // Mặc định thu gọn
   const [chatMessage, setChatMessage] = useState("");
 
   React.useEffect(() => {
@@ -35,6 +35,12 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
     // TODO: Implement actual message sending
     console.log("Sending message:", chatMessage, "to:", selectedFriend);
     setChatMessage("");
+  };
+
+  const handleFriendClick = (friendId: string) => {
+    setSelectedFriend(friendId);
+    // Không tự động mở rộng chat khi click vào bạn bè
+    // Chat sẽ vẫn giữ trạng thái hiện tại (thu gọn hoặc mở rộng)
   };
 
   return (
@@ -62,7 +68,7 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
                 ? "bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-200 shadow-md" 
                 : "hover:bg-gray-50 border border-transparent"
               }`}
-              onClick={() => setSelectedFriend(friend.id)}
+              onClick={() => handleFriendClick(friend.id)}
             >
               <div className="relative">
                 <img 

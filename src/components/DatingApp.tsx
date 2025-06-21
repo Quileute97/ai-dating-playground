@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -210,22 +211,17 @@ const DatingApp = () => {
         </div>
       </div>
 
-      {/* Main Layout - Use the new layout without children for most tabs, but with children for chat */}
-      {activeTab === "chat" || isAdminMode ? (
-        <DatingAppLayout
-          user={user}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        >
-          {renderTabContent()}
-        </DatingAppLayout>
-      ) : (
-        <DatingAppLayout
-          user={user}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        />
-      )}
+      {/* Main Layout (side panels + content) */}
+      <DatingAppLayout
+        user={user}
+        isAdminMode={isAdminMode}
+        isLeftPanelOpen={isLeftPanelOpen}
+        setIsLeftPanelOpen={setIsLeftPanelOpen}
+        isRightPanelOpen={isRightPanelOpen}
+        setIsRightPanelOpen={setIsRightPanelOpen}
+      >
+        {renderTabContent()}
+      </DatingAppLayout>
 
       {/* Modals */}
       <DatingAppModals

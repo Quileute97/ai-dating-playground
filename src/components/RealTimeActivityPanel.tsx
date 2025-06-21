@@ -10,9 +10,10 @@ import FriendRequestDetailModal from "./FriendRequestDetailModal";
 
 interface PanelProps {
   userId?: string;
+  onUserChatSelect?: (userId: string) => void; // Thêm prop để handle chat
 }
 
-export default function RealTimeActivityPanel({ userId }: PanelProps) {
+export default function RealTimeActivityPanel({ userId, onUserChatSelect }: PanelProps) {
   const { data: activities, isLoading } = useRecentActivities(userId);
   const navigate = useNavigate();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -21,7 +22,13 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
   const handleUserClick = (e: React.MouseEvent, activityUserId: string) => {
     e.stopPropagation();
     if (activityUserId) {
-      navigate(`/profile/${activityUserId}`);
+      // Nếu có callback để mở chat, sử dụng nó
+      if (onUserChatSelect) {
+        onUserChatSelect(activityUserId);
+      } else {
+        // Fallback về navigate profile
+        navigate(`/profile/${activityUserId}`);
+      }
     }
   };
 
@@ -81,7 +88,7 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
                 />
                 <div className="flex-1">
                   <span 
-                    className="text-sm text-gray-700 cursor-pointer hover:text-purple-600 transition-colors"
+                    className="text-sm text-gray-700 cursor-pointer hover:text-purple-600 transition-colors font-medium"
                     onClick={(e) => handleUserClick(e, a.user_id)}
                   >
                     {a.user_name || "Ai đó"}

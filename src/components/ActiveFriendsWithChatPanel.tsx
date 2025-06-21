@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { MessageCircle, Send, Minimize2, Maximize2 } from "lucide-react";
 import { useActiveFriendsWithPresence } from "@/hooks/useActiveFriendsWithPresence";
@@ -10,9 +10,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ActiveFriendsWithChatPanelProps {
   myId: string;
+  selectedChatUserId?: string; // Thêm prop để nhận user được chọn từ bên ngoài
+  onChatUserChange?: (userId: string | null) => void; // Callback khi user chat thay đổi
 }
 
-export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithChatPanelProps) {
+export default function ActiveFriendsWithChatPanel({ 
+  myId, 
+  selectedChatUserId, 
+  onChatUserChange 
+}: ActiveFriendsWithChatPanelProps) {
   if (!myId) throw new Error("Missing myId prop in ActiveFriendsWithChatPanel");
 
   const { friends, isLoading } = useActiveFriendsWithPresence(myId);
@@ -25,6 +31,14 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
     myId, 
     selectedFriend || ""
   );
+
+  // Handle external chat user selection
+  useEffect(() => {
+    if (selectedChatUserId) {
+      setSelectedFriend(selectedChatUserId);
+      setIsChatMinimized(false); // Mở chat khi được chọn từ bên ngoài
+    }
+  }, [selectedChatUserId]);
 
   React.useEffect(() => {
     if (!selectedFriend && friends && friends.length > 0) {
@@ -47,6 +61,9 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
 
   const handleFriendClick = (friendId: string) => {
     setSelectedFriend(friendId);
+    if (onChatUserChange) {
+      onChatUserChange(friendId);
+    }
   };
 
   const formatTime = (dateString: string) => {

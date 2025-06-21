@@ -47,7 +47,7 @@ export function useDatingSubscription(userId: string | null | undefined) {
   });
 }
 
-export function useDatingSubscription(userId: string | null | undefined) {
+export function useIsDatingActive(userId: string | null | undefined) {
   const { data: subscription, isLoading } = useDatingSubscription(userId);
   
   return {

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Heart, X, Zap, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -10,7 +9,7 @@ import NearbyFeatureBanner from "@/components/NearbyFeatureBanner";
 import DatingPackageModal from "./DatingPackageModal";
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
-import { useDatingSubscription } from "@/hooks/useDatingSubscription";
+import { useIsDatingActive } from "@/hooks/useDatingSubscription";
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -27,8 +26,8 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
   
-  // Use dating subscription hook instead of upgrade status
-  const { isActive: isDatingActive, isLoading: datingLoading, subscription: datingSubscription } = useDatingSubscription(user?.id);
+  // Use dating subscription hook
+  const { isActive: isDatingActive, isLoading: datingLoading, subscription: datingSubscription } = useIsDatingActive(user?.id);
   const { likeUser, isProcessing } = useUserLike(user?.id);
 
   // Use real data from database with expanded range (50km for dating vs 5km for nearby)

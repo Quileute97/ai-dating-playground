@@ -40,28 +40,6 @@ serve(async (req) => {
       throw new Error(`Invalid package type: ${packageType}`);
     }
 
-    // Create PayOS payment with proper formatting according to PayOS requirements
-    const paymentData = {
-      orderCode: Number(orderCode), // Ensure it's a number
-      amount: selectedPackage.amount,
-      description: `Premium Package ${packageType}`, // Keep description simple and short
-      items: [
-        {
-          name: selectedPackage.description,
-          quantity: 1,
-          price: selectedPackage.amount
-        }
-      ],
-      returnUrl: returnUrl || `${req.headers.get('origin')}/payment-success`,
-      cancelUrl: cancelUrl || `${req.headers.get('origin')}/payment-cancel`,
-      buyerName: userEmail ? userEmail.split('@')[0] : 'Customer',
-      buyerEmail: userEmail || '',
-      buyerPhone: '',
-      buyerAddress: ''
-    };
-
-    console.log('Creating PayOS payment with data:', paymentData);
-
     // Check if required environment variables are set
     const clientId = Deno.env.get('PAYOS_CLIENT_ID');
     const apiKey = Deno.env.get('PAYOS_API_KEY');
@@ -70,6 +48,17 @@ serve(async (req) => {
       console.error('Missing PayOS credentials');
       throw new Error('PayOS credentials not configured');
     }
+
+    // Create PayOS payment with minimal required fields only
+    const paymentData = {
+      orderCode: parseInt(orderCode.toString()),
+      amount: selectedPackage.amount,
+      description: `Premium ${packageType}`,
+      returnUrl: returnUrl || `${req.headers.get('origin')}/payment-success`,
+      cancelUrl: cancelUrl || `${req.headers.get('origin')}/payment-cancel`
+    };
+
+    console.log('Creating PayOS payment with minimal data:', paymentData);
 
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
@@ -82,15 +71,24 @@ serve(async (req) => {
     });
 
     const payosResult = await payosResponse.json();
-    console.log('PayOS API response:', payosResult);
+    console.log('PayOS API response:', JSON.stringify(payosResult, null, 2));
 
-    if (!payosResponse.ok || payosResult.code !== '00') {
-      console.error('PayOS API error details:', {
+    if (!payosResponse.ok) {
+      console.error('PayOS HTTP error:', {
         status: payosResponse.status,
         statusText: payosResponse.statusText,
-        result: payosResult
+        headers: Object.fromEntries(payosResponse.headers.entries())
       });
-      throw new Error(`PayOS API error: ${payosResult.desc || payosResult.message || 'Unknown error'}`);
+      throw new Error(`PayOS HTTP error: ${payosResponse.status} ${payosResponse.statusText}`);
+    }
+
+    if (payosResult.code !== '00') {
+      console.error('PayOS API error details:', {
+        code: payosResult.code,
+        desc: payosResult.desc,
+        data: payosResult.data
+      });
+      throw new Error(`PayOS API error [${payosResult.code}]: ${payosResult.desc || 'Unknown error'}`);
     }
 
     // Save upgrade request to database
@@ -112,7 +110,7 @@ serve(async (req) => {
           : null,
         status: 'pending',
         bank_info: {
-          orderCode: Number(orderCode),
+          orderCode: parseInt(orderCode.toString()),
           paymentLinkId: payosResult.data?.paymentLinkId,
           checkoutUrl: payosResult.data?.checkoutUrl
         }
@@ -128,7 +126,7 @@ serve(async (req) => {
       message: 'success',
       data: {
         checkoutUrl: payosResult.data?.checkoutUrl,
-        orderCode: Number(orderCode),
+        orderCode: parseInt(orderCode.toString()),
         paymentLinkId: payosResult.data?.paymentLinkId,
       }
     }), {

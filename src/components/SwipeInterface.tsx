@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Heart, X, Zap, ArrowLeft, Crown } from 'lucide-react';
+import { Heart, X, Zap, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -31,23 +31,36 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const { data: nearbyUpgrade, isLoading: nearbyLoading } = useUpgradeStatus(user?.id, 'nearby');
   const { likeUser, isProcessing } = useUserLike(user?.id);
 
-  const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, null, 1000);
+  // Use real data from database with expanded range (50km for dating vs 5km for nearby)
+  const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, null, 50);
   
   const availableProfiles = useMemo(() =>
     profiles
-      .filter(p => p.id !== user?.id && p.name && p.avatar)
+      .filter(p => p.id !== user?.id && p.name && p.avatar && p.is_dating_active)
       .map(p => ({
         ...p,
         images: [p.avatar!],
-        bio: p.bio || "Người dùng thật trên hệ thống.",
-        distance: p.lat && p.lng ? 0 : null,
-        interests: p.interests || [],
+        bio: p.bio || "Chào bạn! Tôi đang tìm kiếm những kết nối thú vị trên ứng dụng này.",
+        distance: p.distance || Math.floor(Math.random() * 20) + 1, // Use real distance or random if not available
+        interests: Array.isArray(p.interests) ? p.interests : [],
+        age: p.age || 25,
+        height: p.height,
+        job: p.job,
+        education: p.education,
+        location_name: p.location_name
       })), [profiles, user?.id]
   );
 
   const maxFreeMatches = 10;
   const remainingMatches = maxFreeMatches - dailyMatches;
   const currentProfile = availableProfiles[currentProfileIndex];
+
+  // Check if user has Gold upgrade
+  React.useEffect(() => {
+    if (goldUpgrade?.status === 'approved') {
+      setIsGoldActive(true);
+    }
+  }, [goldUpgrade]);
 
   const handleSwipe = async (direction: 'left' | 'right' | 'super') => {
     if (!currentProfile) return;
@@ -133,7 +146,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           <div className="w-16 h-16 rounded-full mx-auto bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center mb-4">
             <Heart className="w-8 h-8 text-white animate-pulse" />
           </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tải danh sách người dùng thật...</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tải danh sách người dùng...</h2>
         </Card>
       </div>
     );
@@ -145,7 +158,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         <Card className="p-8 text-center bg-white/70 backdrop-blur-sm">
           <Heart className="w-16 h-16 text-pink-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-800 mb-2">Hết người rồi!</h2>
-          <p className="text-gray-600">Hãy quay lại sau để gặp thêm người dùng thật</p>
+          <p className="text-gray-600">Hãy quay lại sau để gặp thêm người dùng mới</p>
         </Card>
       </div>
     );
@@ -217,13 +230,14 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             
             {/* Distance Badge */}
             <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium">
-              {currentProfile.distance ?? 0}km
+              {currentProfile.distance}km
             </div>
 
             {/* Profile Info Overlay */}
             <div className="absolute bottom-4 left-4 right-4 text-white">
               <h2 className="text-2xl font-bold">
                 {currentProfile.name}
+                {currentProfile.age && <span>, {currentProfile.age}</span>}
               </h2>
               <p className="text-sm opacity-90">Nhấn để xem hồ sơ chi tiết</p>
             </div>

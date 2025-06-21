@@ -1,12 +1,19 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Phone, Video, MoreVertical } from 'lucide-react';
+import { Send, ArrowLeft, Phone, Video, MoreVertical, Settings, Image, Palette, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useConversationHistory } from '@/hooks/useConversationHistory';
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ProfileChatWindowProps {
   targetUserId: string;
@@ -26,8 +33,27 @@ const ProfileChatWindow = ({
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [showMediaHistory, setShowMediaHistory] = useState(false);
+  const [chatBackground, setChatBackground] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Predefined background options
+  const backgroundOptions = [
+    { name: 'Mặc định', value: '' },
+    { name: 'Đêm sao', value: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=800&h=600&fit=crop' },
+    { name: 'Rừng vàng', value: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?w=800&h=600&fit=crop' },
+    { name: 'Hồ nước', value: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&h=600&fit=crop' },
+    { name: 'Phòng khách', value: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=800&h=600&fit=crop' }
+  ];
+
+  // Load saved background from localStorage
+  useEffect(() => {
+    const savedBg = localStorage.getItem(`chat-bg-${targetUserId}`);
+    if (savedBg) {
+      setChatBackground(savedBg);
+    }
+  }, [targetUserId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -144,8 +170,30 @@ const ProfileChatWindow = ({
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleBackgroundChange = (bgValue: string) => {
+    setChatBackground(bgValue);
+    localStorage.setItem(`chat-bg-${targetUserId}`, bgValue);
+    toast({
+      title: "Đã thay đổi ảnh nền",
+      description: "Ảnh nền chat đã được cập nhật",
+    });
+  };
+
+  const getMediaMessages = () => {
+    // Filter messages that might contain media (for demo purposes, we'll show all messages)
+    // In a real app, you'd filter for messages with image/video attachments
+    return messages.filter(msg => msg.content.includes('http') || msg.content.includes('image') || msg.content.includes('video'));
+  };
+
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col z-50">
+    <div 
+      className="fixed inset-0 flex flex-col z-50"
+      style={{
+        background: chatBackground 
+          ? `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${chatBackground}) center/cover`
+          : 'linear-gradient(to bottom right, rgb(239 246 255), rgb(250 245 255), rgb(239 246 255))'
+      }}
+    >
       {/* Header */}
       <div className="bg-white/90 backdrop-blur-sm border-b border-purple-100 p-4 shadow-sm">
         <div className="flex items-center gap-3">
@@ -173,6 +221,47 @@ const ProfileChatWindow = ({
             <Button variant="outline" size="sm" onClick={() => toast({ title: "Video Call", description: "Tính năng sẽ được cập nhật!" })}>
               <Video className="w-4 h-4" />
             </Button>
+            
+            {/* Chat Settings Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setShowMediaHistory(true)}>
+                  <History className="w-4 h-4 mr-2" />
+                  Xem lại hình ảnh/video
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                <div className="px-2 py-1.5 text-sm font-medium text-gray-700">
+                  Ảnh nền chat
+                </div>
+                
+                {backgroundOptions.map((bg) => (
+                  <DropdownMenuItem 
+                    key={bg.value} 
+                    onClick={() => handleBackgroundChange(bg.value)}
+                    className="flex items-center gap-2"
+                  >
+                    <div 
+                      className="w-4 h-4 rounded border-2 border-gray-300"
+                      style={{
+                        background: bg.value 
+                          ? `url(${bg.value}) center/cover` 
+                          : 'linear-gradient(45deg, #e5e7eb, #f3f4f6)'
+                      }}
+                    />
+                    {bg.name}
+                    {chatBackground === bg.value && <span className="ml-auto text-purple-600">✓</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button variant="outline" size="sm">
               <MoreVertical className="w-4 h-4" />
             </Button>
@@ -184,7 +273,7 @@ const ProfileChatWindow = ({
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
           {messages.length === 0 ? (
-            <div className="text-center text-gray-500 mt-8">
+            <div className="text-center text-white/80 mt-8">
               <p>Bắt đầu cuộc trò chuyện với {targetUserName}!</p>
             </div>
           ) : (
@@ -196,7 +285,7 @@ const ProfileChatWindow = ({
                 <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl transition-all duration-200 ${
                   message.sender_id === currentUserId
                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                    : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
+                    : 'bg-white/90 backdrop-blur-sm text-gray-800 border border-white/20 shadow-md'
                 }`}>
                   <p className="text-sm break-words">{message.content}</p>
                   <p className={`text-xs mt-1 ${
@@ -233,6 +322,35 @@ const ProfileChatWindow = ({
           </Button>
         </div>
       </div>
+
+      {/* Media History Modal */}
+      <Dialog open={showMediaHistory} onOpenChange={setShowMediaHistory}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Image className="w-5 h-5" />
+              Hình ảnh & Video đã chia sẻ
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {getMediaMessages().length > 0 ? (
+              getMediaMessages().map((msg) => (
+                <div key={msg.id} className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">
+                    {formatTime(msg.created_at)}
+                  </p>
+                  <p className="text-sm">{msg.content}</p>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                <Image className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                <p>Chưa có hình ảnh hoặc video nào được chia sẻ</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

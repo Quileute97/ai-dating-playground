@@ -75,13 +75,11 @@ export const createDatingPackagePayment = async (
       },
       body: JSON.stringify({
         orderCode: Math.floor(Date.now() / 1000),
-        amount: selectedPackage.price,
-        description: `Goi ${selectedPackage.name}`,
-        returnUrl: `${window.location.origin}/payment-success`,
-        cancelUrl: `${window.location.origin}/payment-cancel`,
         userId,
         userEmail,
-        packageType: packageId,
+        packageType: packageId, // Make sure this matches the edge function
+        returnUrl: `${window.location.origin}/payment-success`,
+        cancelUrl: `${window.location.origin}/payment-cancel`,
       }),
     });
 

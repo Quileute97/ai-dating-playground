@@ -1,3 +1,4 @@
+
 export interface PaymentData {
   orderCode: number;
   amount: number;
@@ -68,7 +69,7 @@ export const createNearbyPackagePayment = async (
         orderCode: generateOrderCode(),
         userId,
         userEmail,
-        packageType: packageId,
+        packageType: packageId, // Ensure this matches what the edge function expects
         returnUrl: `${window.location.origin}/payment-success`,
         cancelUrl: `${window.location.origin}/payment-cancel`,
       }),

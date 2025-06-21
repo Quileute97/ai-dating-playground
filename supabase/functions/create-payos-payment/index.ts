@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -15,25 +16,43 @@ serve(async (req) => {
   try {
     const { orderCode, userId, userEmail, packageType, returnUrl, cancelUrl } = await req.json();
 
-    // Package pricing and details
+    // Updated package pricing and details to include all package types
     const packageDetails = {
+      // Legacy packages
       'gold': { amount: 99000, description: 'Gói GOLD - Không giới hạn match', duration: -1 },
       'nearby': { amount: 49000, description: 'Gói Mở rộng Quanh đây - Cũ', duration: -1 },
+      
+      // New nearby packages
       'nearby_week': { amount: 20000, description: 'Gói Premium 1 Tuần - Mở rộng phạm vi 20km', duration: 7 },
       'nearby_month': { amount: 50000, description: 'Gói Premium 1 Tháng - Mở rộng phạm vi 20km', duration: 30 },
-      'nearby_unlimited': { amount: 500000, description: 'Gói Premium Vô Hạn - Mở rộng phạm vi 20km', duration: -1 }
+      'nearby_unlimited': { amount: 500000, description: 'Gói Premium Vô Hạn - Mở rộng phạm vi 20km', duration: -1 },
+      
+      // New dating packages
+      'dating_week': { amount: 49000, description: 'Gói Premium 1 Tuần - Hẹn hò không giới hạn', duration: 7 },
+      'dating_month': { amount: 149000, description: 'Gói Premium 1 Tháng - Hẹn hò không giới hạn', duration: 30 },
+      'dating_unlimited': { amount: 399000, description: 'Gói Premium Vĩnh Viễn - Hẹn hò không giới hạn', duration: -1 }
     };
 
     const selectedPackage = packageDetails[packageType as keyof typeof packageDetails];
     if (!selectedPackage) {
-      throw new Error('Invalid package type');
+      console.error('Invalid package type:', packageType);
+      console.error('Available packages:', Object.keys(packageDetails));
+      throw new Error(`Invalid package type: ${packageType}`);
     }
 
-    // Create PayOS payment
+    // Create PayOS payment with shortened description to avoid PayOS limits
+    const shortDescription = packageType.includes('dating') 
+      ? 'Premium Dating' 
+      : packageType.includes('nearby') 
+        ? 'Nearby Premium'
+        : selectedPackage.description.length > 25 
+          ? selectedPackage.description.substring(0, 22) + '...'
+          : selectedPackage.description;
+
     const paymentData = {
       orderCode,
       amount: selectedPackage.amount,
-      description: selectedPackage.description,
+      description: shortDescription,
       returnUrl: returnUrl || `${req.headers.get('origin')}/payment-success`,
       cancelUrl: cancelUrl || `${req.headers.get('origin')}/payment-cancel`,
     };

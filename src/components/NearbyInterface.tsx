@@ -243,6 +243,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
       onViewProfile={handleViewProfile}
       onLikeUser={handleLikeUser}
       onMessageUser={handleMessageUser}
+      currentUser={user}
     />
   );
 };

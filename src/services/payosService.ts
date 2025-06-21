@@ -5,6 +5,9 @@ export interface PaymentData {
   description: string;
   returnUrl: string;
   cancelUrl: string;
+  userId?: string;
+  userEmail?: string;
+  packageType: string;
 }
 
 export interface PaymentResponse {
@@ -13,33 +16,34 @@ export interface PaymentResponse {
   data?: {
     checkoutUrl: string;
     orderCode: number;
+    paymentLinkId?: string;
   };
 }
 
 export const createPayOSPayment = async (paymentData: PaymentData): Promise<PaymentResponse> => {
   try {
-    // Simulate PayOS API call
     console.log('Creating PayOS payment:', paymentData);
     
-    // Mock response - in real implementation, you would call PayOS API
-    const mockResponse: PaymentResponse = {
-      error: 0,
-      message: "Success",
-      data: {
-        checkoutUrl: `https://payos.vn/checkout/${paymentData.orderCode}`,
-        orderCode: paymentData.orderCode
-      }
-    };
+    const response = await fetch('https://oeepmsbttxfknkznbnym.supabase.co/functions/v1/create-payos-payment', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(paymentData),
+    });
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const result = await response.json();
     
-    return mockResponse;
+    if (!response.ok) {
+      throw new Error(result.message || 'API call failed');
+    }
+
+    return result;
   } catch (error) {
     console.error('PayOS payment error:', error);
     return {
       error: 1,
-      message: 'Có lỗi xảy ra khi tạo thanh toán'
+      message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi tạo thanh toán'
     };
   }
 };

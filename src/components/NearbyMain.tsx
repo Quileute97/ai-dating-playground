@@ -1,3 +1,4 @@
+
 import React from "react";
 import NearbyUserList from "./NearbyUserList";
 import NearbyFeatureBanner from "./NearbyFeatureBanner";
@@ -14,11 +15,6 @@ interface NearbyUser {
   interests: string[];
   rating: number;
   isLiked?: boolean;
-}
-
-interface BankInfoType {
-  bankName?: string;
-  [key: string]: any;
 }
 
 interface NearbyMainProps {
@@ -40,6 +36,7 @@ interface NearbyMainProps {
   onViewProfile: (u: NearbyUser) => void;
   onLikeUser: (userId: string, e?: React.MouseEvent) => void;
   onMessageUser: (userId: string, e?: React.MouseEvent) => void;
+  currentUser?: any; // Thêm prop currentUser
 }
 
 const NearbyMain: React.FC<NearbyMainProps> = ({
@@ -55,7 +52,8 @@ const NearbyMain: React.FC<NearbyMainProps> = ({
   bankInfo,
   onViewProfile,
   onLikeUser,
-  onMessageUser
+  onMessageUser,
+  currentUser
 }) => {
   return (
     <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4">
@@ -85,6 +83,8 @@ const NearbyMain: React.FC<NearbyMainProps> = ({
         packageType="nearby"
         packageName="Mở rộng phạm vi"
         price={49000}
+        userId={currentUser?.id}
+        userEmail={currentUser?.email}
         bankInfo={bankInfo}
       />
     </div>

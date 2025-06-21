@@ -12,6 +12,7 @@ import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
+import { createDatingPackagePayment } from "@/services/datingPackageService";
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -125,6 +126,53 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const handleProfileSwipe = (direction: 'left' | 'right' | 'super') => {
     setSelectedProfile(null);
     handleSwipe(direction);
+  };
+
+  const handleSelectPackage = async (packageId: string) => {
+    if (!user) {
+      toast({
+        title: "Cần đăng nhập",
+        description: "Vui lòng đăng nhập để mua gói Premium",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: "Đang tạo thanh toán...",
+        description: "Vui lòng chờ trong giây lát",
+      });
+
+      const result = await createDatingPackagePayment(packageId, user.id, user.email);
+      
+      if (result.error) {
+        toast({
+          title: "Có lỗi xảy ra!",
+          description: result.message || "Không thể tạo thanh toán",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (result.checkoutUrl) {
+        // Redirect to PayOS checkout
+        window.location.href = result.checkoutUrl;
+      } else {
+        toast({
+          title: "Có lỗi xảy ra!",
+          description: "Không nhận được URL thanh toán",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Có lỗi xảy ra!",
+        description: "Vui lòng thử lại sau",
+        variant: "destructive"
+      });
+    }
   };
 
   if (locationLoading || profilesLoading) {
@@ -318,6 +366,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       <DatingPackageModal
         isOpen={showDatingPackageModal}
         onClose={() => setShowDatingPackageModal(false)}
+        onSelectPackage={handleSelectPackage}
         currentUser={user}
         bankInfo={
           !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 

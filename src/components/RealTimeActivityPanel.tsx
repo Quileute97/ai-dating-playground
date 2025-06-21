@@ -7,28 +7,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import PostDetailModal from "./PostDetailModal";
 import FriendRequestDetailModal from "./FriendRequestDetailModal";
+import ChatWidget from "./ChatWidget";
+import { useChatWidget } from "@/hooks/useChatWidget";
 
 interface PanelProps {
   userId?: string;
-  onUserChatSelect?: (userId: string) => void; // Thêm prop để handle chat
 }
 
-export default function RealTimeActivityPanel({ userId, onUserChatSelect }: PanelProps) {
+export default function RealTimeActivityPanel({ userId }: PanelProps) {
   const { data: activities, isLoading } = useRecentActivities(userId);
   const navigate = useNavigate();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [selectedFriendRequestId, setSelectedFriendRequestId] = useState<string | null>(null);
+  
+  const { isOpen, chatUser, openChat, closeChat } = useChatWidget();
 
-  const handleUserClick = (e: React.MouseEvent, activityUserId: string) => {
+  const handleUserClick = (e: React.MouseEvent, activityUserId: string, activityUserName: string, activityUserAvatar: string) => {
     e.stopPropagation();
-    if (activityUserId) {
-      // Nếu có callback để mở chat, sử dụng nó
-      if (onUserChatSelect) {
-        onUserChatSelect(activityUserId);
-      } else {
-        // Fallback về navigate profile
-        navigate(`/profile/${activityUserId}`);
-      }
+    if (activityUserId && userId) {
+      // Mở chat widget thay vì navigate
+      openChat({
+        id: activityUserId,
+        name: activityUserName || "Người dùng",
+        avatar: activityUserAvatar || "/placeholder.svg"
+      });
     }
   };
 
@@ -84,12 +86,12 @@ export default function RealTimeActivityPanel({ userId, onUserChatSelect }: Pane
                   src={a.user_avatar || "/placeholder.svg"}
                   alt={a.user_name || "user"}
                   className="w-7 h-7 rounded-full object-cover border border-purple-100 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={(e) => handleUserClick(e, a.user_id)}
+                  onClick={(e) => handleUserClick(e, a.user_id, a.user_name || "", a.user_avatar || "")}
                 />
                 <div className="flex-1">
                   <span 
                     className="text-sm text-gray-700 cursor-pointer hover:text-purple-600 transition-colors font-medium"
-                    onClick={(e) => handleUserClick(e, a.user_id)}
+                    onClick={(e) => handleUserClick(e, a.user_id, a.user_name || "", a.user_avatar || "")}
                   >
                     {a.user_name || "Ai đó"}
                   </span>
@@ -117,6 +119,18 @@ export default function RealTimeActivityPanel({ userId, onUserChatSelect }: Pane
         isOpen={!!selectedFriendRequestId}
         onClose={() => setSelectedFriendRequestId(null)}
       />
+
+      {/* Chat Widget */}
+      {chatUser && userId && (
+        <ChatWidget
+          isOpen={isOpen}
+          onClose={closeChat}
+          userId={chatUser.id}
+          userName={chatUser.name}
+          userAvatar={chatUser.avatar}
+          myUserId={userId}
+        />
+      )}
     </>
   );
 }

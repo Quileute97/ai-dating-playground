@@ -12,6 +12,7 @@ import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
+import { useDailyMatches } from "@/hooks/useDailyMatches";
 import { createDatingPackagePayment } from "@/services/datingPackageService";
 
 interface SwipeInterfaceProps {
@@ -23,7 +24,6 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [matches, setMatches] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
-  const [dailyMatches, setDailyMatches] = useState(0);
   const [showDatingPackageModal, setShowDatingPackageModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const { toast } = useToast();
@@ -38,6 +38,9 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   // Use dating subscription hook
   const { isActive: isDatingActive, isLoading: datingLoading, subscription: datingSubscription } = useIsDatingActive(user?.id);
   const { likeUser, isProcessing } = useUserLike(user?.id);
+
+  // Use daily matches hook to get real count from database
+  const { dailyMatches, loading: dailyMatchesLoading } = useDailyMatches(user?.id);
 
   // Use real data from database with expanded range (50km for dating vs 5km for nearby)
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, 50);
@@ -81,7 +84,6 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     if (direction === 'right' || direction === 'super') {
       try {
         const res = await likeUser(currentProfile.id);
-        if (!isDatingActive) setDailyMatches(prev => prev + 1);
         if (res.matched) {
           setMatches(prev => prev + 1);
           setShowMatch(true);
@@ -175,7 +177,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     }
   };
 
-  if (locationLoading || profilesLoading) {
+  if (locationLoading || profilesLoading || dailyMatchesLoading) {
     return (
       <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50">
         <Card className="p-8 text-center bg-white/70 backdrop-blur-sm">
@@ -183,7 +185,9 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             <Heart className="w-8 h-8 text-white animate-pulse" />
           </div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">
-            {locationLoading ? "Đang xác định vị trí..." : "Đang tải danh sách người dùng..."}
+            {locationLoading ? "Đang xác định vị trí..." : 
+             dailyMatchesLoading ? "Đang tải thông tin..." :
+             "Đang tải danh sách người dùng..."}
           </h2>
         </Card>
       </div>

@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Phone, Video, MoreVertical, Settings, Image, Palette, History, Bell, UserX, Trash2 } from 'lucide-react';
+import { Send, ArrowLeft, Phone, Video, MoreVertical, Settings, Image, Palette, History, Bell, UserX, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -47,20 +46,9 @@ const ProfileChatWindow = ({
     sound: true,
     vibration: true
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-
-  // Predefined background options
-  const backgroundOptions = [
-    { name: 'Mặc định', value: '', preview: 'linear-gradient(45deg, #e5e7eb, #f3f4f6)' },
-    { name: 'Đêm sao', value: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=800&h=600&fit=crop', preview: '' },
-    { name: 'Rừng vàng', value: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?w=800&h=600&fit=crop', preview: '' },
-    { name: 'Hồ nước', value: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&h=600&fit=crop', preview: '' },
-    { name: 'Phòng khách', value: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=800&h=600&fit=crop', preview: '' },
-    { name: 'Gradient Tím', value: 'gradient-purple', preview: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-    { name: 'Gradient Xanh', value: 'gradient-blue', preview: 'linear-gradient(135deg, #667eea 0%, #43c6ac 100%)' },
-    { name: 'Gradient Hồng', value: 'gradient-pink', preview: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }
-  ];
 
   // Load saved settings from localStorage
   useEffect(() => {
@@ -204,6 +192,26 @@ const ProfileChatWindow = ({
     });
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          handleBackgroundChange(result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        toast({
+          title: "Lỗi",
+          description: "Vui lòng chọn file hình ảnh",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const handleNotificationChange = (key: string, value: boolean) => {
     const newSettings = { ...notificationSettings, [key]: value };
     setNotificationSettings(newSettings);
@@ -272,16 +280,7 @@ const ProfileChatWindow = ({
       return 'linear-gradient(to bottom right, rgb(239 246 255), rgb(250 245 255), rgb(239 246 255))';
     }
     
-    if (chatBackground.startsWith('gradient-')) {
-      const gradients = {
-        'gradient-purple': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        'gradient-blue': 'linear-gradient(135deg, #667eea 0%, #43c6ac 100%)',
-        'gradient-pink': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-      };
-      return gradients[chatBackground as keyof typeof gradients];
-    }
-    
-    return `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${chatBackground}) center/cover`;
+    return `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url(${chatBackground}) center/cover`;
   };
 
   return (
@@ -360,26 +359,56 @@ const ProfileChatWindow = ({
                       <Palette className="w-4 h-4" />
                       Ảnh nền chat
                     </h3>
-                    <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                      {backgroundOptions.map((bg) => (
-                        <Button
-                          key={bg.value}
-                          onClick={() => {
-                            handleBackgroundChange(bg.value);
+                    <div className="space-y-2">
+                      {/* Default Background Option */}
+                      <Button
+                        onClick={() => handleBackgroundChange('')}
+                        variant={chatBackground === '' ? "default" : "outline"}
+                        className="w-full justify-start h-12"
+                      >
+                        <div 
+                          className="w-8 h-8 rounded border-2 border-gray-300 mr-3"
+                          style={{
+                            background: 'linear-gradient(45deg, #e5e7eb, #f3f4f6)'
                           }}
-                          variant={chatBackground === bg.value ? "default" : "outline"}
-                          className="w-full justify-start h-12"
-                        >
+                        />
+                        Mặc định
+                        {chatBackground === '' && <span className="ml-auto text-purple-600">✓</span>}
+                      </Button>
+
+                      {/* Upload Background Option */}
+                      <Button
+                        onClick={() => fileInputRef.current?.click()}
+                        variant="outline"
+                        className="w-full justify-start h-12"
+                      >
+                        <div className="w-8 h-8 rounded border-2 border-gray-300 mr-3 flex items-center justify-center bg-gray-100">
+                          <Upload className="w-4 h-4 text-gray-600" />
+                        </div>
+                        Tải lên ảnh
+                      </Button>
+
+                      {/* Hidden file input */}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+
+                      {/* Show current custom background if any */}
+                      {chatBackground && chatBackground !== '' && (
+                        <div className="p-2 bg-gray-50 rounded-lg">
+                          <p className="text-xs text-gray-600 mb-2">Ảnh nền hiện tại:</p>
                           <div 
-                            className="w-8 h-8 rounded border-2 border-gray-300 mr-3"
+                            className="w-full h-16 rounded border-2 border-gray-300"
                             style={{
-                              background: bg.preview || (bg.value ? `url(${bg.value}) center/cover` : 'linear-gradient(45deg, #e5e7eb, #f3f4f6)')
+                              background: `url(${chatBackground}) center/cover`
                             }}
                           />
-                          {bg.name}
-                          {chatBackground === bg.value && <span className="ml-auto text-purple-600">✓</span>}
-                        </Button>
-                      ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 

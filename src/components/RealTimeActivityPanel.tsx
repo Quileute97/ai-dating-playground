@@ -5,19 +5,18 @@ import { Card } from "@/components/ui/card";
 import { useRecentActivities } from "@/hooks/useRecentActivities";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
-import PostDetailModal from "./PostDetailModal";
 import FriendRequestDetailModal from "./FriendRequestDetailModal";
 import ChatWidget from "./ChatWidget";
 import { useChatWidget } from "@/hooks/useChatWidget";
 
 interface PanelProps {
   userId?: string;
+  onScrollToPost?: (postId: string) => void;
 }
 
-export default function RealTimeActivityPanel({ userId }: PanelProps) {
+export default function RealTimeActivityPanel({ userId, onScrollToPost }: PanelProps) {
   const { data: activities, isLoading } = useRecentActivities(userId);
   const navigate = useNavigate();
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [selectedFriendRequestId, setSelectedFriendRequestId] = useState<string | null>(null);
   
   const { isOpen, chatUser, openChat, closeChat } = useChatWidget();
@@ -36,12 +35,12 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
 
   const handleActivityClick = (activity: any) => {
     // Navigate to related content based on activity type
-    if (activity.type === "like" && activity.post_id) {
-      // Hiển thị modal bài viết cho post likes
-      setSelectedPostId(activity.post_id);
-    } else if (activity.type === "comment" && activity.post_id) {
-      // Hiển thị modal bài viết cho comments
-      setSelectedPostId(activity.post_id);
+    if (activity.type === "like" && activity.post_id && onScrollToPost) {
+      // Scroll tới bài viết thay vì hiển thị modal
+      onScrollToPost(activity.post_id);
+    } else if (activity.type === "comment" && activity.post_id && onScrollToPost) {
+      // Scroll tới bài viết thay vì hiển thị modal
+      onScrollToPost(activity.post_id);
     } else if (activity.type === "friend_request" && activity.friend_request_id) {
       // Hiển thị modal chi tiết lời mời kết bạn
       setSelectedFriendRequestId(activity.friend_request_id);
@@ -105,13 +104,6 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
           </div>
         </div>
       </aside>
-
-      {/* Post Detail Modal */}
-      <PostDetailModal
-        postId={selectedPostId}
-        isOpen={!!selectedPostId}
-        onClose={() => setSelectedPostId(null)}
-      />
 
       {/* Friend Request Detail Modal */}
       <FriendRequestDetailModal

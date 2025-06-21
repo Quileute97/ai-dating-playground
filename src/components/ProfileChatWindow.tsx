@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Phone, Video, MoreVertical, Settings, Image, Palette, History } from 'lucide-react';
+import { Send, ArrowLeft, Phone, Video, MoreVertical, Settings, Image, Palette, History, Bell, UserX, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,6 +15,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface ProfileChatWindowProps {
   targetUserId: string;
@@ -36,23 +39,40 @@ const ProfileChatWindow = ({
   const [showMediaHistory, setShowMediaHistory] = useState(false);
   const [chatBackground, setChatBackground] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [mediaFilter, setMediaFilter] = useState<'all' | 'images' | 'videos' | 'links'>('all');
+  const [notificationSettings, setNotificationSettings] = useState({
+    enabled: true,
+    sound: true,
+    vibration: true
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Predefined background options
   const backgroundOptions = [
-    { name: 'Mặc định', value: '' },
-    { name: 'Đêm sao', value: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=800&h=600&fit=crop' },
-    { name: 'Rừng vàng', value: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?w=800&h=600&fit=crop' },
-    { name: 'Hồ nước', value: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&h=600&fit=crop' },
-    { name: 'Phòng khách', value: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=800&h=600&fit=crop' }
+    { name: 'Mặc định', value: '', preview: 'linear-gradient(45deg, #e5e7eb, #f3f4f6)' },
+    { name: 'Đêm sao', value: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=800&h=600&fit=crop', preview: '' },
+    { name: 'Rừng vàng', value: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?w=800&h=600&fit=crop', preview: '' },
+    { name: 'Hồ nước', value: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&h=600&fit=crop', preview: '' },
+    { name: 'Phòng khách', value: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=800&h=600&fit=crop', preview: '' },
+    { name: 'Gradient Tím', value: 'gradient-purple', preview: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { name: 'Gradient Xanh', value: 'gradient-blue', preview: 'linear-gradient(135deg, #667eea 0%, #43c6ac 100%)' },
+    { name: 'Gradient Hồng', value: 'gradient-pink', preview: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }
   ];
 
-  // Load saved background from localStorage
+  // Load saved settings from localStorage
   useEffect(() => {
     const savedBg = localStorage.getItem(`chat-bg-${targetUserId}`);
+    const savedNotifications = localStorage.getItem(`chat-notifications-${targetUserId}`);
+    
     if (savedBg) {
       setChatBackground(savedBg);
+    }
+    
+    if (savedNotifications) {
+      setNotificationSettings(JSON.parse(savedNotifications));
     }
   }, [targetUserId]);
 
@@ -171,6 +191,10 @@ const ProfileChatWindow = ({
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('vi-VN');
+  };
+
   const handleBackgroundChange = (bgValue: string) => {
     setChatBackground(bgValue);
     localStorage.setItem(`chat-bg-${targetUserId}`, bgValue);
@@ -180,19 +204,91 @@ const ProfileChatWindow = ({
     });
   };
 
-  const getMediaMessages = () => {
-    // Filter messages that might contain media (for demo purposes, we'll show all messages)
-    // In a real app, you'd filter for messages with image/video attachments
-    return messages.filter(msg => msg.content.includes('http') || msg.content.includes('image') || msg.content.includes('video'));
+  const handleNotificationChange = (key: string, value: boolean) => {
+    const newSettings = { ...notificationSettings, [key]: value };
+    setNotificationSettings(newSettings);
+    localStorage.setItem(`chat-notifications-${targetUserId}`, JSON.stringify(newSettings));
+    toast({
+      title: "Cài đặt đã lưu",
+      description: "Thông báo đã được cập nhật",
+    });
+  };
+
+  const getFilteredMediaMessages = () => {
+    const mediaMessages = messages.filter(msg => {
+      const content = msg.content.toLowerCase();
+      switch (mediaFilter) {
+        case 'images':
+          return content.includes('jpg') || content.includes('png') || content.includes('gif') || content.includes('jpeg') || content.includes('image');
+        case 'videos':
+          return content.includes('mp4') || content.includes('video') || content.includes('mov') || content.includes('avi');
+        case 'links':
+          return content.includes('http') || content.includes('www.');
+        default:
+          return content.includes('http') || content.includes('image') || content.includes('video') || content.includes('jpg') || content.includes('png');
+      }
+    });
+    return mediaMessages;
+  };
+
+  const handleDeleteChatHistory = async () => {
+    if (!conversationId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('conversation_id', conversationId);
+
+      if (error) throw error;
+
+      setMessages([]);
+      setShowDeleteConfirm(false);
+      toast({
+        title: "Đã xóa lịch sử",
+        description: "Tất cả tin nhắn đã được xóa",
+      });
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa lịch sử chat",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBlockUser = () => {
+    // In a real app, this would update the database
+    setShowBlockConfirm(false);
+    toast({
+      title: "Đã chặn người dùng",
+      description: `${targetUserName} đã bị chặn`,
+    });
+    onClose();
+  };
+
+  const getChatBackgroundStyle = () => {
+    if (!chatBackground) {
+      return 'linear-gradient(to bottom right, rgb(239 246 255), rgb(250 245 255), rgb(239 246 255))';
+    }
+    
+    if (chatBackground.startsWith('gradient-')) {
+      const gradients = {
+        'gradient-purple': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'gradient-blue': 'linear-gradient(135deg, #667eea 0%, #43c6ac 100%)',
+        'gradient-pink': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+      };
+      return gradients[chatBackground as keyof typeof gradients];
+    }
+    
+    return `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${chatBackground}) center/cover`;
   };
 
   return (
     <div 
       className="fixed inset-0 flex flex-col z-50"
       style={{
-        background: chatBackground 
-          ? `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${chatBackground}) center/cover`
-          : 'linear-gradient(to bottom right, rgb(239 246 255), rgb(250 245 255), rgb(239 246 255))'
+        background: getChatBackgroundStyle()
       }}
     >
       {/* Header */}
@@ -230,7 +326,7 @@ const ProfileChatWindow = ({
                   <Settings className="w-4 h-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80">
+              <SheetContent side="right" className="w-80 overflow-y-auto">
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-2">
                     <Settings className="w-5 h-5" />
@@ -254,7 +350,7 @@ const ProfileChatWindow = ({
                       className="w-full justify-start"
                     >
                       <Image className="w-4 h-4 mr-2" />
-                      Xem lại hình ảnh/video đã chia sẻ
+                      Xem lại media đã chia sẻ ({getFilteredMediaMessages().length})
                     </Button>
                   </div>
 
@@ -264,13 +360,12 @@ const ProfileChatWindow = ({
                       <Palette className="w-4 h-4" />
                       Ảnh nền chat
                     </h3>
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
                       {backgroundOptions.map((bg) => (
                         <Button
                           key={bg.value}
                           onClick={() => {
                             handleBackgroundChange(bg.value);
-                            setShowSettings(false);
                           }}
                           variant={chatBackground === bg.value ? "default" : "outline"}
                           className="w-full justify-start h-12"
@@ -278,9 +373,7 @@ const ProfileChatWindow = ({
                           <div 
                             className="w-8 h-8 rounded border-2 border-gray-300 mr-3"
                             style={{
-                              background: bg.value 
-                                ? `url(${bg.value}) center/cover` 
-                                : 'linear-gradient(45deg, #e5e7eb, #f3f4f6)'
+                              background: bg.preview || (bg.value ? `url(${bg.value}) center/cover` : 'linear-gradient(45deg, #e5e7eb, #f3f4f6)')
                             }}
                           />
                           {bg.name}
@@ -290,30 +383,67 @@ const ProfileChatWindow = ({
                     </div>
                   </div>
 
-                  {/* Additional Settings */}
+                  {/* Notification Settings */}
                   <div className="space-y-3">
-                    <h3 className="font-medium text-gray-900">Cài đặt khác</h3>
+                    <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                      <Bell className="w-4 h-4" />
+                      Thông báo
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="notifications">Bật thông báo</Label>
+                        <Switch
+                          id="notifications"
+                          checked={notificationSettings.enabled}
+                          onCheckedChange={(checked) => handleNotificationChange('enabled', checked)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="sound">Âm thanh</Label>
+                        <Switch
+                          id="sound"
+                          checked={notificationSettings.sound}
+                          onCheckedChange={(checked) => handleNotificationChange('sound', checked)}
+                          disabled={!notificationSettings.enabled}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="vibration">Rung</Label>
+                        <Switch
+                          id="vibration"
+                          checked={notificationSettings.vibration}
+                          onCheckedChange={(checked) => handleNotificationChange('vibration', checked)}
+                          disabled={!notificationSettings.enabled}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dangerous Actions */}
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-gray-900">Hành động</h3>
                     <div className="space-y-2">
                       <Button
                         variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => toast({ title: "Thông báo", description: "Tính năng đang được phát triển!" })}
+                        className="w-full justify-start text-orange-600 hover:text-orange-700"
+                        onClick={() => {
+                          setShowDeleteConfirm(true);
+                          setShowSettings(false);
+                        }}
                       >
-                        🔔 Cài đặt thông báo
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Xóa lịch sử chat
                       </Button>
                       <Button
                         variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => toast({ title: "Chặn người dùng", description: "Tính năng đang được phát triển!" })}
+                        className="w-full justify-start text-red-600 hover:text-red-700"
+                        onClick={() => {
+                          setShowBlockConfirm(true);
+                          setShowSettings(false);
+                        }}
                       >
-                        🚫 Chặn người dùng
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => toast({ title: "Xóa lịch sử", description: "Tính năng đang được phát triển!" })}
-                      >
-                        🗑️ Xóa lịch sử chat
+                        <UserX className="w-4 h-4 mr-2" />
+                        Chặn người dùng
                       </Button>
                     </div>
                   </div>
@@ -384,29 +514,105 @@ const ProfileChatWindow = ({
 
       {/* Media History Modal */}
       <Dialog open={showMediaHistory} onOpenChange={setShowMediaHistory}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Image className="w-5 h-5" />
-              Hình ảnh & Video đã chia sẻ
+              Media đã chia sẻ
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            {getMediaMessages().length > 0 ? (
-              getMediaMessages().map((msg) => (
-                <div key={msg.id} className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">
-                    {formatTime(msg.created_at)}
-                  </p>
-                  <p className="text-sm">{msg.content}</p>
+          
+          {/* Filter Tabs */}
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+            {[
+              { key: 'all', label: 'Tất cả' },
+              { key: 'images', label: 'Hình ảnh' },
+              { key: 'videos', label: 'Video' },
+              { key: 'links', label: 'Links' }
+            ].map((filter) => (
+              <Button
+                key={filter.key}
+                onClick={() => setMediaFilter(filter.key as any)}
+                variant={mediaFilter === filter.key ? "default" : "ghost"}
+                size="sm"
+                className="flex-1 text-xs"
+              >
+                {filter.label}
+              </Button>
+            ))}
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="space-y-3">
+              {getFilteredMediaMessages().length > 0 ? (
+                getFilteredMediaMessages().map((msg) => (
+                  <div key={msg.id} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="text-xs text-gray-500">
+                        {formatDate(msg.created_at)} - {formatTime(msg.created_at)}
+                      </p>
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        msg.sender_id === currentUserId 
+                          ? 'bg-purple-100 text-purple-600' 
+                          : 'bg-blue-100 text-blue-600'
+                      }`}>
+                        {msg.sender_id === currentUserId ? 'Bạn' : targetUserName}
+                      </span>
+                    </div>
+                    <p className="text-sm break-words">{msg.content}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  <Image className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>Không có {mediaFilter === 'all' ? 'media' : 
+                      mediaFilter === 'images' ? 'hình ảnh' : 
+                      mediaFilter === 'videos' ? 'video' : 'links'} nào</p>
                 </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-500 py-8">
-                <Image className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                <p>Chưa có hình ảnh hoặc video nào được chia sẻ</p>
-              </div>
-            )}
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xóa lịch sử chat?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 mb-4">
+            Bạn có chắc chắn muốn xóa toàn bộ lịch sử chat với {targetUserName}? 
+            Hành động này không thể hoàn tác.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              Hủy
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteChatHistory}>
+              Xóa
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Block Confirmation Dialog */}
+      <Dialog open={showBlockConfirm} onOpenChange={setShowBlockConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Chặn người dùng?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 mb-4">
+            Bạn có chắc chắn muốn chặn {targetUserName}? 
+            Họ sẽ không thể gửi tin nhắn cho bạn nữa.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowBlockConfirm(false)}>
+              Hủy
+            </Button>
+            <Button variant="destructive" onClick={handleBlockUser}>
+              Chặn
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

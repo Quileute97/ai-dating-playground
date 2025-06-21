@@ -278,7 +278,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-center">
             <Heart className="w-6 h-6 text-pink-500" />
-            Chào mừng đến với Love App
+            Chào mừng đến với Hyliya
           </DialogTitle>
         </DialogHeader>
 

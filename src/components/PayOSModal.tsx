@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { CreditCard, X, Loader2, CheckCircle, BadgeCheck, ExternalLink } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -49,10 +48,14 @@ const PayOSModal = ({
 
     try {
       const orderCode = generateOrderCode();
+      
+      // Tạo mô tả ngắn gọn để tránh lỗi PayOS (tối đa 25 ký tự)
+      const shortDescription = packageType === 'nearby' ? 'Morong pham vi' : 'Nang cap Gold';
+      
       const paymentData = {
         orderCode,
         amount: price,
-        description: `Thanh toán ${packageName}`,
+        description: shortDescription,
         returnUrl: `${window.location.origin}/payment-success?orderCode=${orderCode}`,
         cancelUrl: `${window.location.origin}/payment-cancel?orderCode=${orderCode}`,
         userId,

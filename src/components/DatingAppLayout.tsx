@@ -29,7 +29,7 @@ export default function DatingAppLayout({
         {/* LEFT: RealTimeActivityPanel (only nếu đã đăng nhập) */}
         {!isAdminMode && user && (
           isLeftPanelOpen ? (
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <RealTimeActivityPanel userId={user?.id} />
               <SidePanelToggle
                 isOpen={isLeftPanelOpen}
@@ -38,23 +38,27 @@ export default function DatingAppLayout({
               />
             </div>
           ) : (
-            <SidePanelToggle
-              isOpen={isLeftPanelOpen}
-              side="left"
-              onToggle={setIsLeftPanelOpen}
-            />
+            <div className="flex-shrink-0">
+              <SidePanelToggle
+                isOpen={isLeftPanelOpen}
+                side="left"
+                onToggle={setIsLeftPanelOpen}
+              />
+            </div>
           )
         )}
-        {/* CENTER: main tab content */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          <div className="h-full">
+        
+        {/* CENTER: main tab content - expanded to fill available space */}
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          <div className="h-full w-full overflow-auto">
             {children}
           </div>
         </div>
+        
         {/* RIGHT: ActiveFriendsWithChatPanel (chỉ user login) */}
         {!isAdminMode && user && (
           isRightPanelOpen ? (
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <ActiveFriendsWithChatPanel myId={user.id} />
               <SidePanelToggle
                 isOpen={isRightPanelOpen}
@@ -63,11 +67,13 @@ export default function DatingAppLayout({
               />
             </div>
           ) : (
-            <SidePanelToggle
-              isOpen={isRightPanelOpen}
-              side="right"
-              onToggle={setIsRightPanelOpen}
-            />
+            <div className="flex-shrink-0">
+              <SidePanelToggle
+                isOpen={isRightPanelOpen}
+                side="right"
+                onToggle={setIsRightPanelOpen}
+              />
+            </div>
           )
         )}
       </div>

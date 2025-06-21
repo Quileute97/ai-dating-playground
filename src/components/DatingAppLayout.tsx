@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, Users, MessageCircle, User, Sparkles } from "lucide-react";
 import SwipeInterface from "./SwipeInterface";
 import Timeline, { TimelineRef } from "./Timeline";
-import NearbyMain from "./NearbyMain";
+import NearbyWrapper from "./NearbyWrapper";
 import UserProfile from "./UserProfile";
 import RealTimeActivityPanel from "./RealTimeActivityPanel";
 import { Card } from "@/components/ui/card";
@@ -83,7 +83,7 @@ export default function DatingAppLayout({ user, activeTab, onTabChange, children
                 <Timeline ref={timelineRef} user={user} />
               </TabsContent>
               <TabsContent value="nearby" className="mt-0 h-full">
-                <NearbyMain />
+                <NearbyWrapper user={user} />
               </TabsContent>
               <TabsContent value="profile" className="mt-0 h-full">
                 <div className="p-4">

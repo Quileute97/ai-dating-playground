@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useNearbyConversation } from '@/hooks/useNearbyConversation';
+import { useNavigate } from 'react-router-dom';
 
 interface NearbyUser {
   id: string;
@@ -27,6 +28,7 @@ const NearbyChatWindow = ({ user, currentUserId, onClose }: NearbyChatWindowProp
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const { messages, sendMessage, loading } = useNearbyConversation(currentUserId, user.id);
 
@@ -43,6 +45,10 @@ const NearbyChatWindow = ({ user, currentUserId, onClose }: NearbyChatWindowProp
     
     await sendMessage(inputValue);
     setInputValue('');
+  };
+
+  const handleUserClick = () => {
+    navigate(`/profile/${user.id}`);
   };
 
   const handleVideoCall = () => {
@@ -88,21 +94,26 @@ const NearbyChatWindow = ({ user, currentUserId, onClose }: NearbyChatWindowProp
             <ArrowLeft className="w-4 h-4" />
           </Button>
           
-          <img 
-            src={user.avatar} 
-            alt={user.name}
-            className="w-10 h-10 rounded-full object-cover border-2 border-purple-200"
-          />
-          
-          <div className="flex-1">
-            <h2 className="font-semibold text-gray-800">{user.name}, {user.age}</h2>
-            <div className="flex items-center gap-1">
-              {user.isOnline && <div className="w-2 h-2 bg-green-500 rounded-full"></div>}
-              <span className="text-xs text-gray-500">
-                {user.isOnline ? 'Đang online' : user.lastSeen}
-              </span>
+          <button 
+            onClick={handleUserClick}
+            className="flex items-center gap-3 hover:bg-purple-50 rounded-lg p-2 transition-colors flex-1"
+          >
+            <img 
+              src={user.avatar} 
+              alt={user.name}
+              className="w-10 h-10 rounded-full object-cover border-2 border-purple-200"
+            />
+            
+            <div className="flex-1 text-left">
+              <h2 className="font-semibold text-gray-800 hover:text-purple-600 transition-colors">{user.name}, {user.age}</h2>
+              <div className="flex items-center gap-1">
+                {user.isOnline && <div className="w-2 h-2 bg-green-500 rounded-full"></div>}
+                <span className="text-xs text-gray-500">
+                  {user.isOnline ? 'Đang online' : user.lastSeen}
+                </span>
+              </div>
             </div>
-          </div>
+          </button>
 
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleVoiceCall}>

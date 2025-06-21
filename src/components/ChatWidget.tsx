@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRealTimeMessages } from '@/hooks/useRealTimeMessages';
+import { useNavigate } from 'react-router-dom';
 
 interface ChatWidgetProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export default function ChatWidget({
 }: ChatWidgetProps) {
   const [message, setMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
+  const navigate = useNavigate();
   
   const { messages, isLoading, sendMessage, sending } = useRealTimeMessages(myUserId, userId);
 
@@ -40,6 +42,10 @@ export default function ChatWidget({
     }
   };
 
+  const handleUserClick = () => {
+    navigate(`/profile/${userId}`);
+  };
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -51,16 +57,19 @@ export default function ChatWidget({
       <Card className="w-80 bg-white shadow-2xl border-0 rounded-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-          <div className="flex items-center gap-2 min-w-0">
+          <button 
+            onClick={handleUserClick}
+            className="flex items-center gap-2 min-w-0 hover:bg-white/10 rounded-lg p-2 transition-colors flex-1"
+          >
             <img 
               src={userAvatar || '/placeholder.svg'} 
               className="w-8 h-8 rounded-full object-cover border-2 border-white/30" 
             />
-            <div className="min-w-0">
-              <div className="font-medium text-sm truncate">{userName}</div>
+            <div className="min-w-0 text-left">
+              <div className="font-medium text-sm truncate hover:text-purple-100 transition-colors">{userName}</div>
               <div className="text-xs text-purple-100">Đang hoạt động</div>
             </div>
-          </div>
+          </button>
           <div className="flex gap-1">
             <Button
               variant="ghost"

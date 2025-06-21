@@ -7,6 +7,7 @@ import { useRealTimeMessages } from "@/hooks/useRealTimeMessages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from "react-router-dom";
 
 interface ActiveFriendsWithChatPanelProps {
   myId: string;
@@ -25,6 +26,7 @@ export default function ActiveFriendsWithChatPanel({
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
   const [isChatMinimized, setIsChatMinimized] = useState(true);
   const [chatMessage, setChatMessage] = useState("");
+  const navigate = useNavigate();
 
   // Sử dụng real-time messages hook với ID user thật
   const { messages, isLoading: messagesLoading, sendMessage, sending } = useRealTimeMessages(
@@ -64,6 +66,10 @@ export default function ActiveFriendsWithChatPanel({
     if (onChatUserChange) {
       onChatUserChange(friendId);
     }
+  };
+
+  const handleUserNameClick = (userId: string) => {
+    navigate(`/profile/${userId}`);
   };
 
   const formatTime = (dateString: string) => {
@@ -123,7 +129,10 @@ export default function ActiveFriendsWithChatPanel({
           <Card className="bg-white border shadow-xl rounded-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl">
             {/* Chat Header */}
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-              <div className="flex items-center gap-3 min-w-0">
+              <button 
+                onClick={() => handleUserNameClick(selectedFriend)}
+                className="flex items-center gap-3 min-w-0 hover:bg-white/10 rounded-lg p-2 transition-colors flex-1"
+              >
                 <div className="relative">
                   <img 
                     src={selectedFriendData.avatar || '/placeholder.svg'} 
@@ -133,13 +142,13 @@ export default function ActiveFriendsWithChatPanel({
                     selectedFriendData.online ? "bg-green-400" : "bg-gray-300"
                   }`}></span>
                 </div>
-                <div className="min-w-0">
-                  <div className="font-medium text-sm truncate">{selectedFriendData.name}</div>
+                <div className="min-w-0 text-left">
+                  <div className="font-medium text-sm truncate hover:text-purple-100 transition-colors">{selectedFriendData.name}</div>
                   <div className="text-xs text-purple-100">
                     {selectedFriendData.online ? "Đang hoạt động" : "Không hoạt động"}
                   </div>
                 </div>
-              </div>
+              </button>
               <Button
                 variant="ghost"
                 size="sm"

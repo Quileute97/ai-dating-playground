@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Heart, X, Zap, ArrowLeft, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { useBankInfo } from "@/hooks/useBankInfo";
 import { useUpgradeStatus } from './hooks/useUpgradeStatus';
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
+import DatingProfileView from "./DatingProfileView";
 import NearbyFeatureBanner from "@/components/NearbyFeatureBanner";
 
 interface SwipeInterfaceProps {
@@ -19,38 +21,37 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [matches, setMatches] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
-  const [dailyMatches, setDailyMatches] = useState(0); // số lượt match thật sự đã sử dụng
+  const [dailyMatches, setDailyMatches] = useState(0);
   const [isGoldActive, setIsGoldActive] = useState(false);
   const [showPayOSModal, setShowPayOSModal] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
   const { data: goldUpgrade, isLoading: goldLoading } = useUpgradeStatus(user?.id, 'gold');
   const { data: nearbyUpgrade, isLoading: nearbyLoading } = useUpgradeStatus(user?.id, 'nearby');
   const { likeUser, isProcessing } = useUserLike(user?.id);
 
-  // Lấy profile thật từ Supabase, trừ user hiện tại
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, null, 1000);
-  // Xử lý để loại bỏ user hiện tại, và profile chưa đủ thông tin cơ bản, cũng kiêm tra bản ghi bị null
+  
   const availableProfiles = useMemo(() =>
     profiles
       .filter(p => p.id !== user?.id && p.name && p.avatar)
       .map(p => ({
         ...p,
         images: [p.avatar!],
-        bio: "Người dùng thật trên hệ thống.",
-        distance: p.lat && p.lng ? 0 : null, // có thể bổ sung nếu có vị trí, tạm fix 0,
-        interests: [],
+        bio: p.bio || "Người dùng thật trên hệ thống.",
+        distance: p.lat && p.lng ? 0 : null,
+        interests: p.interests || [],
       })), [profiles, user?.id]
   );
 
   const maxFreeMatches = 10;
   const remainingMatches = maxFreeMatches - dailyMatches;
-
   const currentProfile = availableProfiles[currentProfileIndex];
 
   const handleSwipe = async (direction: 'left' | 'right' | 'super') => {
     if (!currentProfile) return;
-    // Giới hạn lượt swipe nếu chưa phải Gold
+    
     if (!isGoldActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
       toast({
         title: "Đã hết lượt match miễn phí!",
@@ -64,7 +65,6 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     setSwipeDirection(direction === 'super' ? 'right' : direction);
 
     if (direction === 'right' || direction === 'super') {
-      // Gọi API Supabase lưu like và kiểm tra match thật sự
       try {
         const res = await likeUser(currentProfile.id);
         if (!isGoldActive) setDailyMatches(prev => prev + 1);
@@ -97,6 +97,21 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       );
       setSwipeDirection(null);
     }, 300);
+  };
+
+  const handleProfileClick = () => {
+    if (currentProfile) {
+      setSelectedProfile(currentProfile);
+    }
+  };
+
+  const handleCloseProfile = () => {
+    setSelectedProfile(null);
+  };
+
+  const handleProfileSwipe = (direction: 'left' | 'right' | 'super') => {
+    setSelectedProfile(null);
+    handleSwipe(direction);
   };
 
   const handleGoldUpgrade = () => {
@@ -136,6 +151,20 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     );
   }
 
+  // Show detailed profile view
+  if (selectedProfile) {
+    return (
+      <DatingProfileView
+        profile={selectedProfile}
+        onClose={handleCloseProfile}
+        onSwipe={handleProfileSwipe}
+        isGoldActive={isGoldActive}
+        dailyMatches={dailyMatches}
+        maxFreeMatches={maxFreeMatches}
+      />
+    );
+  }
+
   return (
     <div className="h-full bg-gradient-to-br from-pink-50 to-purple-50 p-4 relative overflow-hidden">
       {/* Gold Member Badge */}
@@ -170,11 +199,12 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       {/* Profile Card */}
       <div className="max-w-sm mx-auto h-full flex flex-col">
         <Card 
-          className={`flex-1 relative overflow-hidden transition-all duration-300 ${
+          className={`flex-1 relative overflow-hidden transition-all duration-300 cursor-pointer ${
             swipeDirection === 'left' ? 'transform -translate-x-full rotate-12 opacity-0' :
             swipeDirection === 'right' ? 'transform translate-x-full -rotate-12 opacity-0' :
             'transform translate-x-0 rotate-0 opacity-100'
           }`}
+          onClick={handleProfileClick}
         >
           {/* Profile Image */}
           <div className="relative h-2/3">
@@ -195,6 +225,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
               <h2 className="text-2xl font-bold">
                 {currentProfile.name}
               </h2>
+              <p className="text-sm opacity-90">Nhấn để xem hồ sơ chi tiết</p>
             </div>
           </div>
 
@@ -247,7 +278,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           </Button>
         </div>
 
-        {/* Upgrade Banner: chỉ hiện nếu chưa có upgrade hoặc bị rejected */}
+        {/* Upgrade Banner */}
         {!isGoldActive && !goldLoading && (
           remainingMatches <= 3 && (
             <Card className="mt-4 p-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
@@ -270,7 +301,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           )
         )}
 
-        {/* Nearby Upgrade tracker: chỉ hiện nếu chưa có nearby hoặc bị rejected/pending */}
+        {/* Nearby Upgrade tracker */}
         {
           !isGoldActive && !nearbyLoading && (
             <NearbyFeatureBanner
@@ -290,18 +321,16 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         </div>
       </div>
 
-      {/* PayOS Modal chung: Chọn loại package dựa trên mở modal từ đâu */}
+      {/* PayOS Modal */}
       <PayOSModal
         isOpen={showPayOSModal}
         onClose={() => setShowPayOSModal(false)}
         onSuccess={
-          // Nếu đang nâng cấp Nearby thì chỉ close, nếu Gold thì chạy handleGoldUpgrade
           nearbyUpgrade?.status !== "approved"
             ? () => setShowPayOSModal(false)
             : handleGoldUpgrade
         }
         packageType={
-          // Xác định packageType: Nếu mở từ NearbyFeatureBanner thì là "nearby", mặc định là "gold" nếu chưa có nearbyUpgrade hoặc đang là gold modal
           (!nearbyUpgrade || (nearbyUpgrade.status && nearbyUpgrade.status !== "approved" && nearbyUpgrade.status !== "pending"))
             ? "nearby"
             : "gold"

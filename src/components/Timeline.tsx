@@ -158,7 +158,7 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
         <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
       )}
       
-      <div className="flex-1 overflow-y-auto space-y-2 mt-2">
+      <div className="flex-1 overflow-y-auto space-y-2 mt-3">
         {isLoading && (
           <div className="text-center text-gray-500 pt-12">Đang tải timeline...</div>
         )}
@@ -238,55 +238,32 @@ const PostForm: React.FC<{
   };
 
   return (
-    <Card className="mb-4 p-3">
-      <form onSubmit={handleSubmit} className="flex gap-3 flex-col sm:flex-row items-start">
-        <img src={currentAvatar} alt={currentName} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-        <div className="flex-1 w-full flex flex-col gap-2">
+    <Card className="mb-2 p-2 shadow-sm">
+      <form onSubmit={handleSubmit} className="flex gap-2 items-start">
+        <img src={currentAvatar} alt={currentName} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1" />
+        <div className="flex-1 w-full flex flex-col gap-1.5">
           <div className="relative">
             <Textarea
               ref={textAreaRef}
-              className="flex-1 min-h-[80px] resize-none"
+              className="flex-1 min-h-[60px] resize-none text-sm border-gray-200"
               placeholder="Bạn đang nghĩ gì?"
               value={content}
               onChange={e => setContent(e.target.value)}
               disabled={posting || uploadingMedia}
             />
           </div>
-          <div className="flex gap-2 flex-wrap items-center">
-            <label className="cursor-pointer flex gap-1 items-center text-sm px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200">
-              <ImageIcon size={14} />
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={e => handleMediaChange(e, "image")}
-                disabled={posting || uploadingMedia}
-              />
-              <span>Ảnh</span>
-            </label>
-            <label className="cursor-pointer flex gap-1 items-center text-sm px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200">
-              <VideoIcon size={14} />
-              <input
-                type="file"
-                accept="video/*"
-                className="hidden"
-                onChange={e => handleMediaChange(e, "video")}
-                disabled={posting || uploadingMedia}
-              />
-              <span>Video</span>
-            </label>
-          </div>
+          
           {media && (
-            <div className="relative mt-2 mb-2">
+            <div className="relative mt-1 mb-1">
               {media.type === "image" ? (
-                <img src={media.url} alt="preview" className="w-full rounded-lg object-cover max-h-80" />
+                <img src={media.url} alt="preview" className="w-full rounded-md object-cover max-h-48" />
               ) : (
-                <video src={media.url} controls className="w-full rounded-lg max-h-80" />
+                <video src={media.url} controls className="w-full rounded-md max-h-48" />
               )}
               <button
                 type="button"
                 aria-label="Xóa media"
-                className="absolute -top-2 -right-2 bg-white text-gray-600 hover:text-red-500 border rounded-full w-6 h-6 flex items-center justify-center shadow-md"
+                className="absolute -top-1 -right-1 bg-white text-gray-600 hover:text-red-500 border rounded-full w-5 h-5 flex items-center justify-center shadow-md text-xs"
                 onClick={handleRemoveMedia}
                 tabIndex={-1}
                 disabled={posting || uploadingMedia}
@@ -295,14 +272,42 @@ const PostForm: React.FC<{
               </button>
             </div>
           )}
+          
+          <div className="flex justify-between items-center">
+            <div className="flex gap-1.5 items-center">
+              <label className="cursor-pointer flex gap-1 items-center text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors">
+                <ImageIcon size={12} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => handleMediaChange(e, "image")}
+                  disabled={posting || uploadingMedia}
+                />
+                <span>Ảnh</span>
+              </label>
+              <label className="cursor-pointer flex gap-1 items-center text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors">
+                <VideoIcon size={12} />
+                <input
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={e => handleMediaChange(e, "video")}
+                  disabled={posting || uploadingMedia}
+                />
+                <span>Video</span>
+              </label>
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              className="h-7 px-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 text-xs"
+              disabled={posting || uploadingMedia}
+            >
+              {posting ? "Đang đăng..." : uploadingMedia ? "Đang tải..." : "Đăng"}
+            </Button>
+          </div>
         </div>
-        <Button
-          type="submit"
-          className="h-9 px-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 self-stretch sm:self-auto"
-          disabled={posting || uploadingMedia}
-        >
-          {posting ? "Đang đăng..." : uploadingMedia ? "Đang tải..." : "Đăng"}
-        </Button>
       </form>
     </Card>
   );

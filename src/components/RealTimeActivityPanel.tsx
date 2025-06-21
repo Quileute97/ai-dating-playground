@@ -106,11 +106,12 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
         </div>
       </aside>
 
-      {/* Post Detail Modal */}
+      {/* Post Detail Modal - Truyền userId để có thể tương tác */}
       <PostDetailModal
         postId={selectedPostId}
         isOpen={!!selectedPostId}
         onClose={() => setSelectedPostId(null)}
+        userId={userId}
       />
 
       {/* Friend Request Detail Modal */}

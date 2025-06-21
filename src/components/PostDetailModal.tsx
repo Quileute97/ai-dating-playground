@@ -1,15 +1,20 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, MessageCircle, User, Calendar } from "lucide-react";
+import { Heart, MessageCircle, User, Calendar, SendHorizonal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { usePostLikes } from "@/hooks/usePostLikes";
+import { useTimelineComments } from "@/hooks/useTimelineComments";
 
 interface PostDetailModalProps {
   postId: string | null;
   isOpen: boolean;
   onClose: () => void;
+  userId?: string;
 }
 
 interface LocationData {
@@ -17,7 +22,9 @@ interface LocationData {
   [key: string]: any;
 }
 
-export default function PostDetailModal({ postId, isOpen, onClose }: PostDetailModalProps) {
+export default function PostDetailModal({ postId, isOpen, onClose, userId }: PostDetailModalProps) {
+  const [commentInput, setCommentInput] = useState("");
+  
   const { data: post, isLoading } = useQuery({
     queryKey: ["post-detail", postId],
     enabled: !!postId && isOpen,
@@ -35,26 +42,31 @@ export default function PostDetailModal({ postId, isOpen, onClose }: PostDetailM
         .single();
         
       if (postError) throw postError;
-
-      // Fetch likes count
-      const { count: likesCount } = await supabase
-        .from("post_likes")
-        .select("*", { count: "exact", head: true })
-        .eq("post_id", postId);
-
-      // Fetch comments count
-      const { count: commentsCount } = await supabase
-        .from("comments")
-        .select("*", { count: "exact", head: true })
-        .eq("post_id", postId);
-
-      return {
-        ...postData,
-        likes_count: likesCount || 0,
-        comments_count: commentsCount || 0
-      };
+      return postData;
     }
   });
+
+  // Sử dụng hooks để xử lý likes và comments
+  const { likeCount, liked, like, unlike, isToggling } = usePostLikes(postId || undefined, userId);
+  const { comments, createComment, creating } = useTimelineComments(postId || undefined);
+
+  const handleLike = async () => {
+    if (!userId) return;
+    if (liked) await unlike();
+    else await like();
+  };
+
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentInput.trim() || !userId || !postId) return;
+    
+    await createComment({
+      post_id: postId,
+      user_id: userId,
+      content: commentInput,
+    });
+    setCommentInput("");
+  };
 
   if (!isOpen) return null;
 
@@ -120,17 +132,78 @@ export default function PostDetailModal({ postId, isOpen, onClose }: PostDetailM
               </div>
             )}
 
-            {/* Stats */}
-            <div className="flex items-center gap-4 pt-2 border-t">
-              <div className="flex items-center gap-1 text-sm text-gray-600">
-                <Heart className="w-4 h-4" />
-                <span>{post.likes_count} lượt thích</span>
+            {/* Actions - Chỉ hiển thị khi có userId */}
+            {userId && (
+              <div className="flex items-center gap-4 pt-2 border-t">
+                <Button
+                  size="sm"
+                  variant={liked ? "secondary" : "outline"}
+                  className={`transition-all rounded-full px-3 py-1.5 h-8 ${
+                    liked ? "text-pink-500 border-pink-400" : "border-gray-200"
+                  }`}
+                  onClick={handleLike}
+                  disabled={isToggling}
+                >
+                  <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={16} />
+                  <span className="ml-1 text-sm">{likeCount > 0 ? likeCount : ""}</span>
+                </Button>
+                <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <MessageCircle className="w-4 h-4" />
+                  <span>{comments?.length || 0} bình luận</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1 text-sm text-gray-600">
-                <MessageCircle className="w-4 h-4" />
-                <span>{post.comments_count} bình luận</span>
+            )}
+
+            {/* Comments */}
+            {comments && comments.length > 0 && (
+              <div className="space-y-2 border-t pt-3">
+                {comments.map((cmt: any) => (
+                  <div key={cmt.id} className="flex items-start gap-2">
+                    <img 
+                      src={cmt.profiles?.avatar || "/placeholder.svg"} 
+                      alt={cmt.profiles?.name || "User"} 
+                      className="w-6 h-6 rounded-full object-cover border flex-shrink-0" 
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 leading-none mb-1">
+                        <span className="font-semibold text-sm">{cmt.profiles?.name ?? "Ẩn danh"}</span>
+                        <span className="text-xs text-gray-400">{new Date(cmt.created_at).toLocaleTimeString("vi-VN")}</span>
+                      </div>
+                      <div className="text-sm text-gray-800">{cmt.content}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
+
+            {/* Comment Input - Chỉ hiển thị khi có userId */}
+            {userId && (
+              <form className="flex items-center gap-2 mt-2" onSubmit={handleCommentSubmit}>
+                <Input
+                  className="h-8 text-sm bg-gray-50 border border-gray-200 flex-1"
+                  value={commentInput}
+                  placeholder="Viết bình luận..."
+                  onChange={e => setCommentInput(e.target.value)}
+                  disabled={creating}
+                />
+                <Button 
+                  type="submit" 
+                  size="sm" 
+                  variant="secondary" 
+                  className="aspect-square h-8 w-8 p-0 flex-shrink-0" 
+                  disabled={creating || !commentInput.trim()}
+                >
+                  <SendHorizonal size={14} />
+                </Button>
+              </form>
+            )}
+
+            {/* Message khi chưa đăng nhập */}
+            {!userId && (
+              <div className="text-center text-gray-500 py-4 border-t">
+                Vui lòng đăng nhập để tương tác với bài viết
+              </div>
+            )}
           </div>
         ) : (
           <div className="p-4 text-center text-gray-500">

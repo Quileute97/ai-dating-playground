@@ -2,7 +2,7 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Crown, Clock } from "lucide-react";
+import { Crown, Clock, AlertTriangle } from "lucide-react";
 import { useIsNearbyActive } from "@/hooks/useNearbySubscription";
 
 interface NearbyFeatureBannerProps {
@@ -27,6 +27,29 @@ const NearbyFeatureBanner: React.FC<NearbyFeatureBannerProps> = ({
   const { isActive, daysRemaining, subscription } = useIsNearbyActive(userId);
 
   if (nearbyLoading) return null;
+  
+  // Show expired subscription banner
+  if (subscription && subscription.status === 'expired') {
+    return (
+      <Card className="mt-4 p-2 bg-gradient-to-r from-orange-500 to-red-500 text-white">
+        <div className="text-center">
+          <AlertTriangle className="w-8 h-8 mx-auto mb-1" />
+          <h3 className="font-semibold mb-0.5">Gói Premium đã hết hạn</h3>
+          <p className="text-sm opacity-90 mb-1.5">
+            Gia hạn ngay để tiếp tục sử dụng tính năng Premium
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="text-red-600"
+            onClick={onClickUpgrade}
+          >
+            Gia hạn Premium
+          </Button>
+        </div>
+      </Card>
+    );
+  }
   
   // Show package selection banner if no active subscription
   if (!isActive) {

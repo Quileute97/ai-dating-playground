@@ -3,11 +3,11 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { MessageCircle, Send, Minimize2, Maximize2 } from "lucide-react";
 import { useActiveFriendsWithPresence } from "@/hooks/useActiveFriendsWithPresence";
+import { useRealTimeMessages } from "@/hooks/useRealTimeMessages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Now the component requires a myId prop for current user id
 interface ActiveFriendsWithChatPanelProps {
   myId: string;
 }
@@ -16,11 +16,15 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
   if (!myId) throw new Error("Missing myId prop in ActiveFriendsWithChatPanel");
 
   const { friends, isLoading } = useActiveFriendsWithPresence(myId);
-
-  // Chọn mặc định bạn bè đầu tiên (nếu có)
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
-  const [isChatMinimized, setIsChatMinimized] = useState(true); // Mặc định thu gọn
+  const [isChatMinimized, setIsChatMinimized] = useState(true);
   const [chatMessage, setChatMessage] = useState("");
+
+  // Sử dụng real-time messages hook
+  const { messages, isLoading: messagesLoading, sendMessage, sending } = useRealTimeMessages(
+    myId, 
+    selectedFriend || ""
+  );
 
   React.useEffect(() => {
     if (!selectedFriend && friends && friends.length > 0) {
@@ -30,17 +34,23 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
 
   const selectedFriendData = friends.find(f => f.id === selectedFriend);
 
-  const handleSendMessage = () => {
-    if (!chatMessage.trim()) return;
-    // TODO: Implement actual message sending
-    console.log("Sending message:", chatMessage, "to:", selectedFriend);
-    setChatMessage("");
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim() || sending) return;
+    
+    try {
+      await sendMessage(chatMessage);
+      setChatMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
   };
 
   const handleFriendClick = (friendId: string) => {
     setSelectedFriend(friendId);
-    // Không tự động mở rộng chat khi click vào bạn bè
-    // Chat sẽ vẫn giữ trạng thái hiện tại (thu gọn hoặc mở rộng)
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -90,7 +100,7 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
         </div>
       </div>
 
-      {/* Compact Chat Window - Fixed at bottom */}
+      {/* Real-time Chat Window */}
       <div className="flex-1 flex flex-col justify-end">
         {selectedFriend && selectedFriendData ? (
           <Card className="bg-white border shadow-xl rounded-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl">
@@ -130,22 +140,33 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
               {/* Messages Area */}
               <ScrollArea className="h-48 p-4 bg-gradient-to-b from-gray-50 to-white">
                 <div className="space-y-3">
-                  {/* Demo messages */}
-                  <div className="flex justify-end">
-                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-2xl rounded-br-md max-w-[80%] text-sm shadow-md">
-                      Chào bạn! 👋
+                  {messagesLoading ? (
+                    <div className="text-center text-gray-400 text-sm">Đang tải tin nhắn...</div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center text-gray-400 text-sm">
+                      Bắt đầu cuộc trò chuyện với {selectedFriendData.name}!
                     </div>
-                  </div>
-                  <div className="flex justify-start">
-                    <div className="bg-white border border-gray-200 px-4 py-2 rounded-2xl rounded-bl-md max-w-[80%] text-sm text-gray-800 shadow-sm">
-                      Hello! Bạn khỏe không? 😊
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
-                      Hôm nay
-                    </span>
-                  </div>
+                  ) : (
+                    messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.sender_id === myId ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div className={`max-w-[80%] px-4 py-2 rounded-2xl text-sm shadow-md ${
+                          message.sender_id === myId
+                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-br-md'
+                            : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md'
+                        }`}>
+                          <p className="break-words">{message.content}</p>
+                          <p className={`text-xs mt-1 ${
+                            message.sender_id === myId ? 'text-purple-100' : 'text-gray-500'
+                          }`}>
+                            {formatTime(message.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </ScrollArea>
 
@@ -158,12 +179,13 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
                     placeholder="Nhập tin nhắn..."
                     className="flex-1 text-sm border-gray-200 focus:border-purple-400 rounded-full px-4 py-2 transition-all duration-200 focus:shadow-md"
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    disabled={sending}
                   />
                   <Button
                     onClick={handleSendMessage}
                     size="sm"
                     className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full p-2 h-10 w-10 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-                    disabled={!chatMessage.trim()}
+                    disabled={!chatMessage.trim() || sending}
                   >
                     <Send className="w-4 h-4" />
                   </Button>

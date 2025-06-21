@@ -6,7 +6,6 @@ import { useActiveFriendsWithPresence } from "@/hooks/useActiveFriendsWithPresen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import FriendRequestsManager from "./FriendRequestsManager";
 
 // Now the component requires a myId prop for current user id
 interface ActiveFriendsWithChatPanelProps {
@@ -46,11 +45,6 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
 
   return (
     <aside className="hidden lg:flex flex-col w-[320px] max-w-xs min-w-[280px] pt-6 pr-4 h-full bg-gray-50/30 gap-4">
-      {/* Friend Requests Manager */}
-      <div className="flex-shrink-0">
-        <FriendRequestsManager myId={myId} />
-      </div>
-
       {/* Friends List */}
       <div className="flex-shrink-0 mb-4">
         <h3 className="font-bold text-gray-700 text-base pb-3 px-2">Bạn bè đang hoạt động</h3>

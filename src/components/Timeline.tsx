@@ -1,3 +1,4 @@
+
 import React, { useState, ChangeEvent } from "react";
 import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -41,10 +42,7 @@ const STICKERS = [
   { id: 10, name: "🐧 Pengu", url: "https://cdn-icons-png.flaticon.com/512/616/616408.png", code: ":pengu:" },
   { id: 11, name: "🍀 Luck", url: "https://cdn-icons-png.flaticon.com/512/616/616524.png", code: ":luck:" },
   { id: 12, name: "🚀 Rocket", url: "https://cdn-icons-png.flaticon.com/512/616/616424.png", code: ":rocket:" },
-  // ... bạn thêm nhiều sticker tùy thích
 ];
-
-// Sticker style: square, size 56x56
 
 interface LocationData {
   lat: number;
@@ -123,7 +121,6 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
   const [hashtag, setHashtag] = React.useState<string | null>(null);
   const { toast } = useToast();
 
-  // Xử lý đăng post mới (KHÔNG truyền sticker)
   const handlePostSubmit = async (
     data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">
   ) => {
@@ -132,7 +129,6 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
       user_id: userId,
       media_url: data.media?.url,
       media_type: data.media?.type,
-      // sticker: data.sticker, // LOẠI BỎ sticker
       location: data.location,
     });
     refetch();
@@ -157,13 +153,12 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
   };
 
   return (
-    <div className="max-w-lg mx-auto py-6 h-full flex flex-col animate-fade-in">
-      {/* CHỈ HIỂN THỊ PostForm NẾU ĐÃ ĐĂNG NHẬP */}
+    <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in">
       {user && (
         <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
       )}
       
-      <div className="flex-1 overflow-y-auto space-y-3 mt-2">
+      <div className="flex-1 overflow-y-auto space-y-2 mt-2">
         {isLoading && (
           <div className="text-center text-gray-500 pt-12">Đang tải timeline...</div>
         )}
@@ -182,7 +177,6 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
         )}
       </div>
       
-      {/* Modal hashtag */}
       {hashtag && (
         <HashtagPostsModal
           hashtag={hashtag}
@@ -195,8 +189,6 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
   );
 };
 
-// ---------- Sửa PostForm ----------
-// BỎ sticker liên quan UI/state
 const PostForm: React.FC<{
   user: any;
   userProfile: any;
@@ -205,19 +197,13 @@ const PostForm: React.FC<{
 }> = ({ user, userProfile, onCreate, posting }) => {
   const [content, setContent] = React.useState("");
   const [media, setMedia] = React.useState<MediaFile | null>(null);
-  // const [sticker, setSticker] = React.useState<typeof STICKERS[number] | null>(null); // BỎ sticker
-
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
-  // Lấy avatar từ profile hoặc fallback
   const currentAvatar = userProfile?.avatar || user?.avatar || demoUser.avatar;
   const currentName = userProfile?.name || user?.name || demoUser.name;
 
-  // BỎ handleStickerInsert
-
-  // Chọn media và upload lên Supabase Storage (giữ nguyên)
   const handleMediaChange = async (e: ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -246,33 +232,29 @@ const PostForm: React.FC<{
       },
       content: content.trim(),
       media: media ?? undefined,
-      // sticker: sticker, // BỎ sticker không truyền nữa
     });
     setContent("");
     setMedia(null);
-    // setSticker(null); // BỎ
   };
 
   return (
-    <Card className="mb-6 p-4">
+    <Card className="mb-4 p-3">
       <form onSubmit={handleSubmit} className="flex gap-3 flex-col sm:flex-row items-start">
-        <img src={currentAvatar} alt={currentName} className="w-10 h-10 rounded-full object-cover" />
+        <img src={currentAvatar} alt={currentName} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
         <div className="flex-1 w-full flex flex-col gap-2">
           <div className="relative">
             <Textarea
               ref={textAreaRef}
-              className="flex-1 pr-24"
+              className="flex-1 min-h-[80px] resize-none"
               placeholder="Bạn đang nghĩ gì?"
               value={content}
               onChange={e => setContent(e.target.value)}
               disabled={posting || uploadingMedia}
             />
-            {/* BỎ Sticker Selector UI */}
           </div>
           <div className="flex gap-2 flex-wrap items-center">
-            {/* Upload buttons giữ nguyên */}
             <label className="cursor-pointer flex gap-1 items-center text-sm px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200">
-              <ImageIcon size={16} />
+              <ImageIcon size={14} />
               <input
                 type="file"
                 accept="image/*"
@@ -283,7 +265,7 @@ const PostForm: React.FC<{
               <span>Ảnh</span>
             </label>
             <label className="cursor-pointer flex gap-1 items-center text-sm px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200">
-              <VideoIcon size={16} />
+              <VideoIcon size={14} />
               <input
                 type="file"
                 accept="video/*"
@@ -294,46 +276,38 @@ const PostForm: React.FC<{
               <span>Video</span>
             </label>
           </div>
-          {/* Media preview */}
           {media && (
-            <div className="relative mt-2 mb-2 w-36">
+            <div className="relative mt-2 mb-2">
               {media.type === "image" ? (
-                <img src={media.url} alt="preview" className="w-full rounded-lg object-cover max-h-48" />
+                <img src={media.url} alt="preview" className="w-full rounded-lg object-cover max-h-80" />
               ) : (
-                <video src={media.url} controls className="w-full rounded-lg max-h-48" />
+                <video src={media.url} controls className="w-full rounded-lg max-h-80" />
               )}
               <button
                 type="button"
                 aria-label="Xóa media"
-                className="absolute -top-3 -right-3 bg-white text-gray-600 hover:text-red-500 border rounded-full w-7 h-7 flex items-center justify-center shadow-md"
+                className="absolute -top-2 -right-2 bg-white text-gray-600 hover:text-red-500 border rounded-full w-6 h-6 flex items-center justify-center shadow-md"
                 onClick={handleRemoveMedia}
                 tabIndex={-1}
                 disabled={posting || uploadingMedia}
               >
                 ×
               </button>
-              {/* KHÔNG hiển thị sticker overlay nữa */}
             </div>
           )}
-          {/* KHÔNG hiển thị sticker nếu không có media */}
-          {/* Địa điểm đã bị loại bỏ */}
         </div>
         <Button
           type="submit"
-          className="h-10 px-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 self-stretch sm:self-auto"
+          className="h-9 px-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 self-stretch sm:self-auto"
           disabled={posting || uploadingMedia}
         >
-          {posting ? "Đang đăng..." : uploadingMedia ? "Đang tải file..." : "Đăng"}
+          {posting ? "Đang đăng..." : uploadingMedia ? "Đang tải..." : "Đăng"}
         </Button>
       </form>
     </Card>
   );
 };
 
-// ---------- BỎ COMPONENT PopoverStickerSelect ----------
-// (Component này chỉ dùng cho sticker, đã bỏ hoàn toàn)
-
-// ---------- Sửa PostItem ----------
 const PostItem: React.FC<{ 
   post: any; 
   user: any; 
@@ -369,17 +343,16 @@ const PostItem: React.FC<{
     setShowDeleteDialog(false);
   };
 
-  // Kiểm tra xem user hiện tại có phải là chủ bài viết không
   const isPostOwner = user?.id === post.user_id;
 
   return (
-    <Card className="rounded-2xl shadow-md border border-gray-200 mb-4 p-5 bg-white transition hover:shadow-lg">
-      <div className="flex items-center justify-between mb-2">
+    <Card className="rounded-xl shadow-sm border border-gray-200 mb-3 p-4 bg-white transition hover:shadow-md">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <img
             src={post.profiles?.avatar || demoUser.avatar}
             alt={post.profiles?.name || "User"}
-            className="w-11 h-11 rounded-full object-cover border shadow cursor-pointer"
+            className="w-10 h-10 rounded-full object-cover border shadow cursor-pointer"
             onClick={() => post.profiles?.id && navigate(`/profile/${post.profiles.id}`)}
           />
           <div className="flex flex-col">
@@ -393,11 +366,10 @@ const PostItem: React.FC<{
           </div>
         </div>
         
-        {/* Menu xóa bài viết - chỉ hiển thị cho chủ bài viết */}
         {isPostOwner && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100">
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -415,90 +387,93 @@ const PostItem: React.FC<{
       </div>
 
       {/* Content */}
-      <div className="text-base text-gray-900 mb-2 whitespace-pre-line leading-relaxed min-h-[18px]" style={{ wordBreak: 'break-word' }}>
-        {renderContent(post.content, onHashtagClick)}
-      </div>
+      {post.content && (
+        <div className="text-base text-gray-900 mb-3 whitespace-pre-line leading-relaxed" style={{ wordBreak: 'break-word' }}>
+          {renderContent(post.content, onHashtagClick)}
+        </div>
+      )}
       
-      {/* Media */}
+      {/* Media - Optimized for better viewing */}
       {post.media_url && post.media_type === "image" && (
-        <div className="relative flex items-center justify-center mt-2 mb-3">
+        <div className="relative mb-3 -mx-1">
           <img
             src={post.media_url}
             alt="media"
-            className="rounded-lg object-cover border max-h-72 w-full"
-            style={{ maxWidth: '98%' }}
+            className="w-full rounded-lg object-cover cursor-pointer hover:opacity-95 transition-opacity"
+            style={{ maxHeight: '500px' }}
+            onClick={() => window.open(post.media_url, '_blank')}
           />
         </div>
       )}
       {post.media_url && post.media_type === "video" && (
-        <div className="relative flex items-center justify-center mt-2 mb-3">
+        <div className="relative mb-3 -mx-1">
           <video
             src={post.media_url}
             controls
-            className="rounded-lg object-contain border max-h-72 w-full"
-            style={{ maxWidth: '98%' }}
+            className="w-full rounded-lg"
+            style={{ maxHeight: '500px' }}
           />
         </div>
       )}
       
       {/* Actions */}
-      <div className="flex items-center gap-4 mt-2 mb-2">
+      <div className="flex items-center gap-4 mb-2 pt-1">
         <Button
           size="sm"
           variant={liked ? "secondary" : "outline"}
-          className={`transition-all rounded-full px-3 py-1 ${liked ? "text-pink-500 border-pink-400" : "border-gray-200"}`}
+          className={`transition-all rounded-full px-3 py-1.5 h-8 ${liked ? "text-pink-500 border-pink-400" : "border-gray-200"}`}
           onClick={handleLike}
           disabled={isToggling}
         >
-          <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={17} />
-          <span className="ml-1">{likeCount > 0 ? likeCount : ""}</span>
+          <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={16} />
+          <span className="ml-1 text-sm">{likeCount > 0 ? likeCount : ""}</span>
         </Button>
         <Button
           size="sm"
           variant="outline"
-          className="rounded-full px-3 py-1 text-blue-500 border-gray-200"
+          className="rounded-full px-3 py-1.5 h-8 text-blue-500 border-gray-200"
           tabIndex={-1}
           disabled
         >
-          <MessageCircle size={17} />
-          <span className="ml-1">{comments?.length ?? 0}</span>
+          <MessageCircle size={16} />
+          <span className="ml-1 text-sm">{comments?.length ?? 0}</span>
         </Button>
       </div>
       
-      {/* Danh sách bình luận */}
+      {/* Comments */}
       {comments && comments.length > 0 && (
-        <div className="space-y-1.5 border-t pt-3 mt-2">
+        <div className="space-y-2 border-t pt-3 mt-2">
           {commentsLoading && <div className="text-sm text-gray-400 px-2">Đang tải bình luận...</div>}
           {comments.map((cmt: any) => (
             <div key={cmt.id} className="flex items-start gap-2">
-              <img src={cmt.profiles?.avatar || demoUser.avatar} alt={cmt.profiles?.name || "User"} className="w-7 h-7 rounded-full object-cover border" />
-              <div>
-                <div className="flex items-center gap-2 leading-none">
-                  <span className="font-semibold text-xs">{cmt.profiles?.name ?? "Ẩn danh"}</span>
-                  <span className="text-[11px] text-gray-400">{new Date(cmt.created_at).toLocaleTimeString("vi-VN")}</span>
+              <img src={cmt.profiles?.avatar || demoUser.avatar} alt={cmt.profiles?.name || "User"} className="w-6 h-6 rounded-full object-cover border flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 leading-none mb-1">
+                  <span className="font-semibold text-sm">{cmt.profiles?.name ?? "Ẩn danh"}</span>
+                  <span className="text-xs text-gray-400">{new Date(cmt.created_at).toLocaleTimeString("vi-VN")}</span>
                 </div>
-                <div className="text-xs text-gray-800 pl-1">{cmt.content}</div>
+                <div className="text-sm text-gray-800">{cmt.content}</div>
               </div>
             </div>
           ))}
         </div>
       )}
       
-      {/* Input bình luận */}
-      <form className="flex items-center gap-2 mt-1" onSubmit={handleCommentSubmit}>
+      {/* Comment Input */}
+      <form className="flex items-center gap-2 mt-2" onSubmit={handleCommentSubmit}>
         <Input
-          className="h-8 text-sm bg-gray-50 border border-gray-200"
+          className="h-8 text-sm bg-gray-50 border border-gray-200 flex-1"
           value={commentInput}
           placeholder="Viết bình luận..."
           onChange={e => setCommentInput(e.target.value)}
           disabled={creating}
         />
-        <Button type="submit" size="sm" variant="secondary" className="aspect-square h-8 w-8 p-0" disabled={creating}>
-          <SendHorizonal size={16} />
+        <Button type="submit" size="sm" variant="secondary" className="aspect-square h-8 w-8 p-0 flex-shrink-0" disabled={creating}>
+          <SendHorizonal size={14} />
         </Button>
       </form>
 
-      {/* Dialog xác nhận xóa */}
+      {/* Delete Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -523,10 +498,8 @@ const PostItem: React.FC<{
   );
 };
 
-// ---------- Sửa renderContent: BỎ sticker code parsing ----------
 const renderContent = (content: string, onHashtagClick: (tag: string) => void) => {
   if (!content) return null;
-  // KHÔNG replace stickerCode, chỉ parse hashtag
   return <>{parseHashtags(content, onHashtagClick)}</>;
 };
 

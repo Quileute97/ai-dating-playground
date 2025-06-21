@@ -1,11 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from "@tanstack/react-query";
 
 export function useUnifiedProfile(userId: string | undefined) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!userId) {
@@ -41,7 +43,31 @@ export function useUnifiedProfile(userId: string | undefined) {
     }
 
     fetchProfile();
-  }, [userId]);
+
+    // Enhanced realtime subscription cho profile changes
+    const channel = supabase
+      .channel(`profile-${userId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${userId}`
+      }, (payload) => {
+        console.log('👤 Profile realtime update:', payload);
+        if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+          setProfile(payload.new);
+        }
+        // Cross-tab sync
+        queryClient.invalidateQueries({ queryKey: ["unified-profile", userId] });
+        queryClient.invalidateQueries({ queryKey: ["dating-profile", userId] });
+        queryClient.invalidateQueries({ queryKey: ["nearby-profiles"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
 
   const updateProfile = async (updates: any) => {
     if (!userId) return;
@@ -60,6 +86,12 @@ export function useUnifiedProfile(userId: string | undefined) {
       if (error) throw error;
       
       setProfile(data);
+      
+      // Enhanced sync sau khi update
+      queryClient.invalidateQueries({ queryKey: ["unified-profile", userId] });
+      queryClient.invalidateQueries({ queryKey: ["dating-profile", userId] });
+      queryClient.invalidateQueries({ queryKey: ["nearby-profiles"] });
+      
       return data;
     } catch (err: any) {
       console.error('Error updating unified profile:', err);
@@ -84,6 +116,11 @@ export function useUnifiedProfile(userId: string | undefined) {
       if (error) throw error;
       
       setProfile(data);
+      
+      // Enhanced sync sau khi update location
+      queryClient.invalidateQueries({ queryKey: ["unified-profile", userId] });
+      queryClient.invalidateQueries({ queryKey: ["nearby-profiles"] });
+      
       return data;
     } catch (err: any) {
       console.error('Error updating location:', err);
@@ -100,6 +137,7 @@ export function useUnifiedProfile(userId: string | undefined) {
     refreshProfile: () => {
       if (userId) {
         setLoading(true);
+        queryClient.invalidateQueries({ queryKey: ["unified-profile", userId] });
       }
     }
   };

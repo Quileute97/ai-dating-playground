@@ -55,7 +55,7 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
     enabled: !!conversation?.id
   });
 
-  // Realtime subscription cho messages
+  // Enhanced realtime subscription cho messages với cross-tab sync
   useEffect(() => {
     if (!conversation?.id) return;
 
@@ -67,10 +67,13 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
         table: 'messages',
         filter: `conversation_id=eq.${conversation.id}`
       }, (payload) => {
-        console.log('New message received:', payload.new);
+        console.log('💬 New message received:', payload.new);
         queryClient.invalidateQueries({ queryKey: ["messages", conversation.id] });
-        // Cũng invalidate danh sách conversations để cập nhật last_message
         queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        
+        // Cross-tab sync - invalidate trong tất cả tabs
+        queryClient.invalidateQueries({ queryKey: ["conversation"] });
+        queryClient.invalidateQueries({ queryKey: ["timeline-messages"] });
       })
       .subscribe();
 
@@ -79,7 +82,7 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
     };
   }, [conversation?.id, queryClient]);
 
-  // Send message mutation - lưu tin nhắn vĩnh viễn
+  // Send message mutation - lưu tin nhắn vĩnh viễn với enhanced sync
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!conversation?.id) throw new Error("No conversation found");
@@ -105,8 +108,11 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
         .eq('id', conversation.id);
     },
     onSuccess: () => {
+      // Enhanced sync cho tất cả related queries
       queryClient.invalidateQueries({ queryKey: ["messages", conversation?.id] });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["conversation"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline-messages"] });
     }
   });
 

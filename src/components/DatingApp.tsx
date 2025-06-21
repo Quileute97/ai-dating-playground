@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import RequireLogin from "./RequireLogin";
 import DatingAppLayout from "./DatingAppLayout";
 import { useDatingAppUser } from "./hooks/useDatingAppUser";
 import { useUnifiedProfile } from "@/hooks/useUnifiedProfile";
+import { useGlobalSync } from "@/hooks/useGlobalSync";
 
 const DatingApp = () => {
   // User/session quản lý bằng custom hook
@@ -22,6 +22,9 @@ const DatingApp = () => {
   
   // Unified profile hook - thay thế useDatingProfile
   const { profile: unifiedProfile, updateProfile: updateUnifiedProfile } = useUnifiedProfile(user?.id);
+
+  // Global sync hook để đồng bộ giữa các tab
+  const { syncAll } = useGlobalSync(user?.id);
 
   const [activeTab, setActiveTab] = useState("chat");
   const [showFilters, setShowFilters] = useState(false);
@@ -41,7 +44,6 @@ const DatingApp = () => {
   // Kết nối matchmaking - không truyền tham số
   const matchmaking = useStrangerMatchmaking();
 
-  // Kiểm tra quyền admin mỗi khi user thay đổi
   useEffect(() => {
     if (user) {
       import("@/integrations/supabase/client").then(({ supabase }) => {
@@ -59,7 +61,15 @@ const DatingApp = () => {
     }
   }, [user]);
 
-  // Tab info: không khóa tab nào, tất cả đều visible
+  // Sync tất cả dữ liệu khi chuyển tab để đảm bảo consistency
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    // Trigger sync khi chuyển tab để đảm bảo dữ liệu được cập nhật
+    setTimeout(() => {
+      syncAll();
+    }, 100);
+  };
+
   const tabs = [
     { id: "chat", label: "Chat với người lạ", icon: MessageCircle, color: "from-purple-500 to-pink-500" },
     { id: "dating", label: "Hẹn hò", icon: Heart, color: "from-pink-500 to-red-500" },
@@ -73,6 +83,10 @@ const DatingApp = () => {
     if (isFirstTime) {
       setTimeout(() => setShowAIConfig(true), 500);
     }
+    // Sync sau khi login
+    setTimeout(() => {
+      syncAll();
+    }, 1000);
   };
 
   const handleLogout = async () => {
@@ -87,15 +101,15 @@ const DatingApp = () => {
 
   const handleUpdateProfile = (updatedUser: any) => {
     setUser(updatedUser);
+    // Sync sau khi update profile
+    setTimeout(() => {
+      syncAll();
+    }, 500);
   };
 
   const handleApplyFilters = (filters: any) => {
     console.log("Applied filters:", filters);
     // TODO: Apply filters logic
-  };
-
-  const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId);
   };
 
   const handleAdminToggle = () => {
@@ -133,7 +147,7 @@ const DatingApp = () => {
       case "dating":
         return user ? <SwipeInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "nearby":
-        return user ? <NearbyInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
+        return user ? <NearbyInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={()={() => setShowAuth(true)} />} />;
       case "timeline":
         return <Timeline user={{ ...user, ...unifiedProfile }} />;
       default:

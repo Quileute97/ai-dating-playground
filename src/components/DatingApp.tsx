@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -147,7 +148,7 @@ const DatingApp = () => {
       case "dating":
         return user ? <SwipeInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "nearby":
-        return user ? <NearbyInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={()={() => setShowAuth(true)} />} />;
+        return user ? <NearbyInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "timeline":
         return <Timeline user={{ ...user, ...unifiedProfile }} />;
       default:

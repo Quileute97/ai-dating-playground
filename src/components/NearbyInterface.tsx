@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import NearbyChatWindow from './NearbyChatWindow';
-import { useBankInfo } from "@/hooks/useBankInfo";
-import { useUpgradeStatus } from './hooks/useUpgradeStatus';
+import { useIsNearbyActive } from "@/hooks/useNearbySubscription";
 import NearbyProfileView from "./NearbyProfileView";
 import NearbyMain from "./NearbyMain";
 import { Card } from "@/components/ui/card";
@@ -43,11 +43,10 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     null
   );
   const [hasExpandedRange, setHasExpandedRange] = useState(false);
-  const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
-  const bankInfoHook = useBankInfo();
-  const { data: nearbyUpgrade, isLoading: nearbyLoading } = useUpgradeStatus(user?.id, "nearby");
-  const upgradeStatus = nearbyUpgrade?.status;
+  
+  // Use the new subscription hook instead of old upgrade status
+  const { isActive, isLoading: nearbyLoading, subscription } = useIsNearbyActive(user?.id);
 
   // Function to request location access and update state
   const requestLocationPermission = () => {
@@ -85,22 +84,22 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     );
   };
 
-  // Bước 1: Lấy vị trí & cập nhật lên profiles
+  // Get location on mount
   useEffect(() => {
     requestLocationPermission();
   }, []);
 
   useUpdateProfileLocation(user?.id, userLocation);
 
-  // Lấy danh sách user quanh đây thật từ Supabase
-  const searchRadius = hasExpandedRange && upgradeStatus === "approved" ? 20 : 5;
+  // Determine search radius based on subscription status
+  const searchRadius = hasExpandedRange && isActive ? 20 : 5;
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, searchRadius);
 
-  // Chuyển đổi profile từ database thành NearbyUser
+  // Convert profile from database to NearbyUser
   function profileToNearbyUser(profile: any): NearbyUser {
     const interests = Array.isArray(profile.interests) ? profile.interests : [];
     const isRecentlyActive = profile.last_active ? 
-      (new Date().getTime() - new Date(profile.last_active).getTime()) < 30 * 60 * 1000 : false; // 30 phút
+      (new Date().getTime() - new Date(profile.last_active).getTime()) < 30 * 60 * 1000 : false;
 
     return {
       id: profile.id,
@@ -113,7 +112,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
         (isRecentlyActive ? "Đang online" : `${Math.floor((new Date().getTime() - new Date(profile.last_active).getTime()) / (1000 * 60))} phút trước`) 
         : "Chưa rõ",
       interests: interests.length > 0 ? interests : ["Đang cập nhật"],
-      rating: 4.0 + Math.random() * 1.0, // Tạm thời random, sau có thể thêm rating thật
+      rating: 4.0 + Math.random() * 1.0,
       isLiked: false,
       bio: profile.bio,
       height: profile.height,
@@ -128,14 +127,11 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   );
 
   const handleExpandRange = () => {
-    if (upgradeStatus !== "approved") {
+    if (!isActive) {
       toast({
         variant: "destructive",
         title: "Không thể mở rộng phạm vi",
-        description:
-          upgradeStatus === "pending"
-            ? "Yêu cầu nâng cấp của bạn đang chờ duyệt. Vui lòng đợi admin xác nhận trước khi sử dụng tính năng nâng cao."
-            : "Bạn cần nâng cấp để sử dụng tính năng mở rộng phạm vi.",
+        description: "Bạn cần có gói Premium để sử dụng tính năng mở rộng phạm vi.",
       });
       return;
     }
@@ -153,7 +149,6 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
 
   const handleLikeUser = (userId: string, event?: React.MouseEvent) => {
     if (event) event.stopPropagation();
-    // TODO: dùng Supabase cho like thật
     toast({
       title: "Đã thích!",
       description: `Bạn đã thích người dùng này`,
@@ -187,6 +182,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
       </div>
     );
   }
+
   if (locationPermission === "denied") {
     return (
       <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4 flex items-center justify-center">
@@ -219,27 +215,20 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
       />
     );
   }
+
   if (chatUser) {
     return <NearbyChatWindow user={chatUser} currentUserId={user?.id} onClose={handleCloseChat} />;
   }
-
-  // Only pass bankInfo if all required fields are present
-  const fullBankInfo = (!bankInfoHook.loading && bankInfoHook.bankInfo.bankName && bankInfoHook.bankInfo.accountNumber && bankInfoHook.bankInfo.accountHolder && bankInfoHook.bankInfo.qrUrl)
-    ? bankInfoHook.bankInfo
-    : undefined;
 
   return (
     <NearbyMain
       users={nearbyUsers}
       userLocation={userLocation}
       hasExpandedRange={hasExpandedRange}
-      setShowPayOSModal={setShowPayOSModal}
-      showPayOSModal={showPayOSModal}
-      upgradeStatus={upgradeStatus}
+      upgradeStatus={isActive ? "approved" : "none"}
       nearbyLoading={nearbyLoading || profilesLoading}
       onExpandRange={handleExpandRange}
       disableExpand={hasExpandedRange}
-      bankInfo={fullBankInfo}
       onViewProfile={handleViewProfile}
       onLikeUser={handleLikeUser}
       onMessageUser={handleMessageUser}

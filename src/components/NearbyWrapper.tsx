@@ -24,8 +24,8 @@ const NearbyWrapper: React.FC<NearbyWrapperProps> = ({ user }) => {
   const maxDistance = hasExpandedRange ? 20 : 5;
   const { profiles, loading: nearbyLoading } = useNearbyProfiles(user?.id, position, maxDistance);
 
-  // Get bank info
-  const { data: bankInfo } = useBankInfo();
+  // Get bank info - fix destructuring to match the hook's return type
+  const { bankInfo } = useBankInfo();
 
   // Mock upgrade status - you might want to replace this with actual hook
   const upgradeStatus = undefined;

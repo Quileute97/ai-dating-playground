@@ -7,12 +7,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useConversationHistory } from '@/hooks/useConversationHistory';
 import { supabase } from "@/integrations/supabase/client";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ProfileChatWindowProps {
@@ -35,6 +35,7 @@ const ProfileChatWindow = ({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [showMediaHistory, setShowMediaHistory] = useState(false);
   const [chatBackground, setChatBackground] = useState<string>('');
+  const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -222,45 +223,103 @@ const ProfileChatWindow = ({
               <Video className="w-4 h-4" />
             </Button>
             
-            {/* Chat Settings Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            {/* Chat Settings Sheet */}
+            <Sheet open={showSettings} onOpenChange={setShowSettings}>
+              <SheetTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Settings className="w-4 h-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setShowMediaHistory(true)}>
-                  <History className="w-4 h-4 mr-2" />
-                  Xem lại hình ảnh/video
-                </DropdownMenuItem>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-80">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    Cài đặt tin nhắn
+                  </SheetTitle>
+                </SheetHeader>
                 
-                <DropdownMenuSeparator />
-                
-                <div className="px-2 py-1.5 text-sm font-medium text-gray-700">
-                  Ảnh nền chat
-                </div>
-                
-                {backgroundOptions.map((bg) => (
-                  <DropdownMenuItem 
-                    key={bg.value} 
-                    onClick={() => handleBackgroundChange(bg.value)}
-                    className="flex items-center gap-2"
-                  >
-                    <div 
-                      className="w-4 h-4 rounded border-2 border-gray-300"
-                      style={{
-                        background: bg.value 
-                          ? `url(${bg.value}) center/cover` 
-                          : 'linear-gradient(45deg, #e5e7eb, #f3f4f6)'
+                <div className="mt-6 space-y-6">
+                  {/* Media History Section */}
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                      <History className="w-4 h-4" />
+                      Hình ảnh & Video
+                    </h3>
+                    <Button
+                      onClick={() => {
+                        setShowMediaHistory(true);
+                        setShowSettings(false);
                       }}
-                    />
-                    {bg.name}
-                    {chatBackground === bg.value && <span className="ml-auto text-purple-600">✓</span>}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      <Image className="w-4 h-4 mr-2" />
+                      Xem lại hình ảnh/video đã chia sẻ
+                    </Button>
+                  </div>
+
+                  {/* Background Settings Section */}
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                      <Palette className="w-4 h-4" />
+                      Ảnh nền chat
+                    </h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      {backgroundOptions.map((bg) => (
+                        <Button
+                          key={bg.value}
+                          onClick={() => {
+                            handleBackgroundChange(bg.value);
+                            setShowSettings(false);
+                          }}
+                          variant={chatBackground === bg.value ? "default" : "outline"}
+                          className="w-full justify-start h-12"
+                        >
+                          <div 
+                            className="w-8 h-8 rounded border-2 border-gray-300 mr-3"
+                            style={{
+                              background: bg.value 
+                                ? `url(${bg.value}) center/cover` 
+                                : 'linear-gradient(45deg, #e5e7eb, #f3f4f6)'
+                            }}
+                          />
+                          {bg.name}
+                          {chatBackground === bg.value && <span className="ml-auto text-purple-600">✓</span>}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Additional Settings */}
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-gray-900">Cài đặt khác</h3>
+                    <div className="space-y-2">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => toast({ title: "Thông báo", description: "Tính năng đang được phát triển!" })}
+                      >
+                        🔔 Cài đặt thông báo
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => toast({ title: "Chặn người dùng", description: "Tính năng đang được phát triển!" })}
+                      >
+                        🚫 Chặn người dùng
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => toast({ title: "Xóa lịch sử", description: "Tính năng đang được phát triển!" })}
+                      >
+                        🗑️ Xóa lịch sử chat
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
 
             <Button variant="outline" size="sm">
               <MoreVertical className="w-4 h-4" />

@@ -1,10 +1,9 @@
 
-
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Hook dùng để cập nhật vị trí GPS của user lên Supabase khi position thay đổi.
+ * Hook dùng để cập nhật vị trí GPS của user lên bảng profiles duy nhất khi position thay đổi.
  */
 export function useUpdateProfileLocation(userId: string | undefined, position: { lat: number, lng: number } | null) {
   useEffect(() => {
@@ -12,7 +11,7 @@ export function useUpdateProfileLocation(userId: string | undefined, position: {
     
     async function updateLocation() {
       try {
-        // Upsert profile với thông tin vị trí mới
+        // Cập nhật profile với thông tin vị trí mới vào bảng profiles duy nhất
         const { error } = await supabase
           .from("profiles")
           .upsert({

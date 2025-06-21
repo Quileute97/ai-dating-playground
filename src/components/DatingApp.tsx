@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,14 +14,14 @@ import UnifiedProfileButton from "./UnifiedProfileButton";
 import RequireLogin from "./RequireLogin";
 import DatingAppLayout from "./DatingAppLayout";
 import { useDatingAppUser } from "./hooks/useDatingAppUser";
-import { useDatingProfile } from "@/hooks/useDatingProfile";
+import { useUnifiedProfile } from "@/hooks/useUnifiedProfile";
 
 const DatingApp = () => {
   // User/session quản lý bằng custom hook
   const { user, setUser, session, setSession, anonId } = useDatingAppUser();
   
-  // Dating profile hook
-  const { profile: datingProfile, updateProfile: updateDatingProfile } = useDatingProfile(user?.id);
+  // Unified profile hook - thay thế useDatingProfile
+  const { profile: unifiedProfile, updateProfile: updateUnifiedProfile } = useUnifiedProfile(user?.id);
 
   const [activeTab, setActiveTab] = useState("chat");
   const [showFilters, setShowFilters] = useState(false);
@@ -130,11 +131,11 @@ const DatingApp = () => {
           />
         );
       case "dating":
-        return user ? <SwipeInterface user={user} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
+        return user ? <SwipeInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "nearby":
-        return user ? <NearbyInterface user={user} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
+        return user ? <NearbyInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "timeline":
-        return <Timeline user={user} />;
+        return <Timeline user={{ ...user, ...unifiedProfile }} />;
       default:
         return null;
     }
@@ -158,7 +159,7 @@ const DatingApp = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <UnifiedProfileButton
-              user={{ ...user, ...datingProfile }}
+              user={{ ...user, ...unifiedProfile }}
               onUpdateProfile={handleUpdateProfile}
             />
           ) : (
@@ -236,7 +237,7 @@ const DatingApp = () => {
         setShowAdminLogin={setShowAdminLogin}
         showAuth={showAuth}
         setShowAuth={setShowAuth}
-        user={{ ...user, ...datingProfile }}
+        user={{ ...user, ...unifiedProfile }}
         onUpdateProfile={handleUpdateProfile}
         handleApplyFilters={handleApplyFilters}
         onAIConfigClose={() => setShowAIConfig(false)}

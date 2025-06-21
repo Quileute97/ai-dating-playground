@@ -45,11 +45,11 @@ export function useNearbyProfiles(currentUserId: string | undefined, userLocatio
     }
 
     async function fetchNearby() {
-      // Lấy tất cả profile đang hoạt động hẹn hò
+      // Lấy tất cả profile từ bảng profiles duy nhất
       let { data, error } = await supabase
         .from("profiles")
         .select("id, name, age, avatar, lat, lng, gender, bio, interests, height, job, education, location_name, is_dating_active, last_active")
-        .eq('is_dating_active', true);
+        .eq('tai_khoan_hoat_dong', true); // Chỉ lấy tài khoản đang hoạt động
 
       if (error) {
         console.error('Error fetching nearby profiles:', error);
@@ -64,8 +64,7 @@ export function useNearbyProfiles(currentUserId: string | undefined, userLocatio
           u.id !== currentUserId &&
           u.lat !== null &&
           u.lng !== null &&
-          userLocation &&
-          u.is_dating_active
+          userLocation
       ).map((u) => ({
         ...u,
         distance: distance(userLocation.lat, userLocation.lng, u.lat!, u.lng!)

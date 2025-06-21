@@ -14,7 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    const { orderCode, userId, userEmail, packageType, returnUrl, cancelUrl } = await req.json();
+    const requestBody = await req.json();
+    console.log('Received request body:', JSON.stringify(requestBody, null, 2));
+    
+    const { orderCode, userId, userEmail, packageType, returnUrl, cancelUrl } = requestBody;
+
+    // Validate required fields
+    if (!orderCode || !userId || !packageType) {
+      console.error('Missing required fields:', { orderCode, userId, packageType });
+      throw new Error('Missing required fields: orderCode, userId, or packageType');
+    }
 
     // Updated package pricing and details to include all package types
     const packageDetails = {
@@ -49,16 +58,24 @@ serve(async (req) => {
       throw new Error('PayOS credentials not configured');
     }
 
-    // Create PayOS payment with minimal required fields only
+    console.log('PayOS credentials found:', { clientId: clientId ? 'Set' : 'Missing', apiKey: apiKey ? 'Set' : 'Missing' });
+
+    // Ensure orderCode is a number and within valid range
+    const numericOrderCode = parseInt(orderCode.toString());
+    if (isNaN(numericOrderCode) || numericOrderCode <= 0) {
+      throw new Error('Invalid orderCode: must be a positive number');
+    }
+
+    // Create PayOS payment with strict validation
     const paymentData = {
-      orderCode: parseInt(orderCode.toString()),
+      orderCode: numericOrderCode,
       amount: selectedPackage.amount,
-      description: `Premium ${packageType}`,
+      description: `Premium ${packageType}`.substring(0, 25), // PayOS limits description to 25 chars
       returnUrl: returnUrl || `${req.headers.get('origin')}/payment-success`,
       cancelUrl: cancelUrl || `${req.headers.get('origin')}/payment-cancel`
     };
 
-    console.log('Creating PayOS payment with minimal data:', paymentData);
+    console.log('Sending PayOS payment request:', JSON.stringify(paymentData, null, 2));
 
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
@@ -70,6 +87,9 @@ serve(async (req) => {
       body: JSON.stringify(paymentData),
     });
 
+    console.log('PayOS response status:', payosResponse.status);
+    console.log('PayOS response headers:', Object.fromEntries(payosResponse.headers.entries()));
+
     const payosResult = await payosResponse.json();
     console.log('PayOS API response:', JSON.stringify(payosResult, null, 2));
 
@@ -77,9 +97,9 @@ serve(async (req) => {
       console.error('PayOS HTTP error:', {
         status: payosResponse.status,
         statusText: payosResponse.statusText,
-        headers: Object.fromEntries(payosResponse.headers.entries())
+        body: payosResult
       });
-      throw new Error(`PayOS HTTP error: ${payosResponse.status} ${payosResponse.statusText}`);
+      throw new Error(`PayOS HTTP error: ${payosResponse.status} - ${payosResult?.desc || payosResponse.statusText}`);
     }
 
     if (payosResult.code !== '00') {
@@ -88,7 +108,14 @@ serve(async (req) => {
         desc: payosResult.desc,
         data: payosResult.data
       });
-      throw new Error(`PayOS API error [${payosResult.code}]: ${payosResult.desc || 'Unknown error'}`);
+      
+      // Provide more specific error messages
+      let errorMessage = `PayOS API error [${payosResult.code}]: ${payosResult.desc}`;
+      if (payosResult.code === '20') {
+        errorMessage += '. Possible issues: invalid amount, orderCode already exists, or missing required fields.';
+      }
+      
+      throw new Error(errorMessage);
     }
 
     // Save upgrade request to database
@@ -97,48 +124,61 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    const upgradeRequestData = {
+      user_id: userId,
+      user_email: userEmail,
+      type: packageType,
+      price: selectedPackage.amount,
+      duration_days: selectedPackage.duration,
+      expires_at: selectedPackage.duration > 0 
+        ? new Date(Date.now() + selectedPackage.duration * 24 * 60 * 60 * 1000).toISOString()
+        : null,
+      status: 'pending',
+      bank_info: {
+        orderCode: numericOrderCode,
+        paymentLinkId: payosResult.data?.paymentLinkId,
+        checkoutUrl: payosResult.data?.checkoutUrl
+      }
+    };
+
+    console.log('Saving upgrade request:', JSON.stringify(upgradeRequestData, null, 2));
+
     const { error: dbError } = await supabase
       .from('upgrade_requests')
-      .insert({
-        user_id: userId,
-        user_email: userEmail,
-        type: packageType,
-        price: selectedPackage.amount,
-        duration_days: selectedPackage.duration,
-        expires_at: selectedPackage.duration > 0 
-          ? new Date(Date.now() + selectedPackage.duration * 24 * 60 * 60 * 1000).toISOString()
-          : null,
-        status: 'pending',
-        bank_info: {
-          orderCode: parseInt(orderCode.toString()),
-          paymentLinkId: payosResult.data?.paymentLinkId,
-          checkoutUrl: payosResult.data?.checkoutUrl
-        }
-      });
+      .insert(upgradeRequestData);
 
     if (dbError) {
       console.error('Database error:', dbError);
-      throw new Error('Failed to save upgrade request');
+      throw new Error('Failed to save upgrade request: ' + dbError.message);
     }
 
-    return new Response(JSON.stringify({
+    const successResponse = {
       error: 0,
       message: 'success',
       data: {
         checkoutUrl: payosResult.data?.checkoutUrl,
-        orderCode: parseInt(orderCode.toString()),
+        orderCode: numericOrderCode,
         paymentLinkId: payosResult.data?.paymentLinkId,
       }
-    }), {
+    };
+
+    console.log('Returning success response:', JSON.stringify(successResponse, null, 2));
+
+    return new Response(JSON.stringify(successResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('Create payment error:', error);
-    return new Response(JSON.stringify({
+    console.error('Error stack:', error.stack);
+    
+    const errorResponse = {
       error: 1,
-      message: error.message || 'Payment creation failed'
-    }), {
+      message: error.message || 'Payment creation failed',
+      details: error.stack
+    };
+
+    return new Response(JSON.stringify(errorResponse), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

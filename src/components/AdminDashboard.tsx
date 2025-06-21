@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Bot, MessageSquare, Settings, TrendingUp, Eye, Plus, Edit, Trash2, Save } from 'lucide-react';
@@ -11,11 +12,6 @@ import { aiService } from '@/services/aiService';
 import FakeUserChatModal from './FakeUserChatModal';
 import PostAsFakeUserModal from './PostAsFakeUserModal';
 import { supabase } from "@/integrations/supabase/client";
-import { useBankInfo } from "@/hooks/useBankInfo";
-
-import HeaderAdManager from "./HeaderAdManager";
-import BankInfoManager from "./BankInfoManager";
-import UpgradeRequestsAdmin from "./UpgradeRequestsAdmin";
 
 import AdminOverviewTab from "./AdminOverviewTab";
 import AdminFakeUsersTab from "./AdminFakeUsersTab";
@@ -38,14 +34,6 @@ const AdminDashboard = () => {
 
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showAddPromptModal, setShowAddPromptModal] = useState(false);
-  
-  // Settings state
-  const [settings, setSettings] = useState({
-    openaiApiKey: '',
-    chatTimeout: 60,
-    aiMatchRate: 30,
-    searchRadius: 5
-  });
 
   const [editingFakeUser, setEditingFakeUser] = useState<any | null>(null);
   const [editingAIPrompt, setEditingAIPrompt] = useState<AIPrompt | null>(null);
@@ -53,17 +41,7 @@ const AdminDashboard = () => {
   const [chatFakeUser, setChatFakeUser] = useState<FakeUser | null>(null);
   const [postFakeUser, setPostFakeUser] = useState<FakeUser | null>(null);
 
-  const [user, setUser] = useState<any>(null); // Dùng user info từ DatingApp nếu có
-
-  // Ad code for header
-  const [headerAdCode, setHeaderAdCode] = useState(
-    localStorage.getItem('headerAdCode') || ''
-  );
-
-  // Banking info & QR for upgrade
-  const { bankInfo, refetch: refetchBankInfo } = useBankInfo();
-  const [bankInfoDraft, setBankInfoDraft] = useState(bankInfo);
-  const [qrImgUploading, setQrImgUploading] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   // NEW: Đếm số yêu cầu upgrade pending để hiện thông báo cho admin
   const [pendingUpgradeCount, setPendingUpgradeCount] = React.useState(0);
@@ -245,81 +223,6 @@ const AdminDashboard = () => {
     // Để tích hợp thực tế: cần truyền tới component Timeline thông qua global state hoặc props callback
   };
 
-  // Save header ad code
-  const handleSaveHeaderAdCode = () => {
-    localStorage.setItem('headerAdCode', headerAdCode);
-    // Có thể show toast ở đây
-    alert('Đã lưu mã quảng cáo header!');
-  };
-
-  // Save bank info
-  const handleSaveBankInfo = async () => {
-    const { data, error } = await supabase
-      .from("bank_info")
-      .upsert(
-        [
-          {
-            bank_name: bankInfoDraft.bankName,
-            account_number: bankInfoDraft.accountNumber,
-            account_holder: bankInfoDraft.accountHolder,
-            qr_url: bankInfoDraft.qrUrl,
-            updated_at: new Date().toISOString(),
-          }
-        ],
-        { onConflict: "id" }
-      );
-    if (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không lưu được thông tin ngân hàng.",
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Đã lưu thông tin ngân hàng & QR!",
-        description: "",
-        variant: "default"
-      });
-      refetchBankInfo();
-    }
-  };
-
-  // Handle QR upload
-  const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setQrImgUploading(true);
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const newQrUrl = reader.result as string;
-      setBankInfoDraft((bi) => ({ ...bi, qrUrl: newQrUrl }));
-      // Lưu luôn vào Supabase
-      await supabase.from("bank_info").upsert([
-        {
-          bank_name: bankInfoDraft.bankName,
-          account_number: bankInfoDraft.accountNumber,
-          account_holder: bankInfoDraft.accountHolder,
-          qr_url: newQrUrl,
-          updated_at: new Date().toISOString(),
-        }
-      ], { onConflict: "id" });
-      setQrImgUploading(false);
-      refetchBankInfo();
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Save AI/General settings
-  const handleSaveSettings = () => {
-    // Lưu settings vào localStorage (hoặc thêm API/save Supabase ở đây nếu cần)
-    localStorage.setItem('datingAppSettings', JSON.stringify(settings));
-    toast({
-      title: "Đã lưu cài đặt hệ thống!",
-      description: "",
-      variant: "default"
-    });
-  };
-
   // Tab content
   return (
     <div className="h-full bg-gradient-to-br from-gray-50 to-blue-50 p-6 overflow-y-auto">
@@ -338,17 +241,11 @@ const AdminDashboard = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
             <TabsTrigger value="fake-users">Người dùng ảo</TabsTrigger>
             <TabsTrigger value="ai-prompts">AI Prompts</TabsTrigger>
             <TabsTrigger value="settings">Cài đặt</TabsTrigger>
-            <TabsTrigger value="upgrade-requests">
-              Yêu cầu nâng cấp
-              {pendingUpgradeCount > 0 && (
-                <span className="ml-2 px-2 py-1 bg-yellow-400 text-xs rounded text-black">{pendingUpgradeCount}</span>
-              )}
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -400,23 +297,7 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
-            <AdminSettingsTab
-              headerAdCode={headerAdCode}
-              setHeaderAdCode={setHeaderAdCode}
-              onSaveHeaderAd={handleSaveHeaderAdCode}
-              bankInfo={bankInfoDraft}
-              setBankInfo={setBankInfoDraft}
-              onSaveBankInfo={handleSaveBankInfo}
-              qrImgUploading={qrImgUploading}
-              onQrUpload={handleQrUpload}
-              settings={settings}
-              setSettings={setSettings}
-              handleSaveSettings={handleSaveSettings}
-            />
-          </TabsContent>
-
-          <TabsContent value="upgrade-requests" className="space-y-6">
-            <UpgradeRequestsAdmin />
+            <AdminSettingsTab />
           </TabsContent>
 
           {/* THÊM tab quản lý user thật nếu muốn */}

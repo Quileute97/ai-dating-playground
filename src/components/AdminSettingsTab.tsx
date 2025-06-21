@@ -5,12 +5,34 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import BankInfoManager from "./BankInfoManager";
+import HeaderAdManager from "./HeaderAdManager";
 import { useBankInfo } from "@/hooks/useBankInfo";
 
 export default function AdminSettingsTab() {
   const [qrImgUploading, setQrImgUploading] = useState(false);
   const { toast } = useToast();
-  const { bankInfo, setBankInfo, refetch } = useBankInfo();
+  const { bankInfo, loading, refetch } = useBankInfo();
+
+  // Local state for bank info draft
+  const [bankInfoDraft, setBankInfoDraft] = useState(bankInfo);
+
+  // Sync bank info when it changes
+  React.useEffect(() => {
+    setBankInfoDraft(bankInfo);
+  }, [bankInfo]);
+
+  // Header ad code state
+  const [headerAdCode, setHeaderAdCode] = useState(
+    localStorage.getItem('headerAdCode') || ''
+  );
+
+  // Settings state
+  const [settings, setSettings] = useState({
+    openaiApiKey: '',
+    chatTimeout: 60,
+    aiMatchRate: 30,
+    searchRadius: 5
+  });
 
   const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -33,7 +55,7 @@ export default function AdminSettingsTab() {
 
       const data = await response.json();
       if (data.success) {
-        setBankInfo(prev => ({ ...prev, qrUrl: data.data.link }));
+        setBankInfoDraft(prev => ({ ...prev, qrUrl: data.data.link }));
       } else {
         throw new Error('Invalid response');
       }
@@ -55,10 +77,10 @@ export default function AdminSettingsTab() {
       .upsert([
         {
           id: 1,
-          bank_name: bankInfo.bankName,
-          account_number: bankInfo.accountNumber,
-          account_holder: bankInfo.accountHolder,
-          qr_url: bankInfo.qrUrl,
+          bank_name: bankInfoDraft.bankName,
+          account_number: bankInfoDraft.accountNumber,
+          account_holder: bankInfoDraft.accountHolder,
+          qr_url: bankInfoDraft.qrUrl,
         },
       ]);
 
@@ -75,6 +97,22 @@ export default function AdminSettingsTab() {
       });
       refetch();
     }
+  };
+
+  const handleSaveHeaderAdCode = () => {
+    localStorage.setItem('headerAdCode', headerAdCode);
+    toast({
+      title: "Thành công",
+      description: "Đã lưu mã quảng cáo header"
+    });
+  };
+
+  const handleSaveSettings = () => {
+    localStorage.setItem('datingAppSettings', JSON.stringify(settings));
+    toast({
+      title: "Thành công", 
+      description: "Đã lưu cài đặt hệ thống"
+    });
   };
 
   return (
@@ -96,13 +134,67 @@ export default function AdminSettingsTab() {
         </CardContent>
       </Card>
 
+      <HeaderAdManager
+        headerAdCode={headerAdCode}
+        setHeaderAdCode={setHeaderAdCode}
+        onSave={handleSaveHeaderAdCode}
+      />
+
       <BankInfoManager
-        bankInfo={bankInfo}
-        setBankInfo={setBankInfo}
+        bankInfo={bankInfoDraft}
+        setBankInfo={setBankInfoDraft}
         onSave={saveBankInfo}
         qrImgUploading={qrImgUploading}
         onQrUpload={handleQrUpload}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Cài đặt AI & Hệ thống</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">OpenAI API Key</label>
+            <input
+              type="password"
+              value={settings.openaiApiKey}
+              onChange={e => setSettings(prev => ({ ...prev, openaiApiKey: e.target.value }))}
+              className="w-full p-2 rounded border"
+              placeholder="sk-..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Thời gian chờ chat (giây)</label>
+            <input
+              type="number"
+              value={settings.chatTimeout}
+              onChange={e => setSettings(prev => ({ ...prev, chatTimeout: parseInt(e.target.value) }))}
+              className="w-full p-2 rounded border"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Tỷ lệ AI match (%)</label>
+            <input
+              type="number"
+              value={settings.aiMatchRate}
+              onChange={e => setSettings(prev => ({ ...prev, aiMatchRate: parseInt(e.target.value) }))}
+              className="w-full p-2 rounded border"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Bán kính tìm kiếm (km)</label>
+            <input
+              type="number"
+              value={settings.searchRadius}
+              onChange={e => setSettings(prev => ({ ...prev, searchRadius: parseInt(e.target.value) }))}
+              className="w-full p-2 rounded border"
+            />
+          </div>
+          <Button onClick={handleSaveSettings} variant="secondary">
+            Lưu cài đặt hệ thống
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

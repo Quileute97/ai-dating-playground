@@ -337,14 +337,14 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           </Button>
         </div>
 
-        {/* Upgrade Banner */}
+        {/* Upgrade Banner - Reduced padding */}
         {!isDatingActive && !datingLoading && (
           remainingMatches <= 3 && (
-            <Card className="mt-4 p-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+            <Card className="mt-4 p-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
               <div className="text-center">
-                <Crown className="w-8 h-8 mx-auto mb-2" />
-                <h3 className="font-semibold mb-1">Nâng cấp Premium</h3>
-                <p className="text-sm opacity-90 mb-3">
+                <Crown className="w-8 h-8 mx-auto mb-1" />
+                <h3 className="font-semibold mb-0.5">Nâng cấp Premium</h3>
+                <p className="text-sm opacity-90 mb-1.5">
                   Không giới hạn lượt match + nhiều tính năng khác
                 </p>
                 <Button 

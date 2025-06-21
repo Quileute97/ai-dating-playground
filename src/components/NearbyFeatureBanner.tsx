@@ -31,11 +31,11 @@ const NearbyFeatureBanner: React.FC<NearbyFeatureBannerProps> = ({
   // Show package selection banner if no active subscription
   if (!isActive) {
     return (
-      <Card className="mt-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+      <Card className="mt-4 p-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
         <div className="text-center">
-          <Crown className="w-8 h-8 mx-auto mb-2" />
-          <h3 className="font-semibold mb-1">Mở rộng phạm vi tìm kiếm</h3>
-          <p className="text-sm opacity-90 mb-3">
+          <Crown className="w-8 h-8 mx-auto mb-1" />
+          <h3 className="font-semibold mb-0.5">Mở rộng phạm vi tìm kiếm</h3>
+          <p className="text-sm opacity-90 mb-1.5">
             Chọn gói Premium để tìm kiếm trong phạm vi 20km
           </p>
           <Button
@@ -53,10 +53,10 @@ const NearbyFeatureBanner: React.FC<NearbyFeatureBannerProps> = ({
 
   // Show active subscription status
   return (
-    <Card className="mt-4 p-4 bg-gradient-to-r from-green-500 to-blue-500 text-white">
+    <Card className="mt-4 p-2 bg-gradient-to-r from-green-500 to-blue-500 text-white">
       <div className="text-center">
-        <Crown className="w-8 h-8 mx-auto mb-2" />
-        <h3 className="font-semibold mb-1">Premium đã kích hoạt!</h3>
+        <Crown className="w-8 h-8 mx-auto mb-1" />
+        <h3 className="font-semibold mb-0.5">Premium đã kích hoạt!</h3>
         
         {subscription?.duration_days === -1 ? (
           <p className="text-sm opacity-90">Gói Vô Hạn - Không giới hạn thời gian</p>
@@ -70,7 +70,7 @@ const NearbyFeatureBanner: React.FC<NearbyFeatureBannerProps> = ({
         <Button
           variant="secondary"
           size="sm"
-          className="mt-3 text-green-700"
+          className="mt-1.5 text-green-700"
           onClick={onClickExpand}
           disabled={disableExpand}
         >

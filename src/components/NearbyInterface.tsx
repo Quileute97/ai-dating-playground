@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin } from "lucide-react";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
+import { useBankInfo } from "@/hooks/useBankInfo";
 
 interface NearbyUser {
   id: string;
@@ -43,10 +44,14 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     null
   );
   const [hasExpandedRange, setHasExpandedRange] = useState(false);
+  const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
   
   // Use the new subscription hook instead of old upgrade status
   const { isActive, isLoading: nearbyLoading, subscription } = useIsNearbyActive(user?.id);
+  
+  // Get bank info for payment modal
+  const { bankInfo } = useBankInfo();
 
   // Function to request location access and update state
   const requestLocationPermission = () => {
@@ -225,10 +230,13 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
       users={nearbyUsers}
       userLocation={userLocation}
       hasExpandedRange={hasExpandedRange}
+      setShowPayOSModal={setShowPayOSModal}
+      showPayOSModal={showPayOSModal}
       upgradeStatus={isActive ? "approved" : "none"}
       nearbyLoading={nearbyLoading || profilesLoading}
       onExpandRange={handleExpandRange}
       disableExpand={hasExpandedRange}
+      bankInfo={bankInfo}
       onViewProfile={handleViewProfile}
       onLikeUser={handleLikeUser}
       onMessageUser={handleMessageUser}

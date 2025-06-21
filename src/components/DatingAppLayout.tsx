@@ -14,9 +14,10 @@ interface LayoutProps {
   user: any;
   activeTab: string;
   onTabChange: (value: string) => void;
+  children?: React.ReactNode;
 }
 
-export default function DatingAppLayout({ user, activeTab, onTabChange }: LayoutProps) {
+export default function DatingAppLayout({ user, activeTab, onTabChange, children }: LayoutProps) {
   const timelineRef = useRef<TimelineRef>(null);
 
   const handleScrollToPost = (postId: string) => {
@@ -31,6 +32,21 @@ export default function DatingAppLayout({ user, activeTab, onTabChange }: Layout
       timelineRef.current?.scrollToPost(postId);
     }
   };
+
+  // If children are provided, render them directly (for backward compatibility)
+  if (children) {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
+        <div className="flex-1 flex flex-col">
+          {children}
+        </div>
+        <RealTimeActivityPanel 
+          userId={user?.id} 
+          onScrollToPost={handleScrollToPost}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
@@ -67,10 +83,17 @@ export default function DatingAppLayout({ user, activeTab, onTabChange }: Layout
                 <Timeline ref={timelineRef} user={user} />
               </TabsContent>
               <TabsContent value="nearby" className="mt-0 h-full">
-                <NearbyMain user={user} />
+                <NearbyMain />
               </TabsContent>
               <TabsContent value="profile" className="mt-0 h-full">
-                <UserProfile user={user} />
+                <div className="p-4">
+                  <UserProfile 
+                    isOpen={true}
+                    onClose={() => {}}
+                    user={user}
+                    onUpdateProfile={() => {}}
+                  />
+                </div>
               </TabsContent>
             </div>
 

@@ -40,30 +40,42 @@ serve(async (req) => {
       throw new Error(`Invalid package type: ${packageType}`);
     }
 
-    // Create PayOS payment with shortened description to avoid PayOS limits
-    const shortDescription = packageType.includes('dating') 
-      ? 'Premium Dating' 
-      : packageType.includes('nearby') 
-        ? 'Nearby Premium'
-        : selectedPackage.description.length > 25 
-          ? selectedPackage.description.substring(0, 22) + '...'
-          : selectedPackage.description;
-
+    // Create PayOS payment with proper formatting according to PayOS requirements
     const paymentData = {
-      orderCode,
+      orderCode: Number(orderCode), // Ensure it's a number
       amount: selectedPackage.amount,
-      description: shortDescription,
+      description: `Premium Package ${packageType}`, // Keep description simple and short
+      items: [
+        {
+          name: selectedPackage.description,
+          quantity: 1,
+          price: selectedPackage.amount
+        }
+      ],
       returnUrl: returnUrl || `${req.headers.get('origin')}/payment-success`,
       cancelUrl: cancelUrl || `${req.headers.get('origin')}/payment-cancel`,
+      buyerName: userEmail ? userEmail.split('@')[0] : 'Customer',
+      buyerEmail: userEmail || '',
+      buyerPhone: '',
+      buyerAddress: ''
     };
 
     console.log('Creating PayOS payment with data:', paymentData);
 
+    // Check if required environment variables are set
+    const clientId = Deno.env.get('PAYOS_CLIENT_ID');
+    const apiKey = Deno.env.get('PAYOS_API_KEY');
+    
+    if (!clientId || !apiKey) {
+      console.error('Missing PayOS credentials');
+      throw new Error('PayOS credentials not configured');
+    }
+
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
       headers: {
-        'x-client-id': Deno.env.get('PAYOS_CLIENT_ID') || '',
-        'x-api-key': Deno.env.get('PAYOS_API_KEY') || '',
+        'x-client-id': clientId,
+        'x-api-key': apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(paymentData),
@@ -73,7 +85,12 @@ serve(async (req) => {
     console.log('PayOS API response:', payosResult);
 
     if (!payosResponse.ok || payosResult.code !== '00') {
-      throw new Error(`PayOS API error: ${payosResult.desc || 'Unknown error'}`);
+      console.error('PayOS API error details:', {
+        status: payosResponse.status,
+        statusText: payosResponse.statusText,
+        result: payosResult
+      });
+      throw new Error(`PayOS API error: ${payosResult.desc || payosResult.message || 'Unknown error'}`);
     }
 
     // Save upgrade request to database
@@ -95,7 +112,7 @@ serve(async (req) => {
           : null,
         status: 'pending',
         bank_info: {
-          orderCode,
+          orderCode: Number(orderCode),
           paymentLinkId: payosResult.data?.paymentLinkId,
           checkoutUrl: payosResult.data?.checkoutUrl
         }
@@ -111,7 +128,7 @@ serve(async (req) => {
       message: 'success',
       data: {
         checkoutUrl: payosResult.data?.checkoutUrl,
-        orderCode,
+        orderCode: Number(orderCode),
         paymentLinkId: payosResult.data?.paymentLinkId,
       }
     }), {

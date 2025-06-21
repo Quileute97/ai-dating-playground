@@ -20,7 +20,7 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
   const [isChatMinimized, setIsChatMinimized] = useState(true);
   const [chatMessage, setChatMessage] = useState("");
 
-  // Sử dụng real-time messages hook
+  // Sử dụng real-time messages hook với ID user thật
   const { messages, isLoading: messagesLoading, sendMessage, sending } = useRealTimeMessages(
     myId, 
     selectedFriend || ""
@@ -100,7 +100,7 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
         </div>
       </div>
 
-      {/* Real-time Chat Window */}
+      {/* Persistent Chat Window - messages are saved permanently */}
       <div className="flex-1 flex flex-col justify-end">
         {selectedFriend && selectedFriendData ? (
           <Card className="bg-white border shadow-xl rounded-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl">
@@ -137,7 +137,7 @@ export default function ActiveFriendsWithChatPanel({ myId }: ActiveFriendsWithCh
             <div className={`transition-all duration-300 ease-in-out ${
               isChatMinimized ? 'max-h-0 opacity-0' : 'max-h-[400px] opacity-100'
             } overflow-hidden`}>
-              {/* Messages Area */}
+              {/* Messages Area - Persistent messages across tabs */}
               <ScrollArea className="h-48 p-4 bg-gradient-to-b from-gray-50 to-white">
                 <div className="space-y-3">
                   {messagesLoading ? (

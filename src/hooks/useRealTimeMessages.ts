@@ -6,11 +6,11 @@ import { useEffect } from "react";
 export function useRealTimeMessages(myUserId: string, friendId: string) {
   const queryClient = useQueryClient();
   
-  // Tìm hoặc tạo conversation
+  // Tìm hoặc tạo conversation - sử dụng ID thật của user đã đăng nhập
   const { data: conversation } = useQuery({
     queryKey: ["conversation", myUserId, friendId],
     queryFn: async () => {
-      // Tìm conversation hiện có
+      // Tìm conversation hiện có giữa 2 user thật
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
@@ -21,12 +21,12 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
         return existingConv[0];
       }
 
-      // Tạo conversation mới
+      // Tạo conversation mới giữa 2 user thật
       const { data: newConv, error } = await supabase
         .from('conversations')
         .insert([{
           user_real_id: myUserId,
-          user_fake_id: friendId
+          user_fake_id: friendId // Thực tế đây cũng là user thật, chỉ dùng tên cột có sẵn
         }])
         .select('id')
         .single();
@@ -37,7 +37,7 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
     enabled: !!myUserId && !!friendId
   });
 
-  // Lấy messages
+  // Lấy messages với sender_id để xác định ai gửi
   const { data: messages, isLoading } = useQuery({
     queryKey: ["messages", conversation?.id],
     queryFn: async () => {
@@ -69,6 +69,8 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
       }, (payload) => {
         console.log('New message received:', payload.new);
         queryClient.invalidateQueries({ queryKey: ["messages", conversation.id] });
+        // Cũng invalidate danh sách conversations để cập nhật last_message
+        queryClient.invalidateQueries({ queryKey: ["conversations"] });
       })
       .subscribe();
 
@@ -77,7 +79,7 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
     };
   }, [conversation?.id, queryClient]);
 
-  // Send message mutation
+  // Send message mutation - lưu tin nhắn vĩnh viễn
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!conversation?.id) throw new Error("No conversation found");
@@ -87,7 +89,7 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
         .insert([{
           conversation_id: conversation.id,
           content: content.trim(),
-          sender: 'real',
+          sender: 'real', // Đánh dấu là tin nhắn từ user thật
           sender_id: myUserId
         }]);
 
@@ -104,6 +106,7 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["messages", conversation?.id] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
     }
   });
 

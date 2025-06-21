@@ -1,9 +1,11 @@
+
 import React, { useState, ChangeEvent } from "react";
-import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2 } from "lucide-react";
+import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 import { VN_PROVINCES } from "@/utils/vnProvinces";
@@ -121,6 +123,12 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
   const { posts, isLoading, createPost, creating, refetch, deletePost, deleting } = useTimelinePosts(userId);
   const { profile } = useDatingProfile(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
+  const [timelineSettings, setTimelineSettings] = useState({
+    postFrequency: [50],
+    contentFilter: [70],
+    interactionLevel: [80]
+  });
+  const [showSettings, setShowSettings] = useState(false);
   const { toast } = useToast();
 
   // Xử lý đăng post mới (KHÔNG truyền sticker)
@@ -158,10 +166,98 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
 
   return (
     <div className="max-w-lg mx-auto py-6 h-full flex flex-col animate-fade-in">
+      {/* Timeline Settings Panel */}
+      <Card className="mb-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200">
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+              <Settings className="w-4 h-4 text-purple-600" />
+              Cài đặt Timeline
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSettings(!showSettings)}
+              className="text-purple-600 hover:bg-purple-100"
+            >
+              {showSettings ? "Thu gọn" : "Mở rộng"}
+            </Button>
+          </div>
+          
+          {showSettings && (
+            <div className="space-y-4 animate-fade-in">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Tần suất hiển thị bài viết: {timelineSettings.postFrequency[0]}%
+                </label>
+                <Slider
+                  value={timelineSettings.postFrequency}
+                  onValueChange={(value) => 
+                    setTimelineSettings(prev => ({ ...prev, postFrequency: value }))
+                  }
+                  max={100}
+                  step={10}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>Ít</span>
+                  <span>Nhiều</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Bộ lọc nội dung: {timelineSettings.contentFilter[0]}%
+                </label>
+                <Slider
+                  value={timelineSettings.contentFilter}
+                  onValueChange={(value) => 
+                    setTimelineSettings(prev => ({ ...prev, contentFilter: value }))
+                  }
+                  max={100}
+                  step={10}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>Lỏng</span>
+                  <span>Nghiêm ngặt</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Mức độ tương tác: {timelineSettings.interactionLevel[0]}%
+                </label>
+                <Slider
+                  value={timelineSettings.interactionLevel}
+                  onValueChange={(value) => 
+                    setTimelineSettings(prev => ({ ...prev, interactionLevel: value }))
+                  }
+                  max={100}
+                  step={10}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>Thấp</span>
+                  <span>Cao</span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-purple-200">
+                <p className="text-xs text-gray-600 text-center">
+                  Các thay đổi sẽ được áp dụng ngay lập tức
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
       {/* CHỈ HIỂN THỊ PostForm NẾU ĐÃ ĐĂNG NHẬP */}
       {user && (
         <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
       )}
+      
       <div className="flex-1 overflow-y-auto space-y-3 mt-2">
         {isLoading && (
           <div className="text-center text-gray-500 pt-12">Đang tải timeline...</div>
@@ -180,6 +276,7 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
           <div className="text-center text-gray-400 pt-16">Chưa có bài viết nào.</div>
         )}
       </div>
+      
       {/* Modal hashtag */}
       {hashtag && (
         <HashtagPostsModal

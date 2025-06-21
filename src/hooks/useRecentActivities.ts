@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export interface Activity {
   id: string;
-  type: "friend" | "comment" | "like";
+  type: "friend" | "comment" | "like" | "friend_request";
   text: string;
   icon: React.ReactNode;
   created_at: string;
@@ -14,6 +14,7 @@ export interface Activity {
   user_name: string | null;
   user_avatar: string | null;
   post_id?: string; // Thêm field này để lưu ID bài viết
+  friend_request_id?: string; // Thêm field này để lưu ID lời mời kết bạn
   isNew?: boolean;
 }
 
@@ -47,6 +48,15 @@ export function useRecentActivities(userId: string | undefined) {
         .from("friends")
         .select("id, user_id, friend_id, created_at, profiles:user_id(name,avatar)")
         .eq("status", "accepted")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      // Lấy lời mời kết bạn nhận được (pending và mình là friend_id)
+      const { data: friendRequests } = await supabase
+        .from("friends")
+        .select("id, user_id, friend_id, created_at, profiles:user_id(name,avatar)")
+        .eq("friend_id", userId)
+        .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(5);
 
@@ -85,6 +95,21 @@ export function useRecentActivities(userId: string | undefined) {
           user_id: f.user_id,
           user_name: f.profiles?.name || null,
           user_avatar: f.profiles?.avatar || null,
+        });
+      });
+
+      // Lời mời kết bạn
+      friendRequests?.forEach((f: any) => {
+        all.push({
+          id: "friend-request-" + f.id,
+          type: "friend_request",
+          text: `${f.profiles?.name || "Ai đó"} đã gửi lời mời kết bạn`,
+          icon: null,
+          created_at: f.created_at,
+          user_id: f.user_id,
+          user_name: f.profiles?.name || null,
+          user_avatar: f.profiles?.avatar || null,
+          friend_request_id: f.id,
         });
       });
 

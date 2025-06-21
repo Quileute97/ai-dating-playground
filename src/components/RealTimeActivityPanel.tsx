@@ -6,7 +6,7 @@ import { useRecentActivities } from "@/hooks/useRecentActivities";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import PostDetailModal from "./PostDetailModal";
-import FriendRequestsManager from "./FriendRequestsManager";
+import FriendRequestDetailModal from "./FriendRequestDetailModal";
 
 interface PanelProps {
   userId?: string;
@@ -16,6 +16,7 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
   const { data: activities, isLoading } = useRecentActivities(userId);
   const navigate = useNavigate();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [selectedFriendRequestId, setSelectedFriendRequestId] = useState<string | null>(null);
 
   const handleUserClick = (e: React.MouseEvent, activityUserId: string) => {
     e.stopPropagation();
@@ -25,32 +26,28 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
   };
 
   const handleActivityClick = (activity: any) => {
-    // Navigate to related post based on activity type
+    // Navigate to related content based on activity type
     if (activity.type === "like" && activity.post_id) {
       // Hiển thị modal bài viết cho post likes
       setSelectedPostId(activity.post_id);
     } else if (activity.type === "comment" && activity.post_id) {
       // Hiển thị modal bài viết cho comments
       setSelectedPostId(activity.post_id);
+    } else if (activity.type === "friend_request" && activity.friend_request_id) {
+      // Hiển thị modal chi tiết lời mời kết bạn
+      setSelectedFriendRequestId(activity.friend_request_id);
     } else if (activity.type === "friend") {
       // For friend activities, navigate to user profile
       navigate(`/profile/${activity.user_id}`);
     } else {
-      // Default: navigate to main page
-      navigate("/");
+      // Default: navigate to user profile
+      navigate(`/profile/${activity.user_id}`);
     }
   };
 
   return (
     <>
       <aside className="hidden lg:flex flex-col gap-4 w-[300px] max-w-xs min-w-[240px] pt-6 pl-4">
-        {/* Friend Requests Manager */}
-        {userId && (
-          <div className="flex-shrink-0">
-            <FriendRequestsManager myId={userId} />
-          </div>
-        )}
-
         {/* Recent Activities */}
         <div className="flex-1 flex flex-col gap-2">
           <h3 className="font-bold text-gray-700 text-base pb-1">Hoạt động mới</h3>
@@ -71,6 +68,8 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
                   <Heart className="w-6 h-6 text-pink-500" />
                 ) : a.type === "friend" ? (
                   <UserPlus className="w-6 h-6 text-green-500" />
+                ) : a.type === "friend_request" ? (
+                  <UserPlus className="w-6 h-6 text-blue-500" />
                 ) : (
                   <MessageCircle className="w-6 h-6 text-blue-500" />
                 )}
@@ -103,6 +102,13 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
         postId={selectedPostId}
         isOpen={!!selectedPostId}
         onClose={() => setSelectedPostId(null)}
+      />
+
+      {/* Friend Request Detail Modal */}
+      <FriendRequestDetailModal
+        friendRequestId={selectedFriendRequestId}
+        isOpen={!!selectedFriendRequestId}
+        onClose={() => setSelectedFriendRequestId(null)}
       />
     </>
   );

@@ -55,11 +55,18 @@ export const DATING_PACKAGES: DatingPackage[] = [
   }
 ];
 
-// Generate unique order code
+// Generate unique order code with better collision avoidance
 const generateOrderCode = () => {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000);
-  return parseInt(`${timestamp}${random}`.slice(-9));
+  const timestamp = Math.floor(Date.now() / 1000);
+  const random = Math.floor(Math.random() * 9999) + 1000;
+  let orderCode = parseInt(`${timestamp}${random}`.slice(-9));
+  
+  // Ensure it's within valid range
+  if (orderCode <= 0 || orderCode > 999999999) {
+    orderCode = Math.floor(Math.random() * 999999999) + 100000000;
+  }
+  
+  return orderCode;
 };
 
 export const createDatingPackagePayment = async (
@@ -70,12 +77,12 @@ export const createDatingPackagePayment = async (
   try {
     console.log('🚀 Creating dating package payment:', { packageId, userId, userEmail });
     
-    // Validate input data
-    if (!packageId || typeof packageId !== 'string') {
+    // Strict validation
+    if (!packageId || typeof packageId !== 'string' || packageId.trim() === '') {
       throw new Error('Package ID không hợp lệ');
     }
     
-    if (!userId || typeof userId !== 'string') {
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
       throw new Error('User ID không hợp lệ');
     }
     
@@ -90,14 +97,20 @@ export const createDatingPackagePayment = async (
     const orderCode = generateOrderCode();
     console.log('📝 Generated order code:', orderCode);
     
+    // Prepare request data with proper validation
     const requestData = {
       orderCode: orderCode,
-      userId: userId,
-      userEmail: userEmail || '',
+      userId: userId.trim(),
+      userEmail: userEmail?.trim() || '',
       packageType: packageId,
       returnUrl: `${window.location.origin}/payment-success`,
       cancelUrl: `${window.location.origin}/payment-cancel`,
     };
+    
+    // Validate request data
+    if (!requestData.orderCode || requestData.orderCode <= 0) {
+      throw new Error('Order code không hợp lệ');
+    }
     
     console.log('📤 Sending payment request:', requestData);
     
@@ -109,29 +122,30 @@ export const createDatingPackagePayment = async (
       body: JSON.stringify(requestData),
     });
 
+    console.log('📥 Response status:', response.status, response.ok);
+
     let result;
     try {
-      result = await response.json();
+      const responseText = await response.text();
+      console.log('📥 Raw response:', responseText);
+      result = JSON.parse(responseText);
     } catch (parseError) {
       console.error('❌ Failed to parse response JSON:', parseError);
-      throw new Error('Lỗi phản hồi từ server không hợp lệ');
+      throw new Error('Phản hồi từ server không hợp lệ');
     }
     
-    console.log('📥 PayOS response:', {
-      status: response.status,
-      ok: response.ok,
-      result: result
-    });
+    console.log('📥 Parsed response:', result);
     
-    if (!response.ok) {
-      const errorMessage = result?.message || `HTTP Error ${response.status}`;
-      console.error('❌ API call failed:', errorMessage);
-      throw new Error(errorMessage);
-    }
-
+    // Handle error responses (including when response.ok is false)
     if (result.error && result.error !== 0) {
-      console.error('❌ PayOS error response:', result);
-      throw new Error(result.message || 'Lỗi từ PayOS API');
+      console.error('❌ API error response:', result);
+      throw new Error(result.message || 'Có lỗi xảy ra khi tạo thanh toán');
+    }
+    
+    // Validate success response
+    if (!result.data || !result.data.checkoutUrl) {
+      console.error('❌ Invalid success response:', result);
+      throw new Error('Không nhận được URL thanh toán');
     }
     
     console.log('✅ Payment created successfully:', result.data);
@@ -149,10 +163,10 @@ export const createDatingPackagePayment = async (
       userMessage = 'Thông tin người dùng không hợp lệ';
     } else if (error.message?.includes('không tồn tại')) {
       userMessage = 'Gói thanh toán không tồn tại';
-    } else if (error.message?.includes('PayOS API Error')) {
-      userMessage = 'Lỗi từ hệ thống thanh toán. Vui lòng thử lại.';
-    } else if (error.message?.includes('Network')) {
-      userMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.';
+    } else if (error.message?.includes('PayOS')) {
+      userMessage = error.message;
+    } else if (error.message?.includes('Phản hồi từ server')) {
+      userMessage = 'Lỗi kết nối với server. Vui lòng thử lại.';
     } else if (error.message) {
       userMessage = error.message;
     }

@@ -29,15 +29,15 @@ const getPackageDetails = (packageType: string) => {
   return packageDetails[packageType as keyof typeof packageDetails];
 };
 
-// Generate unique orderCode with collision avoidance
+// Generate unique orderCode with better collision avoidance
 const generateUniqueOrderCode = () => {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000);
-  let orderCode = parseInt(`${timestamp}${random}`.slice(-9));
+  const timestamp = Math.floor(Date.now() / 1000); // Use seconds instead of milliseconds
+  const random = Math.floor(Math.random() * 9999) + 1000; // 4-digit random number
+  let orderCode = parseInt(`${timestamp}${random}`.slice(-9)); // Ensure 9 digits max
   
-  // Ensure it's within PayOS range (1-9007199254740991)
-  if (orderCode <= 0) {
-    orderCode = Math.floor(Math.random() * 999999999) + 1;
+  // Ensure it's within PayOS range and positive
+  if (orderCode <= 0 || orderCode > 999999999) {
+    orderCode = Math.floor(Math.random() * 999999999) + 100000000;
   }
   
   return orderCode;
@@ -68,26 +68,19 @@ serve(async (req) => {
 
     console.log('✅ Package selected:', packageType, selectedPackage);
 
-    // Generate or validate orderCode
+    // Generate or use provided orderCode
     let finalOrderCode: number;
     if (rawOrderCode && typeof rawOrderCode === 'number' && rawOrderCode > 0) {
       finalOrderCode = Math.abs(Math.floor(rawOrderCode));
+      // Ensure it's within PayOS limits
+      if (finalOrderCode > 999999999) {
+        finalOrderCode = generateUniqueOrderCode();
+      }
     } else {
       finalOrderCode = generateUniqueOrderCode();
     }
 
-    console.log('📝 Order code generated:', finalOrderCode);
-
-    // Prepare PayOS payment data according to their exact API spec
-    const paymentData = {
-      orderCode: finalOrderCode,
-      amount: selectedPackage.amount,
-      description: selectedPackage.description,
-      returnUrl: returnUrl || `${new URL(req.url).origin}/payment-success`,
-      cancelUrl: cancelUrl || `${new URL(req.url).origin}/payment-cancel`
-    };
-
-    console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
+    console.log('📝 Final order code:', finalOrderCode);
 
     // Check PayOS credentials
     const clientId = Deno.env.get('PAYOS_CLIENT_ID');
@@ -100,7 +93,30 @@ serve(async (req) => {
 
     console.log('✅ PayOS credentials verified');
 
-    // Call PayOS API with exact headers they expect
+    // Prepare PayOS payment data with exact format they expect
+    const paymentData = {
+      orderCode: finalOrderCode,
+      amount: selectedPackage.amount,
+      description: selectedPackage.description,
+      buyerName: userEmail ? userEmail.split('@')[0] : 'User',
+      buyerEmail: userEmail || '',
+      buyerPhone: '',
+      buyerAddress: '',
+      items: [
+        {
+          name: selectedPackage.description,
+          quantity: 1,
+          price: selectedPackage.amount
+        }
+      ],
+      cancelUrl: cancelUrl || `${new URL(req.url).origin}/payment-cancel`,
+      returnUrl: returnUrl || `${new URL(req.url).origin}/payment-success`,
+      signature: ''
+    };
+
+    console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
+
+    // Call PayOS API
     console.log('🚀 Calling PayOS API...');
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
@@ -115,31 +131,37 @@ serve(async (req) => {
     let payosResult;
     const responseText = await payosResponse.text();
     console.log('📥 PayOS Raw Response:', responseText);
+    console.log('📥 PayOS Response Status:', payosResponse.status);
     
     try {
       payosResult = JSON.parse(responseText);
     } catch (parseError) {
       console.error('❌ Failed to parse PayOS response:', parseError);
-      throw new Error(`Invalid PayOS response: ${responseText}`);
+      throw new Error(`Invalid PayOS response: ${responseText.slice(0, 200)}`);
     }
 
-    console.log('📥 PayOS Response Status:', payosResponse.status);
     console.log('📥 PayOS Response Data:', JSON.stringify(payosResult, null, 2));
 
-    // Handle PayOS API errors
-    if (!payosResponse.ok || (payosResult.code && payosResult.code !== '00')) {
-      let errorMessage = `PayOS API Error`;
-      
-      if (payosResult.code) {
-        errorMessage += ` [${payosResult.code}]: ${payosResult.desc || 'Unknown error'}`;
-      } else {
-        errorMessage += `: HTTP ${payosResponse.status}`;
+    // Handle PayOS API errors with detailed logging
+    if (!payosResponse.ok) {
+      let errorMessage = `PayOS HTTP Error ${payosResponse.status}`;
+      if (payosResult?.desc) {
+        errorMessage += `: ${payosResult.desc}`;
       }
-      
-      console.error('❌ PayOS API Error:', errorMessage);
-      console.error('Full error details:', payosResult);
-      
+      console.error('❌ PayOS HTTP Error:', errorMessage);
       throw new Error(errorMessage);
+    }
+
+    if (payosResult.code && payosResult.code !== '00') {
+      const errorMessage = `PayOS API Error [${payosResult.code}]: ${payosResult.desc || 'Unknown error'}`;
+      console.error('❌ PayOS API Error:', errorMessage);
+      console.error('Full PayOS error response:', payosResult);
+      throw new Error(errorMessage);
+    }
+
+    if (!payosResult.data || !payosResult.data.checkoutUrl) {
+      console.error('❌ Missing checkout URL in PayOS response');
+      throw new Error('PayOS response missing checkout URL');
     }
 
     console.log('✅ PayOS payment created successfully');
@@ -162,8 +184,8 @@ serve(async (req) => {
       status: 'pending',
       bank_info: {
         orderCode: finalOrderCode,
-        paymentLinkId: payosResult.data?.paymentLinkId,
-        checkoutUrl: payosResult.data?.checkoutUrl,
+        paymentLinkId: payosResult.data.paymentLinkId,
+        checkoutUrl: payosResult.data.checkoutUrl,
         amount: selectedPackage.amount,
         description: selectedPackage.description
       }
@@ -177,7 +199,6 @@ serve(async (req) => {
 
     if (dbError) {
       console.error('❌ Database error:', dbError);
-      // Don't throw here - payment was created successfully
       console.log('⚠️ Payment created but database save failed');
     } else {
       console.log('✅ Saved to database successfully');
@@ -187,16 +208,16 @@ serve(async (req) => {
       error: 0,
       message: 'Payment created successfully',
       data: {
-        checkoutUrl: payosResult.data?.checkoutUrl,
+        checkoutUrl: payosResult.data.checkoutUrl,
         orderCode: finalOrderCode,
-        paymentLinkId: payosResult.data?.paymentLinkId,
+        paymentLinkId: payosResult.data.paymentLinkId,
         amount: selectedPackage.amount,
         description: selectedPackage.description
       }
     };
 
     console.log('🎉 Payment creation completed successfully');
-    console.log('Response:', JSON.stringify(successResponse, null, 2));
+    console.log('Success response:', JSON.stringify(successResponse, null, 2));
     console.log('=== PayOS Payment Request Completed ===');
 
     return new Response(JSON.stringify(successResponse), {
@@ -212,14 +233,26 @@ serve(async (req) => {
     });
     console.log('=== PayOS Payment Request Failed ===');
     
+    let userFriendlyMessage = 'Có lỗi xảy ra khi tạo thanh toán';
+    
+    if (error.message?.includes('PayOS API Error')) {
+      userFriendlyMessage = 'Lỗi từ PayOS: ' + error.message.split(': ')[1];
+    } else if (error.message?.includes('Invalid package type')) {
+      userFriendlyMessage = 'Gói thanh toán không hợp lệ';
+    } else if (error.message?.includes('Missing required fields')) {
+      userFriendlyMessage = 'Thiếu thông tin bắt buộc';
+    } else if (error.message?.includes('PayOS credentials')) {
+      userFriendlyMessage = 'Cấu hình PayOS chưa đúng';
+    }
+    
     const errorResponse = {
       error: 1,
-      message: error.message || 'Payment creation failed',
+      message: userFriendlyMessage,
       originalError: error.message
     };
 
     return new Response(JSON.stringify(errorResponse), {
-      status: 500,
+      status: 200, // Return 200 so frontend can handle the error properly
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

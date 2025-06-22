@@ -8,6 +8,75 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// PayOS package details with proper validation
+const getPackageDetails = (packageType: string) => {
+  const packageDetails = {
+    // Legacy packages
+    'gold': { amount: 99000, description: 'Goi GOLD Premium', duration: -1 },
+    'nearby': { amount: 49000, description: 'Mo rong Quanh day', duration: -1 },
+    
+    // New nearby packages
+    'nearby_week': { amount: 20000, description: 'Premium 1 Tuan', duration: 7 },
+    'nearby_month': { amount: 50000, description: 'Premium 1 Thang', duration: 30 },
+    'nearby_unlimited': { amount: 500000, description: 'Premium Vo Han', duration: -1 },
+    
+    // New dating packages
+    'dating_week': { amount: 49000, description: 'Premium Hen ho 1T', duration: 7 },
+    'dating_month': { amount: 149000, description: 'Premium Hen ho 1Th', duration: 30 },
+    'dating_unlimited': { amount: 399000, description: 'Premium Hen ho VH', duration: -1 }
+  };
+
+  return packageDetails[packageType as keyof typeof packageDetails];
+};
+
+// Generate unique orderCode with collision avoidance
+const generateUniqueOrderCode = () => {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const random = Math.floor(Math.random() * 1000);
+  let orderCode = parseInt(`${timestamp}${random}`.slice(-9)); // Keep last 9 digits
+  
+  // Ensure it's within PayOS range (1-999999999)
+  if (orderCode > 999999999) {
+    orderCode = orderCode % 999999999;
+  }
+  if (orderCode <= 0) {
+    orderCode = Math.floor(Math.random() * 999999999) + 1;
+  }
+  
+  return orderCode;
+};
+
+// Validate PayOS payment data
+const validatePaymentData = (data: any) => {
+  const errors: string[] = [];
+  
+  if (!data.orderCode || typeof data.orderCode !== 'number') {
+    errors.push('Invalid orderCode: must be a positive number');
+  }
+  
+  if (!data.amount || typeof data.amount !== 'number' || data.amount <= 0) {
+    errors.push('Invalid amount: must be a positive number');
+  }
+  
+  if (!data.description || typeof data.description !== 'string' || data.description.length === 0) {
+    errors.push('Invalid description: must be a non-empty string');
+  }
+  
+  if (data.description && data.description.length > 25) {
+    errors.push('Description too long: maximum 25 characters allowed');
+  }
+  
+  if (!data.returnUrl || typeof data.returnUrl !== 'string') {
+    errors.push('Invalid returnUrl: must be a valid URL string');
+  }
+  
+  if (!data.cancelUrl || typeof data.cancelUrl !== 'string') {
+    errors.push('Invalid cancelUrl: must be a valid URL string');
+  }
+  
+  return errors;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -15,76 +84,77 @@ serve(async (req) => {
 
   try {
     const requestBody = await req.json();
-    console.log('Received request body:', JSON.stringify(requestBody, null, 2));
+    console.log('=== PayOS Payment Request Started ===');
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
     
-    const { orderCode, userId, userEmail, packageType, returnUrl, cancelUrl } = requestBody;
+    const { orderCode: rawOrderCode, userId, userEmail, packageType, returnUrl, cancelUrl } = requestBody;
 
-    // Validate required fields
-    if (!orderCode || !userId || !packageType) {
-      console.error('Missing required fields:', { orderCode, userId, packageType });
-      throw new Error('Missing required fields: orderCode, userId, or packageType');
+    // Input validation
+    if (!userId || !packageType) {
+      const error = 'Missing required fields: userId or packageType';
+      console.error('❌ Validation Error:', error);
+      throw new Error(error);
     }
 
-    // Updated package pricing and details to include all package types
-    const packageDetails = {
-      // Legacy packages
-      'gold': { amount: 99000, description: 'Goi GOLD Premium', duration: -1 },
-      'nearby': { amount: 49000, description: 'Mo rong Quanh day', duration: -1 },
-      
-      // New nearby packages
-      'nearby_week': { amount: 20000, description: 'Premium 1 Tuan', duration: 7 },
-      'nearby_month': { amount: 50000, description: 'Premium 1 Thang', duration: 30 },
-      'nearby_unlimited': { amount: 500000, description: 'Premium Vo Han', duration: -1 },
-      
-      // New dating packages
-      'dating_week': { amount: 49000, description: 'Premium Hen ho 1T', duration: 7 },
-      'dating_month': { amount: 149000, description: 'Premium Hen ho 1Th', duration: 30 },
-      'dating_unlimited': { amount: 399000, description: 'Premium Hen ho VH', duration: -1 }
+    // Get package details
+    const selectedPackage = getPackageDetails(packageType);
+    if (!selectedPackage) {
+      const error = `Invalid package type: ${packageType}`;
+      console.error('❌ Package Error:', error);
+      console.log('Available packages:', Object.keys({
+        gold: true, nearby: true, nearby_week: true, nearby_month: true, 
+        nearby_unlimited: true, dating_week: true, dating_month: true, dating_unlimited: true
+      }));
+      throw new Error(error);
+    }
+
+    console.log('✅ Package selected:', packageType, selectedPackage);
+
+    // Generate or validate orderCode
+    let finalOrderCode: number;
+    if (rawOrderCode && typeof rawOrderCode === 'number') {
+      finalOrderCode = Math.abs(rawOrderCode);
+      if (finalOrderCode > 999999999) {
+        finalOrderCode = finalOrderCode % 999999999;
+      }
+    } else {
+      finalOrderCode = generateUniqueOrderCode();
+    }
+
+    console.log('📝 Order code generated:', finalOrderCode);
+
+    // Prepare PayOS payment data with strict validation
+    const paymentData = {
+      orderCode: finalOrderCode,
+      amount: Math.abs(Math.floor(selectedPackage.amount)), // Ensure positive integer
+      description: selectedPackage.description.substring(0, 25), // Limit to 25 chars
+      returnUrl: returnUrl || `${new URL(req.url).origin}/payment-success`,
+      cancelUrl: cancelUrl || `${new URL(req.url).origin}/payment-cancel`
     };
 
-    const selectedPackage = packageDetails[packageType as keyof typeof packageDetails];
-    if (!selectedPackage) {
-      console.error('Invalid package type:', packageType);
-      console.error('Available packages:', Object.keys(packageDetails));
-      throw new Error(`Invalid package type: ${packageType}`);
+    // Validate payment data
+    const validationErrors = validatePaymentData(paymentData);
+    if (validationErrors.length > 0) {
+      const error = `Payment data validation failed: ${validationErrors.join(', ')}`;
+      console.error('❌ Validation Errors:', validationErrors);
+      throw new Error(error);
     }
 
-    // Check if required environment variables are set
+    console.log('✅ Payment data validated:', JSON.stringify(paymentData, null, 2));
+
+    // Check PayOS credentials
     const clientId = Deno.env.get('PAYOS_CLIENT_ID');
     const apiKey = Deno.env.get('PAYOS_API_KEY');
     
     if (!clientId || !apiKey) {
-      console.error('Missing PayOS credentials');
+      console.error('❌ Missing PayOS credentials');
       throw new Error('PayOS credentials not configured');
     }
 
-    console.log('PayOS credentials found:', { clientId: clientId ? 'Set' : 'Missing', apiKey: apiKey ? 'Set' : 'Missing' });
+    console.log('✅ PayOS credentials verified');
 
-    // Ensure orderCode is a number and within valid range (1-999999999)
-    let numericOrderCode = parseInt(orderCode.toString());
-    if (isNaN(numericOrderCode) || numericOrderCode <= 0) {
-      numericOrderCode = Math.floor(Date.now() / 1000);
-    }
-    
-    // Ensure orderCode is within PayOS acceptable range
-    if (numericOrderCode > 999999999) {
-      numericOrderCode = numericOrderCode % 999999999;
-    }
-
-    console.log('Final orderCode:', numericOrderCode);
-
-    // Create PayOS payment with exact format required by PayOS API
-    const paymentData = {
-      orderCode: numericOrderCode,
-      amount: selectedPackage.amount,
-      description: selectedPackage.description,
-      returnUrl: returnUrl || `${req.headers.get('origin')}/payment-success`,
-      cancelUrl: cancelUrl || `${req.headers.get('origin')}/payment-cancel`
-    };
-
-    console.log('Sending PayOS payment request:', JSON.stringify(paymentData, null, 2));
-
-    // Make sure we're using the correct PayOS API endpoint and headers
+    // Call PayOS API
+    console.log('🚀 Calling PayOS API...');
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
       headers: {
@@ -95,34 +165,46 @@ serve(async (req) => {
       body: JSON.stringify(paymentData),
     });
 
-    console.log('PayOS response status:', payosResponse.status);
-    
     const payosResult = await payosResponse.json();
-    console.log('PayOS API response:', JSON.stringify(payosResult, null, 2));
+    console.log('📥 PayOS Response Status:', payosResponse.status);
+    console.log('📥 PayOS Response Data:', JSON.stringify(payosResult, null, 2));
 
+    // Handle PayOS API errors with detailed messages
     if (!payosResponse.ok || payosResult.code !== '00') {
-      console.error('PayOS API error details:', {
+      let errorMessage = `PayOS API Error [${payosResult.code}]: ${payosResult.desc || 'Unknown error'}`;
+      
+      // Add specific error guidance
+      switch (payosResult.code) {
+        case '20':
+          errorMessage += ' - Invalid request data. Check amount, orderCode, or required fields.';
+          break;
+        case '21':
+          errorMessage += ' - OrderCode already exists. Please try again.';
+          break;
+        case '22':
+          errorMessage += ' - Invalid amount value.';
+          break;
+        case '401':
+          errorMessage += ' - Invalid API credentials.';
+          break;
+        default:
+          errorMessage += ' - Please contact support if this persists.';
+      }
+      
+      console.error('❌ PayOS API Error:', errorMessage);
+      console.error('Full error details:', {
         status: payosResponse.status,
         code: payosResult.code,
         desc: payosResult.desc,
         data: payosResult.data
       });
       
-      // Provide more specific error messages based on PayOS error codes
-      let errorMessage = `PayOS API error [${payosResult.code}]: ${payosResult.desc}`;
-      
-      if (payosResult.code === '20') {
-        errorMessage += '. Có thể do: số tiền không hợp lệ, mã đơn hàng đã tồn tại, hoặc thiếu thông tin bắt buộc.';
-      } else if (payosResult.code === '21') {
-        errorMessage += '. Mã đơn hàng đã tồn tại trong hệ thống.';
-      } else if (payosResult.code === '22') {
-        errorMessage += '. Số tiền thanh toán không hợp lệ.';
-      }
-      
       throw new Error(errorMessage);
     }
 
-    // Save upgrade request to database
+    console.log('✅ PayOS payment created successfully');
+
+    // Save to database
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -130,7 +212,7 @@ serve(async (req) => {
 
     const upgradeRequestData = {
       user_id: userId,
-      user_email: userEmail,
+      user_email: userEmail || null,
       type: packageType,
       price: selectedPackage.amount,
       duration_days: selectedPackage.duration,
@@ -139,47 +221,57 @@ serve(async (req) => {
         : null,
       status: 'pending',
       bank_info: {
-        orderCode: numericOrderCode,
+        orderCode: finalOrderCode,
         paymentLinkId: payosResult.data?.paymentLinkId,
-        checkoutUrl: payosResult.data?.checkoutUrl
+        checkoutUrl: payosResult.data?.checkoutUrl,
+        amount: selectedPackage.amount,
+        description: selectedPackage.description
       }
     };
 
-    console.log('Saving upgrade request:', JSON.stringify(upgradeRequestData, null, 2));
+    console.log('💾 Saving to database:', JSON.stringify(upgradeRequestData, null, 2));
 
     const { error: dbError } = await supabase
       .from('upgrade_requests')
       .insert(upgradeRequestData);
 
     if (dbError) {
-      console.error('Database error:', dbError);
-      throw new Error('Failed to save upgrade request: ' + dbError.message);
+      console.error('❌ Database error:', dbError);
+      throw new Error(`Database save failed: ${dbError.message}`);
     }
+
+    console.log('✅ Saved to database successfully');
 
     const successResponse = {
       error: 0,
-      message: 'success',
+      message: 'Payment created successfully',
       data: {
         checkoutUrl: payosResult.data?.checkoutUrl,
-        orderCode: numericOrderCode,
+        orderCode: finalOrderCode,
         paymentLinkId: payosResult.data?.paymentLinkId,
+        amount: selectedPackage.amount,
+        description: selectedPackage.description
       }
     };
 
-    console.log('Returning success response:', JSON.stringify(successResponse, null, 2));
+    console.log('🎉 Payment creation completed successfully');
+    console.log('Response:', JSON.stringify(successResponse, null, 2));
+    console.log('=== PayOS Payment Request Completed ===');
 
     return new Response(JSON.stringify(successResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Create payment error:', error);
+    console.error('💥 Payment creation failed:', error);
     console.error('Error stack:', error.stack);
+    console.log('=== PayOS Payment Request Failed ===');
     
     const errorResponse = {
       error: 1,
       message: error.message || 'Payment creation failed',
-      details: error.stack
+      details: error.stack,
+      timestamp: new Date().toISOString()
     };
 
     return new Response(JSON.stringify(errorResponse), {

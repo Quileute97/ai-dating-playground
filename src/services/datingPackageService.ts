@@ -55,27 +55,9 @@ export const DATING_PACKAGES: DatingPackage[] = [
   }
 ];
 
-// Validate package data before sending
-const validatePackageRequest = (packageId: string, userId: string) => {
-  if (!packageId || typeof packageId !== 'string') {
-    throw new Error('Package ID không hợp lệ');
-  }
-  
-  if (!userId || typeof userId !== 'string') {
-    throw new Error('User ID không hợp lệ');
-  }
-  
-  const selectedPackage = DATING_PACKAGES.find(pkg => pkg.id === packageId);
-  if (!selectedPackage) {
-    throw new Error(`Gói ${packageId} không tồn tại`);
-  }
-  
-  return selectedPackage;
-};
-
-// Generate unique order code with collision avoidance
+// Generate unique order code
 const generateOrderCode = () => {
-  const timestamp = Math.floor(Date.now() / 1000);
+  const timestamp = Date.now();
   const random = Math.floor(Math.random() * 1000);
   return parseInt(`${timestamp}${random}`.slice(-9));
 };
@@ -89,7 +71,19 @@ export const createDatingPackagePayment = async (
     console.log('🚀 Creating dating package payment:', { packageId, userId, userEmail });
     
     // Validate input data
-    const selectedPackage = validatePackageRequest(packageId, userId);
+    if (!packageId || typeof packageId !== 'string') {
+      throw new Error('Package ID không hợp lệ');
+    }
+    
+    if (!userId || typeof userId !== 'string') {
+      throw new Error('User ID không hợp lệ');
+    }
+    
+    const selectedPackage = DATING_PACKAGES.find(pkg => pkg.id === packageId);
+    if (!selectedPackage) {
+      throw new Error(`Gói ${packageId} không tồn tại`);
+    }
+    
     console.log('✅ Package validated:', selectedPackage);
     
     // Generate unique order code
@@ -149,14 +143,14 @@ export const createDatingPackagePayment = async (
     // Provide user-friendly error messages
     let userMessage = 'Có lỗi xảy ra khi tạo thanh toán';
     
-    if (error.message?.includes('PayOS API Error [20]')) {
-      userMessage = 'Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.';
-    } else if (error.message?.includes('PayOS API Error [21]')) {
-      userMessage = 'Mã đơn hàng đã tồn tại. Vui lòng thử lại.';
-    } else if (error.message?.includes('PayOS API Error [22]')) {
-      userMessage = 'Số tiền thanh toán không hợp lệ.';
-    } else if (error.message?.includes('PayOS credentials')) {
-      userMessage = 'Lỗi cấu hình hệ thống thanh toán. Vui lòng liên hệ hỗ trợ.';
+    if (error.message?.includes('Package ID không hợp lệ')) {
+      userMessage = 'Gói thanh toán không hợp lệ';
+    } else if (error.message?.includes('User ID không hợp lệ')) {
+      userMessage = 'Thông tin người dùng không hợp lệ';
+    } else if (error.message?.includes('không tồn tại')) {
+      userMessage = 'Gói thanh toán không tồn tại';
+    } else if (error.message?.includes('PayOS API Error')) {
+      userMessage = 'Lỗi từ hệ thống thanh toán. Vui lòng thử lại.';
     } else if (error.message?.includes('Network')) {
       userMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.';
     } else if (error.message) {

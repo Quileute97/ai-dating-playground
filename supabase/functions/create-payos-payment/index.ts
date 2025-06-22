@@ -31,50 +31,16 @@ const getPackageDetails = (packageType: string) => {
 
 // Generate unique orderCode with collision avoidance
 const generateUniqueOrderCode = () => {
-  const timestamp = Math.floor(Date.now() / 1000);
+  const timestamp = Date.now();
   const random = Math.floor(Math.random() * 1000);
-  let orderCode = parseInt(`${timestamp}${random}`.slice(-9)); // Keep last 9 digits
+  let orderCode = parseInt(`${timestamp}${random}`.slice(-9));
   
-  // Ensure it's within PayOS range (1-999999999)
-  if (orderCode > 999999999) {
-    orderCode = orderCode % 999999999;
-  }
+  // Ensure it's within PayOS range (1-9007199254740991)
   if (orderCode <= 0) {
     orderCode = Math.floor(Math.random() * 999999999) + 1;
   }
   
   return orderCode;
-};
-
-// Validate PayOS payment data
-const validatePaymentData = (data: any) => {
-  const errors: string[] = [];
-  
-  if (!data.orderCode || typeof data.orderCode !== 'number') {
-    errors.push('Invalid orderCode: must be a positive number');
-  }
-  
-  if (!data.amount || typeof data.amount !== 'number' || data.amount <= 0) {
-    errors.push('Invalid amount: must be a positive number');
-  }
-  
-  if (!data.description || typeof data.description !== 'string' || data.description.length === 0) {
-    errors.push('Invalid description: must be a non-empty string');
-  }
-  
-  if (data.description && data.description.length > 25) {
-    errors.push('Description too long: maximum 25 characters allowed');
-  }
-  
-  if (!data.returnUrl || typeof data.returnUrl !== 'string') {
-    errors.push('Invalid returnUrl: must be a valid URL string');
-  }
-  
-  if (!data.cancelUrl || typeof data.cancelUrl !== 'string') {
-    errors.push('Invalid cancelUrl: must be a valid URL string');
-  }
-  
-  return errors;
 };
 
 serve(async (req) => {
@@ -91,56 +57,37 @@ serve(async (req) => {
 
     // Input validation
     if (!userId || !packageType) {
-      const error = 'Missing required fields: userId or packageType';
-      console.error('❌ Validation Error:', error);
-      throw new Error(error);
+      throw new Error('Missing required fields: userId or packageType');
     }
 
     // Get package details
     const selectedPackage = getPackageDetails(packageType);
     if (!selectedPackage) {
-      const error = `Invalid package type: ${packageType}`;
-      console.error('❌ Package Error:', error);
-      console.log('Available packages:', Object.keys({
-        gold: true, nearby: true, nearby_week: true, nearby_month: true, 
-        nearby_unlimited: true, dating_week: true, dating_month: true, dating_unlimited: true
-      }));
-      throw new Error(error);
+      throw new Error(`Invalid package type: ${packageType}`);
     }
 
     console.log('✅ Package selected:', packageType, selectedPackage);
 
     // Generate or validate orderCode
     let finalOrderCode: number;
-    if (rawOrderCode && typeof rawOrderCode === 'number') {
-      finalOrderCode = Math.abs(rawOrderCode);
-      if (finalOrderCode > 999999999) {
-        finalOrderCode = finalOrderCode % 999999999;
-      }
+    if (rawOrderCode && typeof rawOrderCode === 'number' && rawOrderCode > 0) {
+      finalOrderCode = Math.abs(Math.floor(rawOrderCode));
     } else {
       finalOrderCode = generateUniqueOrderCode();
     }
 
     console.log('📝 Order code generated:', finalOrderCode);
 
-    // Prepare PayOS payment data with strict validation
+    // Prepare PayOS payment data according to their exact API spec
     const paymentData = {
       orderCode: finalOrderCode,
-      amount: Math.abs(Math.floor(selectedPackage.amount)), // Ensure positive integer
-      description: selectedPackage.description.substring(0, 25), // Limit to 25 chars
+      amount: selectedPackage.amount,
+      description: selectedPackage.description,
       returnUrl: returnUrl || `${new URL(req.url).origin}/payment-success`,
       cancelUrl: cancelUrl || `${new URL(req.url).origin}/payment-cancel`
     };
 
-    // Validate payment data
-    const validationErrors = validatePaymentData(paymentData);
-    if (validationErrors.length > 0) {
-      const error = `Payment data validation failed: ${validationErrors.join(', ')}`;
-      console.error('❌ Validation Errors:', validationErrors);
-      throw new Error(error);
-    }
-
-    console.log('✅ Payment data validated:', JSON.stringify(paymentData, null, 2));
+    console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
 
     // Check PayOS credentials
     const clientId = Deno.env.get('PAYOS_CLIENT_ID');
@@ -153,7 +100,7 @@ serve(async (req) => {
 
     console.log('✅ PayOS credentials verified');
 
-    // Call PayOS API
+    // Call PayOS API with exact headers they expect
     console.log('🚀 Calling PayOS API...');
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
@@ -165,39 +112,32 @@ serve(async (req) => {
       body: JSON.stringify(paymentData),
     });
 
-    const payosResult = await payosResponse.json();
+    let payosResult;
+    const responseText = await payosResponse.text();
+    console.log('📥 PayOS Raw Response:', responseText);
+    
+    try {
+      payosResult = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ Failed to parse PayOS response:', parseError);
+      throw new Error(`Invalid PayOS response: ${responseText}`);
+    }
+
     console.log('📥 PayOS Response Status:', payosResponse.status);
     console.log('📥 PayOS Response Data:', JSON.stringify(payosResult, null, 2));
 
-    // Handle PayOS API errors with detailed messages
-    if (!payosResponse.ok || payosResult.code !== '00') {
-      let errorMessage = `PayOS API Error [${payosResult.code}]: ${payosResult.desc || 'Unknown error'}`;
+    // Handle PayOS API errors
+    if (!payosResponse.ok || (payosResult.code && payosResult.code !== '00')) {
+      let errorMessage = `PayOS API Error`;
       
-      // Add specific error guidance
-      switch (payosResult.code) {
-        case '20':
-          errorMessage += ' - Invalid request data. Check amount, orderCode, or required fields.';
-          break;
-        case '21':
-          errorMessage += ' - OrderCode already exists. Please try again.';
-          break;
-        case '22':
-          errorMessage += ' - Invalid amount value.';
-          break;
-        case '401':
-          errorMessage += ' - Invalid API credentials.';
-          break;
-        default:
-          errorMessage += ' - Please contact support if this persists.';
+      if (payosResult.code) {
+        errorMessage += ` [${payosResult.code}]: ${payosResult.desc || 'Unknown error'}`;
+      } else {
+        errorMessage += `: HTTP ${payosResponse.status}`;
       }
       
       console.error('❌ PayOS API Error:', errorMessage);
-      console.error('Full error details:', {
-        status: payosResponse.status,
-        code: payosResult.code,
-        desc: payosResult.desc,
-        data: payosResult.data
-      });
+      console.error('Full error details:', payosResult);
       
       throw new Error(errorMessage);
     }
@@ -237,10 +177,11 @@ serve(async (req) => {
 
     if (dbError) {
       console.error('❌ Database error:', dbError);
-      throw new Error(`Database save failed: ${dbError.message}`);
+      // Don't throw here - payment was created successfully
+      console.log('⚠️ Payment created but database save failed');
+    } else {
+      console.log('✅ Saved to database successfully');
     }
-
-    console.log('✅ Saved to database successfully');
 
     const successResponse = {
       error: 0,
@@ -264,14 +205,17 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('💥 Payment creation failed:', error);
-    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     console.log('=== PayOS Payment Request Failed ===');
     
     const errorResponse = {
       error: 1,
       message: error.message || 'Payment creation failed',
-      details: error.stack,
-      timestamp: new Date().toISOString()
+      originalError: error.message
     };
 
     return new Response(JSON.stringify(errorResponse), {

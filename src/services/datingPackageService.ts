@@ -68,22 +68,30 @@ export const createDatingPackagePayment = async (
   try {
     console.log('Creating dating package payment:', { packageId, userId });
     
+    // Generate a more reliable orderCode
+    const orderCode = Math.floor(Date.now() / 1000);
+    
+    const requestData = {
+      orderCode: orderCode,
+      userId: userId,
+      userEmail: userEmail || '',
+      packageType: packageId,
+      returnUrl: `${window.location.origin}/payment-success`,
+      cancelUrl: `${window.location.origin}/payment-cancel`,
+    };
+    
+    console.log('Request data:', requestData);
+    
     const response = await fetch('https://oeepmsbttxfknkznbnym.supabase.co/functions/v1/create-payos-payment', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        orderCode: Math.floor(Date.now() / 1000),
-        userId,
-        userEmail,
-        packageType: packageId, // Make sure this matches the edge function
-        returnUrl: `${window.location.origin}/payment-success`,
-        cancelUrl: `${window.location.origin}/payment-cancel`,
-      }),
+      body: JSON.stringify(requestData),
     });
 
     const result = await response.json();
+    console.log('PayOS response result:', result);
     
     if (!response.ok) {
       throw new Error(result.message || 'API call failed');

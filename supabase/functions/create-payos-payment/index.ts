@@ -28,18 +28,18 @@ serve(async (req) => {
     // Updated package pricing and details to include all package types
     const packageDetails = {
       // Legacy packages
-      'gold': { amount: 99000, description: 'Gói GOLD - Không giới hạn match', duration: -1 },
-      'nearby': { amount: 49000, description: 'Gói Mở rộng Quanh đây - Cũ', duration: -1 },
+      'gold': { amount: 99000, description: 'Goi GOLD Premium', duration: -1 },
+      'nearby': { amount: 49000, description: 'Mo rong Quanh day', duration: -1 },
       
       // New nearby packages
-      'nearby_week': { amount: 20000, description: 'Gói Premium 1 Tuần - Mở rộng phạm vi 20km', duration: 7 },
-      'nearby_month': { amount: 50000, description: 'Gói Premium 1 Tháng - Mở rộng phạm vi 20km', duration: 30 },
-      'nearby_unlimited': { amount: 500000, description: 'Gói Premium Vô Hạn - Mở rộng phạm vi 20km', duration: -1 },
+      'nearby_week': { amount: 20000, description: 'Premium 1 Tuan', duration: 7 },
+      'nearby_month': { amount: 50000, description: 'Premium 1 Thang', duration: 30 },
+      'nearby_unlimited': { amount: 500000, description: 'Premium Vo Han', duration: -1 },
       
       // New dating packages
-      'dating_week': { amount: 49000, description: 'Gói Premium 1 Tuần - Hẹn hò không giới hạn', duration: 7 },
-      'dating_month': { amount: 149000, description: 'Gói Premium 1 Tháng - Hẹn hò không giới hạn', duration: 30 },
-      'dating_unlimited': { amount: 399000, description: 'Gói Premium Vĩnh Viễn - Hẹn hò không giới hạn', duration: -1 }
+      'dating_week': { amount: 49000, description: 'Premium Hen ho 1T', duration: 7 },
+      'dating_month': { amount: 149000, description: 'Premium Hen ho 1Th', duration: 30 },
+      'dating_unlimited': { amount: 399000, description: 'Premium Hen ho VH', duration: -1 }
     };
 
     const selectedPackage = packageDetails[packageType as keyof typeof packageDetails];
@@ -60,23 +60,31 @@ serve(async (req) => {
 
     console.log('PayOS credentials found:', { clientId: clientId ? 'Set' : 'Missing', apiKey: apiKey ? 'Set' : 'Missing' });
 
-    // Ensure orderCode is a number and within valid range
-    const numericOrderCode = parseInt(orderCode.toString());
+    // Ensure orderCode is a number and within valid range (1-999999999)
+    let numericOrderCode = parseInt(orderCode.toString());
     if (isNaN(numericOrderCode) || numericOrderCode <= 0) {
-      throw new Error('Invalid orderCode: must be a positive number');
+      numericOrderCode = Math.floor(Date.now() / 1000);
+    }
+    
+    // Ensure orderCode is within PayOS acceptable range
+    if (numericOrderCode > 999999999) {
+      numericOrderCode = numericOrderCode % 999999999;
     }
 
-    // Create PayOS payment with strict validation
+    console.log('Final orderCode:', numericOrderCode);
+
+    // Create PayOS payment with exact format required by PayOS API
     const paymentData = {
       orderCode: numericOrderCode,
       amount: selectedPackage.amount,
-      description: `Premium ${packageType}`.substring(0, 25), // PayOS limits description to 25 chars
+      description: selectedPackage.description,
       returnUrl: returnUrl || `${req.headers.get('origin')}/payment-success`,
       cancelUrl: cancelUrl || `${req.headers.get('origin')}/payment-cancel`
     };
 
     console.log('Sending PayOS payment request:', JSON.stringify(paymentData, null, 2));
 
+    // Make sure we're using the correct PayOS API endpoint and headers
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
       headers: {
@@ -88,31 +96,27 @@ serve(async (req) => {
     });
 
     console.log('PayOS response status:', payosResponse.status);
-    console.log('PayOS response headers:', Object.fromEntries(payosResponse.headers.entries()));
-
+    
     const payosResult = await payosResponse.json();
     console.log('PayOS API response:', JSON.stringify(payosResult, null, 2));
 
-    if (!payosResponse.ok) {
-      console.error('PayOS HTTP error:', {
-        status: payosResponse.status,
-        statusText: payosResponse.statusText,
-        body: payosResult
-      });
-      throw new Error(`PayOS HTTP error: ${payosResponse.status} - ${payosResult?.desc || payosResponse.statusText}`);
-    }
-
-    if (payosResult.code !== '00') {
+    if (!payosResponse.ok || payosResult.code !== '00') {
       console.error('PayOS API error details:', {
+        status: payosResponse.status,
         code: payosResult.code,
         desc: payosResult.desc,
         data: payosResult.data
       });
       
-      // Provide more specific error messages
+      // Provide more specific error messages based on PayOS error codes
       let errorMessage = `PayOS API error [${payosResult.code}]: ${payosResult.desc}`;
+      
       if (payosResult.code === '20') {
-        errorMessage += '. Possible issues: invalid amount, orderCode already exists, or missing required fields.';
+        errorMessage += '. Có thể do: số tiền không hợp lệ, mã đơn hàng đã tồn tại, hoặc thiếu thông tin bắt buộc.';
+      } else if (payosResult.code === '21') {
+        errorMessage += '. Mã đơn hàng đã tồn tại trong hệ thống.';
+      } else if (payosResult.code === '22') {
+        errorMessage += '. Số tiền thanh toán không hợp lệ.';
       }
       
       throw new Error(errorMessage);

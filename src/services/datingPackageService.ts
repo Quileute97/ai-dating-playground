@@ -55,17 +55,17 @@ export const DATING_PACKAGES: DatingPackage[] = [
   }
 ];
 
-// Generate unique order code following PayOS best practices
+// Generate unique order code following PayOS documentation requirements
 const generateOrderCode = () => {
   const timestamp = Math.floor(Date.now() / 1000);
   const random = Math.floor(Math.random() * 999);
   
-  // Create order code within PayOS limits (9 digits max)
+  // Create order code within PayOS limits (max 9 digits)
   const orderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`);
   
-  // Ensure it's within valid range
-  if (orderCode > 999999999 || orderCode < 100000000) {
-    return Math.floor(Math.random() * 899999999) + 100000000;
+  // Ensure it's within valid range (1-999999999)
+  if (orderCode > 999999999 || orderCode < 1) {
+    return Math.floor(Math.random() * 999999999) + 1;
   }
   
   return orderCode;
@@ -79,7 +79,7 @@ export const createDatingPackagePayment = async (
   try {
     console.log('🚀 Creating dating package payment:', { packageId, userId, userEmail });
     
-    // Strict validation
+    // Strict validation following PayOS requirements
     if (!packageId || typeof packageId !== 'string' || packageId.trim() === '') {
       throw new Error('Package ID không hợp lệ');
     }
@@ -95,11 +95,11 @@ export const createDatingPackagePayment = async (
     
     console.log('✅ Package validated:', selectedPackage);
     
-    // Generate unique order code
+    // Generate unique order code following PayOS requirements
     const orderCode = generateOrderCode();
     console.log('📝 Generated order code:', orderCode);
     
-    // Prepare request data with clean formatting
+    // Prepare request data following PayOS Hosted Page format
     const requestData = {
       orderCode: orderCode,
       userId: userId.trim(),
@@ -140,7 +140,7 @@ export const createDatingPackagePayment = async (
       throw new Error(result.message || 'Có lỗi xảy ra khi tạo thanh toán');
     }
     
-    // Validate success response
+    // Validate success response structure
     if (!result.data || !result.data.checkoutUrl) {
       console.error('❌ Invalid success response:', result);
       throw new Error('Không nhận được URL thanh toán');

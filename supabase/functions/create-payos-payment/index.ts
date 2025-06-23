@@ -8,25 +8,25 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to create PayOS signature
-const createSignature = (data: string, checksumKey: string): string => {
+// Helper function to create PayOS signature according to official docs
+const createSignature = async (data: string, checksumKey: string): Promise<string> => {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(checksumKey);
   const dataToSign = encoder.encode(data);
   
-  return crypto.subtle.importKey(
+  const key = await crypto.subtle.importKey(
     'raw',
     keyData,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
-  ).then(key => 
-    crypto.subtle.sign('HMAC', key, dataToSign)
-  ).then(signature => 
-    Array.from(new Uint8Array(signature))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
   );
+  
+  const signature = await crypto.subtle.sign('HMAC', key, dataToSign);
+  
+  return Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 };
 
 // PayOS package details with proper validation
@@ -50,7 +50,7 @@ const getPackageDetails = (packageType: string) => {
   return packageDetails[packageType as keyof typeof packageDetails];
 };
 
-// Generate unique orderCode with better collision avoidance
+// Generate unique orderCode following PayOS requirements (max 9 digits)
 const generateUniqueOrderCode = () => {
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 1000);
@@ -114,7 +114,7 @@ serve(async (req) => {
 
     console.log('✅ PayOS credentials verified');
 
-    // Prepare PayOS payment data according to official demo
+    // Prepare PayOS payment data according to official PayOS documentation
     const paymentData = {
       orderCode: finalOrderCode,
       amount: selectedPackage.amount,
@@ -136,10 +136,13 @@ serve(async (req) => {
 
     console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
 
-    // Create signature for PayOS
-    const sortedData = Object.keys(paymentData)
+    // Create signature following PayOS documentation
+    // Sort keys alphabetically and exclude items and signature from signature calculation
+    const sortedKeys = Object.keys(paymentData)
       .filter(key => key !== 'items' && key !== 'signature')
-      .sort()
+      .sort();
+    
+    const sortedData = sortedKeys
       .map(key => `${key}=${paymentData[key as keyof typeof paymentData]}`)
       .join('&');
     
@@ -153,7 +156,7 @@ serve(async (req) => {
       signature
     };
 
-    // Call PayOS API with proper headers and URL
+    // Call PayOS API
     console.log('🚀 Calling PayOS API...');
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
@@ -191,14 +194,14 @@ serve(async (req) => {
       throw new Error(errorMessage);
     }
 
-    // Check for PayOS API error codes
+    // Check for PayOS API error codes (success should be code '00')
     if (payosResult.code && payosResult.code !== '00') {
       const errorMessage = `PayOS API Error [${payosResult.code}]: ${payosResult.desc || payosResult.message || 'Unknown error'}`;
       console.error('❌ PayOS API Error:', errorMessage);
       throw new Error('Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.');
     }
 
-    // Validate success response
+    // Validate success response structure
     if (!payosResult.data || !payosResult.data.checkoutUrl) {
       console.error('❌ Missing checkout URL in PayOS response');
       console.error('Response data:', payosResult);

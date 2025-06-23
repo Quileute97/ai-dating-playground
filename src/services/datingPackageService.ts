@@ -55,15 +55,15 @@ export const DATING_PACKAGES: DatingPackage[] = [
   }
 ];
 
-// Generate unique order code with better collision avoidance
+// Generate unique order code with millisecond precision
 const generateOrderCode = () => {
-  const timestamp = Math.floor(Date.now() / 1000);
-  const random = Math.floor(Math.random() * 9999) + 1000;
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 1000);
   let orderCode = parseInt(`${timestamp}${random}`.slice(-9));
   
-  // Ensure it's within valid range
+  // Ensure it's within valid range (1-999999999)
   if (orderCode <= 0 || orderCode > 999999999) {
-    orderCode = Math.floor(Math.random() * 999999999) + 100000000;
+    orderCode = Math.floor(Math.random() * 899999999) + 100000000;
   }
   
   return orderCode;
@@ -93,11 +93,11 @@ export const createDatingPackagePayment = async (
     
     console.log('✅ Package validated:', selectedPackage);
     
-    // Generate unique order code
+    // Generate unique order code with better uniqueness
     const orderCode = generateOrderCode();
     console.log('📝 Generated order code:', orderCode);
     
-    // Prepare request data with proper validation
+    // Prepare request data with enhanced validation
     const requestData = {
       orderCode: orderCode,
       userId: userId.trim(),
@@ -107,8 +107,8 @@ export const createDatingPackagePayment = async (
       cancelUrl: `${window.location.origin}/payment-cancel`,
     };
     
-    // Validate request data
-    if (!requestData.orderCode || requestData.orderCode <= 0) {
+    // Enhanced validation
+    if (!requestData.orderCode || requestData.orderCode <= 0 || requestData.orderCode > 999999999) {
       throw new Error('Order code không hợp lệ');
     }
     
@@ -118,6 +118,7 @@ export const createDatingPackagePayment = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       body: JSON.stringify(requestData),
     });
@@ -136,7 +137,7 @@ export const createDatingPackagePayment = async (
     
     console.log('📥 Parsed response:', result);
     
-    // Handle error responses (including when response.ok is false)
+    // Handle error responses
     if (result.error && result.error !== 0) {
       console.error('❌ API error response:', result);
       throw new Error(result.message || 'Có lỗi xảy ra khi tạo thanh toán');
@@ -163,8 +164,8 @@ export const createDatingPackagePayment = async (
       userMessage = 'Thông tin người dùng không hợp lệ';
     } else if (error.message?.includes('không tồn tại')) {
       userMessage = 'Gói thanh toán không tồn tại';
-    } else if (error.message?.includes('PayOS')) {
-      userMessage = error.message;
+    } else if (error.message?.includes('Dữ liệu thanh toán không hợp lệ')) {
+      userMessage = 'Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.';
     } else if (error.message?.includes('Phản hồi từ server')) {
       userMessage = 'Lỗi kết nối với server. Vui lòng thử lại.';
     } else if (error.message) {

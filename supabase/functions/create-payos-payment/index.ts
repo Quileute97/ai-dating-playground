@@ -8,6 +8,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to create PayOS signature
+const createSignature = (data: string, checksumKey: string): string => {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(checksumKey);
+  const dataToSign = encoder.encode(data);
+  
+  return crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  ).then(key => 
+    crypto.subtle.sign('HMAC', key, dataToSign)
+  ).then(signature => 
+    Array.from(new Uint8Array(signature))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+  );
+};
+
 // PayOS package details with proper validation
 const getPackageDetails = (packageType: string) => {
   const packageDetails = {
@@ -84,15 +105,16 @@ serve(async (req) => {
     // Check PayOS credentials
     const clientId = Deno.env.get('PAYOS_CLIENT_ID');
     const apiKey = Deno.env.get('PAYOS_API_KEY');
+    const checksumKey = Deno.env.get('PAYOS_CHECKSUM_KEY');
     
-    if (!clientId || !apiKey) {
+    if (!clientId || !apiKey || !checksumKey) {
       console.error('❌ Missing PayOS credentials');
       throw new Error('PayOS credentials not configured');
     }
 
     console.log('✅ PayOS credentials verified');
 
-    // Prepare PayOS payment data with EXACT PayOS API v2 format
+    // Prepare PayOS payment data according to official demo
     const paymentData = {
       orderCode: finalOrderCode,
       amount: selectedPackage.amount,
@@ -114,6 +136,23 @@ serve(async (req) => {
 
     console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
 
+    // Create signature for PayOS
+    const sortedData = Object.keys(paymentData)
+      .filter(key => key !== 'items' && key !== 'signature')
+      .sort()
+      .map(key => `${key}=${paymentData[key as keyof typeof paymentData]}`)
+      .join('&');
+    
+    console.log('🔐 Data for signature:', sortedData);
+    
+    const signature = await createSignature(sortedData, checksumKey);
+    console.log('🔐 Generated signature:', signature);
+
+    const finalPaymentData = {
+      ...paymentData,
+      signature
+    };
+
     // Call PayOS API with proper headers and URL
     console.log('🚀 Calling PayOS API...');
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
@@ -123,7 +162,7 @@ serve(async (req) => {
         'x-api-key': apiKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(paymentData),
+      body: JSON.stringify(finalPaymentData),
     });
 
     let payosResult;

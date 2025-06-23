@@ -55,16 +55,15 @@ export const DATING_PACKAGES: DatingPackage[] = [
   }
 ];
 
-// Generate unique order code with better timestamp-based approach
+// Generate unique order code following PayOS best practices
 const generateOrderCode = () => {
-  // Use seconds instead of milliseconds to avoid too large numbers
   const timestamp = Math.floor(Date.now() / 1000);
   const random = Math.floor(Math.random() * 999);
   
-  // Create a number that's guaranteed to be within PayOS limits
+  // Create order code within PayOS limits (9 digits max)
   const orderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`);
   
-  // Double check bounds
+  // Ensure it's within valid range
   if (orderCode > 999999999 || orderCode < 100000000) {
     return Math.floor(Math.random() * 899999999) + 100000000;
   }

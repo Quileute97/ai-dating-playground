@@ -43,13 +43,6 @@ const generateUniqueOrderCode = () => {
   return orderCode;
 };
 
-// Create signature for PayOS (simplified version)
-const createSignature = (data: any, apiKey: string) => {
-  // For now, return empty string as PayOS might not require signature for basic requests
-  // In production, you would implement proper HMAC-SHA256 signature
-  return '';
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -99,16 +92,15 @@ serve(async (req) => {
 
     console.log('✅ PayOS credentials verified');
 
-    // Prepare PayOS payment data with exact PayOS API specification
+    // Prepare PayOS payment data with EXACT PayOS API v2 format
     const paymentData = {
       orderCode: finalOrderCode,
       amount: selectedPackage.amount,
       description: selectedPackage.description,
-      // Ensure these fields are properly formatted
       buyerName: userEmail ? userEmail.split('@')[0] : `User${finalOrderCode}`,
-      buyerEmail: userEmail || '',
-      buyerPhone: '0123456789', // Default phone number
-      buyerAddress: 'Ha Noi, Viet Nam', // Default address
+      buyerEmail: userEmail || `user${finalOrderCode}@example.com`,
+      buyerPhone: "0000000000",
+      buyerAddress: "Viet Nam",
       items: [
         {
           name: selectedPackage.description,
@@ -122,15 +114,14 @@ serve(async (req) => {
 
     console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
 
-    // Call PayOS API with proper headers
+    // Call PayOS API with proper headers and URL
     console.log('🚀 Calling PayOS API...');
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
       headers: {
         'x-client-id': clientId,
         'x-api-key': apiKey,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(paymentData),
     });
@@ -138,7 +129,6 @@ serve(async (req) => {
     let payosResult;
     const responseText = await payosResponse.text();
     console.log('📥 PayOS Raw Response Status:', payosResponse.status);
-    console.log('📥 PayOS Raw Response Headers:', Object.fromEntries(payosResponse.headers.entries()));
     console.log('📥 PayOS Raw Response Body:', responseText);
     
     try {
@@ -150,35 +140,23 @@ serve(async (req) => {
 
     console.log('📥 PayOS Parsed Response:', JSON.stringify(payosResult, null, 2));
 
-    // Handle PayOS API errors with detailed logging
+    // Handle PayOS API errors
     if (!payosResponse.ok) {
       let errorMessage = `PayOS HTTP Error ${payosResponse.status}`;
       if (payosResult?.desc) {
         errorMessage += `: ${payosResult.desc}`;
-      }
-      if (payosResult?.code) {
-        errorMessage += ` (Code: ${payosResult.code})`;
+      } else if (payosResult?.message) {
+        errorMessage += `: ${payosResult.message}`;
       }
       console.error('❌ PayOS HTTP Error:', errorMessage);
-      console.error('Full error response:', payosResult);
       throw new Error(errorMessage);
     }
 
     // Check for PayOS API error codes
     if (payosResult.code && payosResult.code !== '00') {
-      const errorMessage = `PayOS API Error [${payosResult.code}]: ${payosResult.desc || 'Unknown error'}`;
+      const errorMessage = `PayOS API Error [${payosResult.code}]: ${payosResult.desc || payosResult.message || 'Unknown error'}`;
       console.error('❌ PayOS API Error:', errorMessage);
-      console.error('Full PayOS error response:', payosResult);
-      
-      // Provide specific error messages for common issues
-      let userFriendlyMessage = errorMessage;
-      if (payosResult.code === '20') {
-        userFriendlyMessage = 'Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.';
-      } else if (payosResult.code === '21') {
-        userFriendlyMessage = 'Mã đơn hàng đã tồn tại. Vui lòng thử lại.';
-      }
-      
-      throw new Error(userFriendlyMessage);
+      throw new Error('Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.');
     }
 
     // Validate success response
@@ -260,7 +238,7 @@ serve(async (req) => {
     let userFriendlyMessage = 'Có lỗi xảy ra khi tạo thanh toán';
     
     if (error.message?.includes('PayOS API Error')) {
-      userFriendlyMessage = error.message;
+      userFriendlyMessage = 'Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.';
     } else if (error.message?.includes('Invalid package type')) {
       userFriendlyMessage = 'Gói thanh toán không hợp lệ';
     } else if (error.message?.includes('Missing required fields')) {

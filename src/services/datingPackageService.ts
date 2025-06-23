@@ -55,15 +55,18 @@ export const DATING_PACKAGES: DatingPackage[] = [
   }
 ];
 
-// Generate unique order code with millisecond precision
+// Generate unique order code with better timestamp-based approach
 const generateOrderCode = () => {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000);
-  let orderCode = parseInt(`${timestamp}${random}`.slice(-9));
+  // Use seconds instead of milliseconds to avoid too large numbers
+  const timestamp = Math.floor(Date.now() / 1000);
+  const random = Math.floor(Math.random() * 999);
   
-  // Ensure it's within valid range (1-999999999)
-  if (orderCode <= 0 || orderCode > 999999999) {
-    orderCode = Math.floor(Math.random() * 899999999) + 100000000;
+  // Create a number that's guaranteed to be within PayOS limits
+  const orderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`);
+  
+  // Double check bounds
+  if (orderCode > 999999999 || orderCode < 100000000) {
+    return Math.floor(Math.random() * 899999999) + 100000000;
   }
   
   return orderCode;
@@ -93,11 +96,11 @@ export const createDatingPackagePayment = async (
     
     console.log('✅ Package validated:', selectedPackage);
     
-    // Generate unique order code with better uniqueness
+    // Generate unique order code
     const orderCode = generateOrderCode();
     console.log('📝 Generated order code:', orderCode);
     
-    // Prepare request data with enhanced validation
+    // Prepare request data with clean formatting
     const requestData = {
       orderCode: orderCode,
       userId: userId.trim(),
@@ -106,11 +109,6 @@ export const createDatingPackagePayment = async (
       returnUrl: `${window.location.origin}/payment-success`,
       cancelUrl: `${window.location.origin}/payment-cancel`,
     };
-    
-    // Enhanced validation
-    if (!requestData.orderCode || requestData.orderCode <= 0 || requestData.orderCode > 999999999) {
-      throw new Error('Order code không hợp lệ');
-    }
     
     console.log('📤 Sending payment request:', requestData);
     
@@ -165,7 +163,7 @@ export const createDatingPackagePayment = async (
     } else if (error.message?.includes('không tồn tại')) {
       userMessage = 'Gói thanh toán không tồn tại';
     } else if (error.message?.includes('Dữ liệu thanh toán không hợp lệ')) {
-      userMessage = 'Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.';
+      userMessage = error.message;
     } else if (error.message?.includes('Phản hồi từ server')) {
       userMessage = 'Lỗi kết nối với server. Vui lòng thử lại.';
     } else if (error.message) {

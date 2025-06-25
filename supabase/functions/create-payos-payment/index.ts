@@ -100,6 +100,7 @@ serve(async (req) => {
     console.log('✅ PayOS credentials verified');
 
     // Prepare PayOS payment data according to official PayOS documentation
+    // VERY IMPORTANT: Use exact field names as in PayOS docs
     const paymentData = {
       orderCode: finalOrderCode,
       amount: selectedPackage.amount,
@@ -121,9 +122,9 @@ serve(async (req) => {
 
     console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
 
-    // Create signature following PayOS documentation exactly
-    // IMPORTANT: According to PayOS docs, signature is created from sorted query string WITHOUT items array
-    const signatureData = {
+    // Create signature following PayOS v2 documentation exactly
+    // According to PayOS docs: sort all fields EXCEPT items and signature, then create query string
+    const sortedData = {
       amount: paymentData.amount,
       buyerAddress: paymentData.buyerAddress,
       buyerEmail: paymentData.buyerEmail,
@@ -136,9 +137,9 @@ serve(async (req) => {
     };
 
     // Sort keys alphabetically and create query string
-    const sortedKeys = Object.keys(signatureData).sort();
+    const sortedKeys = Object.keys(sortedData).sort();
     const queryString = sortedKeys
-      .map(key => `${key}=${signatureData[key as keyof typeof signatureData]}`)
+      .map(key => `${key}=${sortedData[key as keyof typeof sortedData]}`)
       .join('&');
     
     console.log('🔐 Data for signature:', queryString);
@@ -154,7 +155,7 @@ serve(async (req) => {
 
     console.log('📤 Final payment data:', JSON.stringify(finalPaymentData, null, 2));
 
-    // Call PayOS API
+    // Call PayOS API v2
     console.log('🚀 Calling PayOS API...');
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',

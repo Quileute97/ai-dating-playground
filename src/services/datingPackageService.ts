@@ -55,22 +55,6 @@ export const DATING_PACKAGES: DatingPackage[] = [
   }
 ];
 
-// Generate unique order code following PayOS documentation requirements
-const generateOrderCode = () => {
-  const timestamp = Math.floor(Date.now() / 1000);
-  const random = Math.floor(Math.random() * 999);
-  
-  // Create order code within PayOS limits (max 9 digits)
-  const orderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`);
-  
-  // Ensure it's within valid range (1-999999999)
-  if (orderCode > 999999999 || orderCode < 1) {
-    return Math.floor(Math.random() * 999999999) + 1;
-  }
-  
-  return orderCode;
-};
-
 export const createDatingPackagePayment = async (
   packageId: string,
   userId: string,
@@ -79,7 +63,7 @@ export const createDatingPackagePayment = async (
   try {
     console.log('🚀 Creating dating package payment:', { packageId, userId, userEmail });
     
-    // Strict validation following PayOS requirements
+    // Strict validation
     if (!packageId || typeof packageId !== 'string' || packageId.trim() === '') {
       throw new Error('Package ID không hợp lệ');
     }
@@ -95,11 +79,19 @@ export const createDatingPackagePayment = async (
     
     console.log('✅ Package validated:', selectedPackage);
     
-    // Generate unique order code following PayOS requirements
-    const orderCode = generateOrderCode();
+    // Generate unique orderCode following PayOS requirements (max 9999999999)
+    const timestamp = Math.floor(Date.now() / 1000);
+    const random = Math.floor(Math.random() * 999) + 1;
+    let orderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`);
+    
+    // Ensure orderCode is within PayOS limits
+    if (orderCode > 9999999999 || orderCode <= 0) {
+      orderCode = Math.floor(Math.random() * 999999999) + 100000000;
+    }
+    
     console.log('📝 Generated order code:', orderCode);
     
-    // Prepare request data following PayOS Hosted Page format
+    // Prepare request data
     const requestData = {
       orderCode: orderCode,
       userId: userId.trim(),

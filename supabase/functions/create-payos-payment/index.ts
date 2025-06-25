@@ -50,20 +50,6 @@ const getPackageDetails = (packageType: string) => {
   return packageDetails[packageType as keyof typeof packageDetails];
 };
 
-// Generate unique orderCode following PayOS requirements (max 9 digits)
-const generateUniqueOrderCode = () => {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000);
-  let orderCode = parseInt(`${timestamp}${random}`.slice(-9));
-  
-  // Ensure it's within PayOS range and positive
-  if (orderCode <= 0 || orderCode > 999999999) {
-    orderCode = Math.floor(Math.random() * 899999999) + 100000000;
-  }
-  
-  return orderCode;
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -89,18 +75,17 @@ serve(async (req) => {
 
     console.log('✅ Package selected:', packageType, selectedPackage);
 
-    // Generate or use provided orderCode
-    let finalOrderCode: number;
-    if (rawOrderCode && typeof rawOrderCode === 'number' && rawOrderCode > 0) {
-      finalOrderCode = Math.abs(Math.floor(rawOrderCode));
-      if (finalOrderCode > 999999999) {
-        finalOrderCode = generateUniqueOrderCode();
-      }
-    } else {
-      finalOrderCode = generateUniqueOrderCode();
+    // Generate unique orderCode (must be positive integer <= 9999999999)
+    const timestamp = Math.floor(Date.now() / 1000);
+    const random = Math.floor(Math.random() * 999) + 1;
+    let finalOrderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`);
+    
+    // Ensure orderCode is within PayOS limits
+    if (finalOrderCode > 9999999999 || finalOrderCode <= 0) {
+      finalOrderCode = Math.floor(Math.random() * 999999999) + 100000000;
     }
 
-    console.log('📝 Final order code:', finalOrderCode);
+    console.log('📝 Generated order code:', finalOrderCode);
 
     // Check PayOS credentials
     const clientId = Deno.env.get('PAYOS_CLIENT_ID');
@@ -136,19 +121,29 @@ serve(async (req) => {
 
     console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
 
-    // Create signature following PayOS documentation
-    // Sort keys alphabetically and exclude items and signature from signature calculation
-    const sortedKeys = Object.keys(paymentData)
-      .filter(key => key !== 'items' && key !== 'signature')
-      .sort();
-    
-    const sortedData = sortedKeys
-      .map(key => `${key}=${paymentData[key as keyof typeof paymentData]}`)
+    // Create signature following PayOS documentation exactly
+    // Data for signature must be sorted alphabetically and exclude 'items' and 'signature'
+    const dataForSignature = {
+      amount: paymentData.amount,
+      buyerAddress: paymentData.buyerAddress,
+      buyerEmail: paymentData.buyerEmail,
+      buyerName: paymentData.buyerName,
+      buyerPhone: paymentData.buyerPhone,
+      cancelUrl: paymentData.cancelUrl,
+      description: paymentData.description,
+      orderCode: paymentData.orderCode,
+      returnUrl: paymentData.returnUrl
+    };
+
+    // Sort keys and create query string
+    const sortedKeys = Object.keys(dataForSignature).sort();
+    const queryString = sortedKeys
+      .map(key => `${key}=${dataForSignature[key as keyof typeof dataForSignature]}`)
       .join('&');
     
-    console.log('🔐 Data for signature:', sortedData);
+    console.log('🔐 Data for signature:', queryString);
     
-    const signature = await createSignature(sortedData, checksumKey);
+    const signature = await createSignature(queryString, checksumKey);
     console.log('🔐 Generated signature:', signature);
 
     const finalPaymentData = {
@@ -170,8 +165,8 @@ serve(async (req) => {
 
     let payosResult;
     const responseText = await payosResponse.text();
-    console.log('📥 PayOS Raw Response Status:', payosResponse.status);
-    console.log('📥 PayOS Raw Response Body:', responseText);
+    console.log('📥 PayOS Response Status:', payosResponse.status);
+    console.log('📥 PayOS Response Body:', responseText);
     
     try {
       payosResult = JSON.parse(responseText);
@@ -191,7 +186,7 @@ serve(async (req) => {
         errorMessage += `: ${payosResult.message}`;
       }
       console.error('❌ PayOS HTTP Error:', errorMessage);
-      throw new Error(errorMessage);
+      throw new Error('Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.');
     }
 
     // Check for PayOS API error codes (success should be code '00')

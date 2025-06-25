@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Heart, Settings, Users, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -146,13 +145,15 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
               <p className="text-sm text-gray-500">Kết nối và trò chuyện ngẫu nhiên</p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowStrangerSettings(true)}
-          >
-            <Settings className="w-4 h-4" />
-          </Button>
+          {user && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowStrangerSettings(true)}
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
 

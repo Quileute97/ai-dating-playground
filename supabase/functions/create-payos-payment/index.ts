@@ -122,8 +122,8 @@ serve(async (req) => {
     console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
 
     // Create signature following PayOS documentation exactly
-    // Data for signature must be sorted alphabetically and exclude 'items' and 'signature'
-    const dataForSignature = {
+    // IMPORTANT: According to PayOS docs, signature is created from sorted query string WITHOUT items array
+    const signatureData = {
       amount: paymentData.amount,
       buyerAddress: paymentData.buyerAddress,
       buyerEmail: paymentData.buyerEmail,
@@ -135,10 +135,10 @@ serve(async (req) => {
       returnUrl: paymentData.returnUrl
     };
 
-    // Sort keys and create query string
-    const sortedKeys = Object.keys(dataForSignature).sort();
+    // Sort keys alphabetically and create query string
+    const sortedKeys = Object.keys(signatureData).sort();
     const queryString = sortedKeys
-      .map(key => `${key}=${dataForSignature[key as keyof typeof dataForSignature]}`)
+      .map(key => `${key}=${signatureData[key as keyof typeof signatureData]}`)
       .join('&');
     
     console.log('🔐 Data for signature:', queryString);
@@ -146,10 +146,13 @@ serve(async (req) => {
     const signature = await createSignature(queryString, checksumKey);
     console.log('🔐 Generated signature:', signature);
 
+    // Final payment data with signature
     const finalPaymentData = {
       ...paymentData,
       signature
     };
+
+    console.log('📤 Final payment data:', JSON.stringify(finalPaymentData, null, 2));
 
     // Call PayOS API
     console.log('🚀 Calling PayOS API...');

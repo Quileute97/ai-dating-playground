@@ -91,7 +91,7 @@ export const createDatingPackagePayment = async (
     
     console.log('📝 Generated order code:', orderCode);
     
-    // Prepare request data
+    // Prepare request data with clean URLs
     const requestData = {
       orderCode: orderCode,
       userId: userId.trim(),

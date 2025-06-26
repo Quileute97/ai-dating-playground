@@ -1,4 +1,3 @@
-
 import React, { useState, ChangeEvent } from "react";
 import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -27,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useChatIntegration } from '@/hooks/useChatIntegration';
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
@@ -114,7 +114,11 @@ import { useTimelineComments } from "@/hooks/useTimelineComments";
 import { usePostLikes } from "@/hooks/usePostLikes";
 import { useDatingProfile } from "@/hooks/useDatingProfile";
 
-const Timeline: React.FC<{ user: any }> = ({ user }) => {
+type TimelineProps = {
+  user: any;
+};
+
+const Timeline: React.FC<TimelineProps> = ({ user }) => {
   const userId = user?.id;
   const { posts, isLoading, createPost, creating, refetch, deletePost, deleting } = useTimelinePosts(userId);
   const { profile } = useDatingProfile(userId);
@@ -150,6 +154,17 @@ const Timeline: React.FC<{ user: any }> = ({ user }) => {
         variant: "destructive",
       });
     }
+  };
+
+  const { startChatWith } = useChatIntegration();
+
+  const handleUserClick = (userId: string, userName: string, userAvatar: string) => {
+    // Use unified chat system
+    startChatWith({
+      id: userId,
+      name: userName,
+      avatar: userAvatar
+    });
   };
 
   return (

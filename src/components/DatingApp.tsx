@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,8 @@ import DatingAppLayout from "./DatingAppLayout";
 import { useDatingAppUser } from "./hooks/useDatingAppUser";
 import { useUnifiedProfile } from "@/hooks/useUnifiedProfile";
 import { useGlobalSync } from "@/hooks/useGlobalSync";
+import { ChatProvider } from "@/hooks/useChatContext";
+import UnifiedChatWidget from "./UnifiedChatWidget";
 
 const DatingApp = () => {
   // User/session quản lý bằng custom hook
@@ -157,109 +158,114 @@ const DatingApp = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      {/* Tab Navigation */}
-      <MainTabs
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        isAdminMode={isAdminMode}
-        tabs={tabs}
-        showLoginButton={!user}
-        onLoginClick={() => setShowAuth(true)}
-      />
+    <ChatProvider>
+      <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+        {/* Tab Navigation */}
+        <MainTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          isAdminMode={isAdminMode}
+          tabs={tabs}
+          showLoginButton={!user}
+          onLoginClick={() => setShowAuth(true)}
+        />
 
-      {/* Top Action Bar */}
-      <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
-        {/* User Info */}
-        <div className="flex items-center gap-2">
-          {user ? (
-            <UnifiedProfileButton
-              user={{ ...user, ...unifiedProfile }}
-              onUpdateProfile={handleUpdateProfile}
-            />
-          ) : (
+        {/* Top Action Bar */}
+        <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
+          {/* User Info */}
+          <div className="flex items-center gap-2">
+            {user ? (
+              <UnifiedProfileButton
+                user={{ ...user, ...unifiedProfile }}
+                onUpdateProfile={handleUpdateProfile}
+              />
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAuth(true)}
+                className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
+              >
+                Đăng nhập
+              </Button>
+            )}
+          </div>
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            {/* Admin Mode Toggle */}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowAuth(true)}
-              className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
+              onClick={handleAdminToggle}
+              className={`backdrop-blur-sm border-purple-200 shadow-sm transition-all duration-200 ${
+                isAdminMode
+                  ? "bg-purple-500 text-white hover:bg-purple-600 shadow-lg"
+                  : "bg-white/90 hover:bg-purple-50"
+              }`}
             >
-              Đăng nhập
+              <Shield className="w-4 h-4" />
             </Button>
-          )}
+            {!isAdminMode && activeTab === "chat" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(true)}
+                className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+            )}
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 shadow-sm"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          {/* Admin Mode Toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAdminToggle}
-            className={`backdrop-blur-sm border-purple-200 shadow-sm transition-all duration-200 ${
-              isAdminMode
-                ? "bg-purple-500 text-white hover:bg-purple-600 shadow-lg"
-                : "bg-white/90 hover:bg-purple-50"
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-          </Button>
-          {!isAdminMode && activeTab === "chat" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(true)}
-              className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
-          )}
-          {user && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 shadow-sm"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
+
+        {/* Main Layout (side panels + content) */}
+        <DatingAppLayout
+          user={user}
+          isAdminMode={isAdminMode}
+          isLeftPanelOpen={isLeftPanelOpen}
+          setIsLeftPanelOpen={setIsLeftPanelOpen}
+          isRightPanelOpen={isRightPanelOpen}
+          setIsRightPanelOpen={setIsRightPanelOpen}
+        >
+          {renderTabContent()}
+        </DatingAppLayout>
+
+        {/* Modals */}
+        <DatingAppModals
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
+          showProfile={showProfile}
+          setShowProfile={setShowProfile}
+          showDatingProfile={showDatingProfile}
+          setShowDatingProfile={setShowDatingProfile}
+          showAIConfig={showAIConfig}
+          setShowAIConfig={setShowAIConfig}
+          showAdminLogin={showAdminLogin}
+          setShowAdminLogin={setShowAdminLogin}
+          showAuth={showAuth}
+          setShowAuth={setShowAuth}
+          user={{ ...user, ...unifiedProfile }}
+          onUpdateProfile={handleUpdateProfile}
+          handleApplyFilters={handleApplyFilters}
+          onAIConfigClose={() => setShowAIConfig(false)}
+          onAdminLogin={handleAdminLogin}
+          onAuthLogin={handleLogin}
+        />
+
+        {/* Unified Chat Widget - only show when user is logged in */}
+        {user && <UnifiedChatWidget myUserId={user.id} />}
       </div>
-
-      {/* Main Layout (side panels + content) */}
-      <DatingAppLayout
-        user={user}
-        isAdminMode={isAdminMode}
-        isLeftPanelOpen={isLeftPanelOpen}
-        setIsLeftPanelOpen={setIsLeftPanelOpen}
-        isRightPanelOpen={isRightPanelOpen}
-        setIsRightPanelOpen={setIsRightPanelOpen}
-      >
-        {renderTabContent()}
-      </DatingAppLayout>
-
-      {/* Modals */}
-      <DatingAppModals
-        showFilters={showFilters}
-        setShowFilters={setShowFilters}
-        showProfile={showProfile}
-        setShowProfile={setShowProfile}
-        showDatingProfile={showDatingProfile}
-        setShowDatingProfile={setShowDatingProfile}
-        showAIConfig={showAIConfig}
-        setShowAIConfig={setShowAIConfig}
-        showAdminLogin={showAdminLogin}
-        setShowAdminLogin={setShowAdminLogin}
-        showAuth={showAuth}
-        setShowAuth={setShowAuth}
-        user={{ ...user, ...unifiedProfile }}
-        onUpdateProfile={handleUpdateProfile}
-        handleApplyFilters={handleApplyFilters}
-        onAIConfigClose={() => setShowAIConfig(false)}
-        onAdminLogin={handleAdminLogin}
-        onAuthLogin={handleLogin}
-      />
-    </div>
+    </ChatProvider>
   );
 };
 

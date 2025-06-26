@@ -14,6 +14,7 @@ import { useGeolocation } from "@/hooks/useGeolocation";
 import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
 import { useDailyMatches } from "@/hooks/useDailyMatches";
 import { createDatingPackagePayment } from "@/services/datingPackageService";
+import { useChatIntegration } from '@/hooks/useChatIntegration';
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -174,6 +175,15 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleChatClick = (profile: any) => {
+    // Use unified chat system instead of separate modal
+    startChatWith({
+      id: profile.id,
+      name: profile.name,
+      avatar: profile.avatar
+    });
   };
 
   if (locationLoading || profilesLoading || dailyMatchesLoading) {

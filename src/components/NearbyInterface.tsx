@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MapPin, Heart, MessageCircle, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { useGeolocation } from "@/hooks/useGeolocation";
 
 interface NearbyInterfaceProps {
   user: any;
@@ -22,18 +24,13 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [showMap, setShowMap] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { profiles, isLoading, error } = useNearbyProfiles(user?.id, distance);
+  
+  // Get user location
+  const { position: userLocation } = useGeolocation();
+  
+  // Use the hook with correct parameters
+  const { profiles, loading } = useNearbyProfiles(user?.id, userLocation, distance);
   const { startChatWith } = useChatIntegration();
-
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải danh sách người dùng quanh đây",
-        variant: "destructive",
-      });
-    }
-  }, [error, toast]);
 
   const handleProfileClick = (profile: any) => {
     navigate(`/profile/${profile.id}`);
@@ -92,7 +89,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        {isLoading ? (
+        {loading ? (
           <div className="p-4 space-y-3">
             {[...Array(5)].map((_, i) => (
               <Card key={i} className="p-4">
@@ -128,7 +125,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
                           <Map className="w-3 h-3 mr-1" />
                           {profile.distance} km
                         </Badge>
-                        {profile.isOnline && (
+                        {profile.last_active && new Date(profile.last_active) > new Date(Date.now() - 5 * 60 * 1000) && (
                           <Badge variant="outline">
                             Online
                           </Badge>

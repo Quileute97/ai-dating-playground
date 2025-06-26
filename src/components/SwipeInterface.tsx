@@ -46,6 +46,9 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   // Use real data from database with expanded range (50km for dating vs 5km for nearby)
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, 50);
   
+  // Import the chat integration hook
+  const { startChatWith } = useChatIntegration();
+  
   const availableProfiles = useMemo(() =>
     profiles
       .filter(p => p.id !== user?.id && p.name && p.avatar && p.is_dating_active)

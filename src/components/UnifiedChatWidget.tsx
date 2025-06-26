@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, MessageCircle, Send, Minimize2, Maximize2, Phone, Video } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,13 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
     activeChatUser?.id || ''
   );
 
+  // Auto-scroll to bottom when new messages arrive
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const handleSendMessage = async () => {
     if (!message.trim() || sending || !activeChatUser) return;
     
@@ -30,6 +37,13 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
       setMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
@@ -99,7 +113,7 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
             {isLoading ? (
               <div className="text-center text-gray-400 text-sm py-4 flex items-center justify-center gap-2">
                 <div className="animate-spin w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full"></div>
-                Đang tải...
+                Đang tải tin nhắn...
               </div>
             ) : messages.length === 0 ? (
               <div className="text-center text-gray-400 text-sm py-8">
@@ -130,6 +144,7 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
                 </div>
               ))
             )}
+            <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
 
@@ -141,7 +156,7 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Nhập tin nhắn..."
               className="flex-1 text-sm border-gray-300 focus:border-purple-500 rounded-full px-4 py-2 bg-gray-50 focus:bg-white transition-colors"
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              onKeyPress={handleKeyPress}
               disabled={sending}
             />
             <Button

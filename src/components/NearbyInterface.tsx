@@ -1,26 +1,40 @@
 
 import React, { useState, useEffect } from "react";
-import { MapPin, Heart, MessageCircle, Map } from "lucide-react";
+import { MapPin, Heart, MessageCircle, Star, Crown, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useNavigate } from "react-router-dom";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
-import { Label } from "@/components/ui/label";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import NearbyFeatureBanner from "./NearbyFeatureBanner";
+import NearbyPackageModal from "./NearbyPackageModal";
+import { createNearbyPackagePayment } from "@/services/payosService";
 
 interface NearbyInterfaceProps {
   user: any;
 }
 
+interface NearbyUser {
+  id: string;
+  name: string;
+  age: number;
+  distance: number;
+  avatar: string;
+  isOnline: boolean;
+  lastSeen: string;
+  interests: string[];
+  rating: number;
+  isLiked?: boolean;
+}
+
 const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
-  const [distance, setDistance] = useState(5); // Initial distance in kilometers
-  const [showMap, setShowMap] = useState(false);
+  const [distance, setDistance] = useState(5);
+  const [hasExpandedRange, setHasExpandedRange] = useState(false);
+  const [showPackageModal, setShowPackageModal] = useState(false);
+  const [likedUsers, setLikedUsers] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -30,132 +44,241 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   // Use the hook with correct parameters
   const { profiles, loading } = useNearbyProfiles(user?.id, userLocation, distance);
 
-  const handleProfileClick = (profile: any) => {
+  // Transform profiles to match NearbyUser interface
+  const users: NearbyUser[] = profiles.map(profile => ({
+    id: profile.id,
+    name: profile.name || "Unknown",
+    age: profile.age || 25,
+    distance: profile.distance || 0,
+    avatar: profile.avatar || "/placeholder.svg",
+    isOnline: profile.last_active ? new Date(profile.last_active) > new Date(Date.now() - 5 * 60 * 1000) : false,
+    lastSeen: profile.last_active ? "Vừa online" : "Offline",
+    interests: Array.isArray(profile.interests) ? profile.interests : [],
+    rating: 4.5,
+    isLiked: likedUsers.has(profile.id)
+  }));
+
+  const handleViewProfile = (profile: NearbyUser) => {
     navigate(`/profile/${profile.id}`);
   };
 
-  const handleChatClick = (profile: any) => {
+  const handleLikeUser = (userId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    
+    setLikedUsers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+
+    const user = users.find(u => u.id === userId);
+    toast({
+      title: likedUsers.has(userId) ? "Đã bỏ thích" : "❤️ Đã thích",
+      description: user ? `${user.name}` : "Người dùng",
+    });
+  };
+
+  const handleMessageUser = (userId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    
+    const targetUser = users.find(u => u.id === userId);
     toast({
       title: "💬 Chat",
-      description: `Bắt đầu chat với ${profile.name}!`,
+      description: `Bắt đầu chat với ${targetUser?.name}!`,
     });
-    // TODO: Implement chat functionality
   };
 
-  const handleLikeClick = (profile: any) => {
+  const handleExpandRange = () => {
+    setHasExpandedRange(true);
+    setDistance(20);
     toast({
-      title: "❤️ Đã thích",
-      description: `Bạn đã thích ${profile.name}!`,
+      title: "Đã mở rộng phạm vi",
+      description: "Tìm kiếm trong phạm vi 20km",
     });
-    // TODO: Implement like functionality
   };
 
-  const handleDistanceChange = (value: number[]) => {
-    setDistance(value[0]);
+  const handleSelectPackage = async (packageId: string) => {
+    if (!user?.id) {
+      toast({
+        title: "Vui lòng đăng nhập",
+        description: "Bạn cần đăng nhập để mua gói Premium",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setShowPackageModal(false);
+    
+    try {
+      const result = await createNearbyPackagePayment(
+        packageId,
+        user.id,
+        user.email
+      );
+
+      if (result.error === 0 && result.data?.checkoutUrl) {
+        window.open(result.data.checkoutUrl, '_blank');
+        toast({
+          title: "Chuyển hướng thanh toán",
+          description: "Vui lòng hoàn tất thanh toán để kích hoạt gói Premium",
+        });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Lỗi tạo thanh toán",
+        description: "Không thể tạo liên kết thanh toán. Vui lòng thử lại.",
+        variant: "destructive"
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4">
+        <div className="max-w-md mx-auto h-full flex flex-col">
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Đang tải...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container relative h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-blue-500" />
-          <h1 className="text-lg font-semibold">Quanh đây</h1>
+    <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4">
+      <div className="max-w-md mx-auto h-full flex flex-col">
+        {/* Header */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-xl font-bold text-gray-800">Quanh đây</h1>
+            {userLocation && (
+              <div className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                GPS
+              </div>
+            )}
+            {hasExpandedRange && (
+              <div className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs flex items-center gap-1">
+                <Crown className="w-3 h-3" />
+                Mở rộng
+              </div>
+            )}
+          </div>
+          <p className="text-gray-600 text-sm">
+            {users.length} người trong phạm vi {hasExpandedRange ? "20km" : "5km"}
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setShowMap(!showMap)}>
-          {showMap ? "Ẩn bản đồ" : "Xem bản đồ"}
-        </Button>
-      </div>
 
-      {/* Distance Filter */}
-      <div className="p-4">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="distance">Khoảng cách: {distance} km</Label>
-        </div>
-        <Slider
-          id="distance"
-          defaultValue={[distance]}
-          max={50}
-          step={1}
-          onValueChange={handleDistanceChange}
-          className="mt-2"
-        />
-      </div>
-
-      <Separator />
-
-      {/* Content */}
-      <div className="flex-1 overflow-hidden">
-        {loading ? (
-          <div className="p-4 space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <Card key={i} className="p-4">
-                <div className="flex items-center space-x-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-[250px]" />
-                    <Skeleton className="h-4 w-[200px]" />
+        {/* Users List */}
+        <ScrollArea className="flex-1">
+          <div className="space-y-3 pb-4">
+            {users.map((user) => (
+              <Card
+                key={user.id}
+                className="p-4 hover:shadow-md transition-all cursor-pointer hover:scale-[1.02]"
+                onClick={() => handleViewProfile(user)}
+              >
+                <div className="flex items-center gap-3">
+                  {/* Avatar */}
+                  <div className="relative">
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                    {user.isOnline && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
+                    )}
+                  </div>
+                  {/* User Info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-gray-800">
+                        {user.name}, {user.age}
+                      </h3>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                        <span className="text-xs text-gray-600">{user.rating}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                      <MapPin className="w-4 h-4" />
+                      <span>{user.distance}km</span>
+                      <span>•</span>
+                      <span>{user.lastSeen}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      {user.interests.slice(0, 2).map((interest, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs"
+                        >
+                          {interest}
+                        </span>
+                      ))}
+                      {user.interests.length > 2 && (
+                        <span className="px-2 py-1 bg-gray-50 text-gray-600 rounded text-xs">
+                          +{user.interests.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Quick Actions */}
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={`w-8 h-8 p-0 rounded-full transition-all duration-200 ${
+                        user.isLiked
+                          ? "border-pink-300 bg-pink-50 hover:bg-pink-100"
+                          : "hover:border-pink-300 hover:bg-pink-50"
+                      }`}
+                      onClick={(e) => handleLikeUser(user.id, e)}
+                    >
+                      <Heart className={`w-4 h-4 text-pink-500 ${user.isLiked ? "fill-current" : ""}`} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-8 h-8 p-0 rounded-full hover:border-blue-300 hover:bg-blue-50"
+                      onClick={(e) => handleMessageUser(user.id, e)}
+                    >
+                      <MessageCircle className="w-4 h-4 text-blue-500" />
+                    </Button>
                   </div>
                 </div>
               </Card>
             ))}
           </div>
-        ) : profiles && profiles.length > 0 ? (
-          <ScrollArea className="h-full w-full p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {profiles.map((profile) => (
-                <Card
-                  key={profile.id}
-                  className="p-4 hover:bg-gray-50 transition-colors duration-200"
-                >
-                  <div className="flex flex-col h-full">
-                    <img
-                      src={profile.avatar || "/placeholder.svg"}
-                      alt={profile.name}
-                      className="w-full h-32 object-cover rounded-md mb-3"
-                    />
-                    <h2 className="text-lg font-semibold">{profile.name}</h2>
-                    <p className="text-sm text-gray-500">{profile.bio || "Không có bio"}</p>
-                    <div className="mt-auto flex justify-between items-center">
-                      <div className="flex items-center gap-1">
-                        <Badge variant="secondary">
-                          <Map className="w-3 h-3 mr-1" />
-                          {profile.distance} km
-                        </Badge>
-                        {profile.last_active && new Date(profile.last_active) > new Date(Date.now() - 5 * 60 * 1000) && (
-                          <Badge variant="outline">
-                            Online
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleLikeClick(profile)}
-                        >
-                          <Heart className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handleChatClick(profile)}
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
-        ) : (
-          <div className="p-4 text-center text-gray-500">
-            Không tìm thấy ai ở gần bạn. Hãy thử tăng khoảng cách tìm kiếm.
-          </div>
-        )}
+        </ScrollArea>
+
+        {/* Feature Banner */}
+        <NearbyFeatureBanner
+          upgradeStatus={undefined}
+          nearbyLoading={loading}
+          hasExpandedRange={hasExpandedRange}
+          onClickUpgrade={() => setShowPackageModal(true)}
+          onClickExpand={handleExpandRange}
+          disableExpand={hasExpandedRange}
+          userId={user?.id}
+        />
       </div>
+
+      {/* Package Modal */}
+      <NearbyPackageModal
+        isOpen={showPackageModal}
+        onClose={() => setShowPackageModal(false)}
+        onSelectPackage={handleSelectPackage}
+        currentUser={user}
+      />
     </div>
   );
 };

@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { useChatIntegration } from '@/hooks/useChatIntegration';
 import { useGeolocation } from "@/hooks/useGeolocation";
 
 interface NearbyInterfaceProps {
@@ -30,19 +29,17 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   
   // Use the hook with correct parameters
   const { profiles, loading } = useNearbyProfiles(user?.id, userLocation, distance);
-  const { startChatWith } = useChatIntegration();
 
   const handleProfileClick = (profile: any) => {
     navigate(`/profile/${profile.id}`);
   };
 
   const handleChatClick = (profile: any) => {
-    // Use unified chat system instead of separate modal
-    startChatWith({
-      id: profile.id,
-      name: profile.name,
-      avatar: profile.avatar
+    toast({
+      title: "💬 Chat",
+      description: `Bắt đầu chat với ${profile.name}!`,
     });
+    // TODO: Implement chat functionality
   };
 
   const handleLikeClick = (profile: any) => {

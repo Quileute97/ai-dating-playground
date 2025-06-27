@@ -39,7 +39,7 @@ serve(async (req) => {
     console.log('=== PayOS Payment Request Started ===');
     console.log('Request body:', JSON.stringify(requestBody, null, 2));
     
-    const { orderCode: rawOrderCode, userId, userEmail, packageType, returnUrl, cancelUrl } = requestBody;
+    const { userId, userEmail, packageType, returnUrl, cancelUrl } = requestBody;
 
     // Input validation
     if (!userId || !packageType) {
@@ -56,7 +56,6 @@ serve(async (req) => {
 
     // Generate unique orderCode exactly like PayOS sample - using Date.now() last 6 digits
     const finalOrderCode = Number(String(Date.now()).slice(-6));
-
     console.log('📝 Generated order code:', finalOrderCode);
 
     // Check PayOS credentials
@@ -71,8 +70,10 @@ serve(async (req) => {
 
     console.log('✅ PayOS credentials verified');
 
-    // Use EXACT PayOS sample format
+    // Use EXACT PayOS sample format with YOUR_DOMAIN
     const YOUR_DOMAIN = 'https://preview--ai-dating-playground.lovable.app';
+    
+    // Create payment body EXACTLY like PayOS sample
     const paymentBody = {
       orderCode: finalOrderCode,
       amount: selectedPackage.amount,
@@ -132,14 +133,14 @@ serve(async (req) => {
     if (payosResult.code && payosResult.code !== '00') {
       const errorMessage = `PayOS API Error [${payosResult.code}]: ${payosResult.desc || payosResult.message || 'Unknown error'}`;
       console.error('❌ PayOS API Error:', errorMessage);
-      throw new Error('Lỗi tạo thanh toán. Vui lòng thử lại.');
+      throw new Error('Lỗi từ PayOS API. Vui lòng thử lại.');
     }
 
     // Validate success response structure
     if (!payosResult.data || !payosResult.data.checkoutUrl) {
       console.error('❌ Missing checkout URL in PayOS response');
       console.error('Response data:', payosResult);
-      throw new Error('PayOS response missing checkout URL');
+      throw new Error('PayOS không trả về URL thanh toán');
     }
 
     console.log('✅ PayOS payment created successfully');
@@ -214,7 +215,7 @@ serve(async (req) => {
     let userFriendlyMessage = 'Có lỗi xảy ra khi tạo thanh toán';
     
     if (error.message?.includes('PayOS API Error')) {
-      userFriendlyMessage = 'Lỗi tạo thanh toán. Vui lòng thử lại.';
+      userFriendlyMessage = 'Lỗi từ PayOS API. Vui lòng thử lại.';
     } else if (error.message?.includes('Invalid package type')) {
       userFriendlyMessage = 'Gói thanh toán không hợp lệ';
     } else if (error.message?.includes('Missing required fields')) {
@@ -223,7 +224,9 @@ serve(async (req) => {
       userFriendlyMessage = 'Cấu hình PayOS chưa đúng';
     } else if (error.message?.includes('Lỗi kết nối PayOS')) {
       userFriendlyMessage = error.message;
-    } else if (error.message?.includes('Lỗi tạo thanh toán')) {
+    } else if (error.message?.includes('Lỗi từ PayOS API')) {
+      userFriendlyMessage = error.message;
+    } else if (error.message?.includes('PayOS không trả về URL')) {
       userFriendlyMessage = error.message;
     }
     

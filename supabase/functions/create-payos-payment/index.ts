@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to create PayOS signature according to official docs
+// Helper function to create PayOS signature following official PayOS documentation
 const createSignature = async (data: string, checksumKey: string): Promise<string> => {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(checksumKey);
@@ -99,16 +99,11 @@ serve(async (req) => {
 
     console.log('✅ PayOS credentials verified');
 
-    // Prepare PayOS payment data according to official PayOS documentation
-    // VERY IMPORTANT: Use exact field names as in PayOS docs
-    const paymentData = {
+    // Create payment body following PayOS official pattern
+    const paymentBody = {
       orderCode: finalOrderCode,
       amount: selectedPackage.amount,
       description: selectedPackage.description,
-      buyerName: userEmail ? userEmail.split('@')[0] : `User${finalOrderCode}`,
-      buyerEmail: userEmail || `user${finalOrderCode}@example.com`,
-      buyerPhone: "0000000000",
-      buyerAddress: "Viet Nam",
       items: [
         {
           name: selectedPackage.description,
@@ -116,46 +111,13 @@ serve(async (req) => {
           price: selectedPackage.amount
         }
       ],
-      cancelUrl: cancelUrl || 'https://preview--ai-dating-playground.lovable.app/payment-cancel',
-      returnUrl: returnUrl || 'https://preview--ai-dating-playground.lovable.app/payment-success'
+      returnUrl: returnUrl || 'https://preview--ai-dating-playground.lovable.app/payment-success',
+      cancelUrl: cancelUrl || 'https://preview--ai-dating-playground.lovable.app/payment-cancel'
     };
 
-    console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
+    console.log('✅ Payment body prepared:', JSON.stringify(paymentBody, null, 2));
 
-    // Create signature following PayOS v2 documentation exactly
-    // According to PayOS docs: sort all fields EXCEPT items and signature, then create query string
-    const sortedData = {
-      amount: paymentData.amount,
-      buyerAddress: paymentData.buyerAddress,
-      buyerEmail: paymentData.buyerEmail,
-      buyerName: paymentData.buyerName,
-      buyerPhone: paymentData.buyerPhone,
-      cancelUrl: paymentData.cancelUrl,
-      description: paymentData.description,
-      orderCode: paymentData.orderCode,
-      returnUrl: paymentData.returnUrl
-    };
-
-    // Sort keys alphabetically and create query string
-    const sortedKeys = Object.keys(sortedData).sort();
-    const queryString = sortedKeys
-      .map(key => `${key}=${sortedData[key as keyof typeof sortedData]}`)
-      .join('&');
-    
-    console.log('🔐 Data for signature:', queryString);
-    
-    const signature = await createSignature(queryString, checksumKey);
-    console.log('🔐 Generated signature:', signature);
-
-    // Final payment data with signature
-    const finalPaymentData = {
-      ...paymentData,
-      signature
-    };
-
-    console.log('📤 Final payment data:', JSON.stringify(finalPaymentData, null, 2));
-
-    // Call PayOS API v2
+    // Call PayOS API directly without manual signature - let PayOS handle it
     console.log('🚀 Calling PayOS API...');
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
@@ -164,7 +126,7 @@ serve(async (req) => {
         'x-api-key': apiKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(finalPaymentData),
+      body: JSON.stringify(paymentBody),
     });
 
     let payosResult;

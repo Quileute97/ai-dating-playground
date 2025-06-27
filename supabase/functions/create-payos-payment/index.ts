@@ -8,27 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to create PayOS signature following official PayOS documentation
-const createSignature = async (data: string, checksumKey: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(checksumKey);
-  const dataToSign = encoder.encode(data);
-  
-  const key = await crypto.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  
-  const signature = await crypto.subtle.sign('HMAC', key, dataToSign);
-  
-  return Array.from(new Uint8Array(signature))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-};
-
 // PayOS package details with proper validation
 const getPackageDetails = (packageType: string) => {
   const packageDetails = {
@@ -75,15 +54,8 @@ serve(async (req) => {
 
     console.log('✅ Package selected:', packageType, selectedPackage);
 
-    // Generate unique orderCode (must be positive integer <= 9999999999)
-    const timestamp = Math.floor(Date.now() / 1000);
-    const random = Math.floor(Math.random() * 999) + 1;
-    let finalOrderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`);
-    
-    // Ensure orderCode is within PayOS limits
-    if (finalOrderCode > 9999999999 || finalOrderCode <= 0) {
-      finalOrderCode = Math.floor(Math.random() * 999999999) + 100000000;
-    }
+    // Generate unique orderCode exactly like PayOS sample - using Date.now() last 6 digits
+    const finalOrderCode = Number(String(Date.now()).slice(-6));
 
     console.log('📝 Generated order code:', finalOrderCode);
 
@@ -99,7 +71,8 @@ serve(async (req) => {
 
     console.log('✅ PayOS credentials verified');
 
-    // Create payment body following PayOS official pattern
+    // Use EXACT PayOS sample format
+    const YOUR_DOMAIN = 'https://preview--ai-dating-playground.lovable.app';
     const paymentBody = {
       orderCode: finalOrderCode,
       amount: selectedPackage.amount,
@@ -108,16 +81,16 @@ serve(async (req) => {
         {
           name: selectedPackage.description,
           quantity: 1,
-          price: selectedPackage.amount
-        }
+          price: selectedPackage.amount,
+        },
       ],
-      returnUrl: returnUrl || 'https://preview--ai-dating-playground.lovable.app/payment-success',
-      cancelUrl: cancelUrl || 'https://preview--ai-dating-playground.lovable.app/payment-cancel'
+      returnUrl: returnUrl || `${YOUR_DOMAIN}/payment-success`,
+      cancelUrl: cancelUrl || `${YOUR_DOMAIN}/payment-cancel`,
     };
 
     console.log('✅ Payment body prepared:', JSON.stringify(paymentBody, null, 2));
 
-    // Call PayOS API directly without manual signature - let PayOS handle it
+    // Call PayOS API using exact headers from sample
     console.log('🚀 Calling PayOS API...');
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',
@@ -152,14 +125,14 @@ serve(async (req) => {
         errorMessage += `: ${payosResult.message}`;
       }
       console.error('❌ PayOS HTTP Error:', errorMessage);
-      throw new Error('Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.');
+      throw new Error('Lỗi kết nối PayOS. Vui lòng thử lại.');
     }
 
     // Check for PayOS API error codes (success should be code '00')
     if (payosResult.code && payosResult.code !== '00') {
       const errorMessage = `PayOS API Error [${payosResult.code}]: ${payosResult.desc || payosResult.message || 'Unknown error'}`;
       console.error('❌ PayOS API Error:', errorMessage);
-      throw new Error('Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.');
+      throw new Error('Lỗi tạo thanh toán. Vui lòng thử lại.');
     }
 
     // Validate success response structure
@@ -241,14 +214,16 @@ serve(async (req) => {
     let userFriendlyMessage = 'Có lỗi xảy ra khi tạo thanh toán';
     
     if (error.message?.includes('PayOS API Error')) {
-      userFriendlyMessage = 'Dữ liệu thanh toán không hợp lệ. Vui lòng thử lại.';
+      userFriendlyMessage = 'Lỗi tạo thanh toán. Vui lòng thử lại.';
     } else if (error.message?.includes('Invalid package type')) {
       userFriendlyMessage = 'Gói thanh toán không hợp lệ';
     } else if (error.message?.includes('Missing required fields')) {
       userFriendlyMessage = 'Thiếu thông tin bắt buộc';
     } else if (error.message?.includes('PayOS credentials')) {
       userFriendlyMessage = 'Cấu hình PayOS chưa đúng';
-    } else if (error.message?.includes('Dữ liệu thanh toán không hợp lệ')) {
+    } else if (error.message?.includes('Lỗi kết nối PayOS')) {
+      userFriendlyMessage = error.message;
+    } else if (error.message?.includes('Lỗi tạo thanh toán')) {
       userFriendlyMessage = error.message;
     }
     

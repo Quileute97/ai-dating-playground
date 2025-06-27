@@ -66,29 +66,28 @@ serve(async (req) => {
 
     console.log('✅ PayOS credentials verified');
 
-    // Generate simple orderCode (6 digits max as per PayOS requirement)
-    const orderCode = Math.floor(Math.random() * 999999) + 100000;
+    // Generate orderCode theo đúng format PayOS (number, không quá 9 chữ số)
+    const timestamp = Date.now();
+    const orderCode = parseInt(timestamp.toString().slice(-8)); // Lấy 8 chữ số cuối
     console.log('📝 Generated order code:', orderCode);
 
-    // Create payment request body matching PayOS documentation exactly
+    // Tạo payment data theo đúng format PayOS API v2
     const paymentData = {
-      orderCode: orderCode,
+      orderCode,
       amount: selectedPackage.amount,
       description: selectedPackage.description,
-      items: [
-        {
-          name: selectedPackage.description,
-          quantity: 1,
-          price: selectedPackage.amount
-        }
-      ],
+      items: [{
+        name: selectedPackage.description,
+        quantity: 1,
+        price: selectedPackage.amount
+      }],
       returnUrl: returnUrl || 'https://preview--ai-dating-playground.lovable.app/payment-success',
       cancelUrl: cancelUrl || 'https://preview--ai-dating-playground.lovable.app/payment-cancel'
     };
 
     console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
 
-    // Call PayOS API with exact headers as documented
+    // Call PayOS API với headers chính xác
     console.log('🚀 Calling PayOS API...');
     const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
       method: 'POST',

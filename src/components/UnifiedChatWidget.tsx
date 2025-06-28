@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, MessageCircle, Send, Minimize2, Maximize2, Phone, Video } from 'lucide-react';
+import { X, MessageCircle, Send, Minimize2, Maximize2, Phone, Video, Image as ImageIcon, Video as VideoIcon, Paperclip } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRealTimeMessages } from '@/hooks/useRealTimeMessages';
 import { useChatContext } from '@/hooks/useChatContext';
+import { uploadTimelineMedia } from '@/utils/uploadTimelineMedia';
+import { useToast } from '@/hooks/use-toast';
 import ProfileChatWindow from './ProfileChatWindow';
 
 interface UnifiedChatWidgetProps {
@@ -15,7 +17,9 @@ interface UnifiedChatWidgetProps {
 
 export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) {
   const [message, setMessage] = useState('');
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const { activeChatUser, isChatOpen, isFullScreen, closeChat, toggleFullScreen } = useChatContext();
+  const { toast } = useToast();
   
   const { messages, isLoading, sendMessage, sending } = useRealTimeMessages(
     myUserId, 
@@ -37,6 +41,11 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
       setMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể gửi tin nhắn. Vui lòng thử lại.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -47,8 +56,64 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
     }
   };
 
+  const handleMediaUpload = async (file: File, type: 'image' | 'video') => {
+    if (!activeChatUser || uploadingMedia) return;
+    
+    setUploadingMedia(true);
+    try {
+      const mediaUrl = await uploadTimelineMedia(file);
+      const mediaMessage = `[${type === 'image' ? '🖼️ Ảnh' : '🎬 Video'}] ${mediaUrl}`;
+      await sendMessage(mediaMessage);
+      toast({
+        title: "Đã gửi thành công",
+        description: `${type === 'image' ? 'Ảnh' : 'Video'} đã được gửi`,
+      });
+    } catch (error) {
+      console.error(`Error uploading ${type}:`, error);
+      toast({
+        title: "Lỗi upload",
+        description: `Không thể upload ${type === 'image' ? 'ảnh' : 'video'}. Vui lòng thử lại.`,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const renderMessage = (content: string) => {
+    // Check if message contains media
+    const mediaPattern = /\[(🖼️ Ảnh|🎬 Video)\] (https?:\/\/[^\s]+)/;
+    const match = content.match(mediaPattern);
+    
+    if (match) {
+      const [, mediaType, mediaUrl] = match;
+      const isImage = mediaType === '🖼️ Ảnh';
+      
+      return (
+        <div className="space-y-2">
+          {isImage ? (
+            <img 
+              src={mediaUrl} 
+              alt="Shared image" 
+              className="max-w-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => window.open(mediaUrl, '_blank')}
+            />
+          ) : (
+            <video 
+              src={mediaUrl} 
+              controls 
+              className="max-w-48 rounded-lg"
+            />
+          )}
+        </div>
+      );
+    }
+    
+    return <p className="break-words leading-relaxed">{content}</p>;
   };
 
   if (!isChatOpen || !activeChatUser) return null;
@@ -134,7 +199,7 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
                       : 'bg-white border border-gray-200 text-gray-800 shadow-sm'
                   }`}>
-                    <p className="break-words leading-relaxed">{msg.content}</p>
+                    {renderMessage(msg.content)}
                     <p className={`text-xs mt-1 ${
                       msg.sender_id === myUserId ? 'text-purple-100' : 'text-gray-500'
                     }`}>
@@ -150,28 +215,87 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
 
         {/* Input */}
         <div className="p-3 border-t bg-white border-gray-200">
-          <div className="flex gap-2 items-center">
-            <Input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Nhập tin nhắn..."
-              className="flex-1 text-sm border-gray-300 focus:border-purple-500 rounded-full px-4 py-2 bg-gray-50 focus:bg-white transition-colors"
-              onKeyPress={handleKeyPress}
-              disabled={sending}
-            />
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Nhập tin nhắn..."
+                className="text-sm border-gray-300 focus:border-purple-500 rounded-full px-4 py-2 bg-gray-50 focus:bg-white transition-colors"
+                onKeyPress={handleKeyPress}
+                disabled={sending || uploadingMedia}
+              />
+              
+              {/* Media Upload Buttons */}
+              <div className="flex gap-1 mt-2">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleMediaUpload(file, 'image');
+                    }}
+                    disabled={uploadingMedia || sending}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50"
+                    disabled={uploadingMedia || sending}
+                  >
+                    <ImageIcon className="w-3 h-3 mr-1" />
+                    Ảnh
+                  </Button>
+                </label>
+                
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleMediaUpload(file, 'video');
+                    }}
+                    disabled={uploadingMedia || sending}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50"
+                    disabled={uploadingMedia || sending}
+                  >
+                    <VideoIcon className="w-3 h-3 mr-1" />
+                    Video
+                  </Button>
+                </label>
+              </div>
+            </div>
+            
             <Button
               onClick={handleSendMessage}
               size="sm"
               className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full p-2 h-8 w-8 shadow-md hover:shadow-lg transition-all duration-200"
-              disabled={!message.trim() || sending}
+              disabled={!message.trim() || sending || uploadingMedia}
             >
-              {sending ? (
+              {sending || uploadingMedia ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <Send className="w-4 h-4" />
               )}
             </Button>
           </div>
+          
+          {uploadingMedia && (
+            <div className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+              <div className="w-3 h-3 border border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+              Đang upload media...
+            </div>
+          )}
         </div>
       </Card>
     </div>

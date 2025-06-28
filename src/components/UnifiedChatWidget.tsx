@@ -80,6 +80,24 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
     }
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleMediaUpload(file, 'image');
+    }
+    // Reset input value to allow selecting the same file again
+    event.target.value = '';
+  };
+
+  const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleMediaUpload(file, 'video');
+    }
+    // Reset input value to allow selecting the same file again
+    event.target.value = '';
+  };
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -228,51 +246,47 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
               
               {/* Media Upload Buttons */}
               <div className="flex gap-1 mt-2">
-                <label className="cursor-pointer">
+                {/* Image Upload */}
+                <div className="relative">
                   <input
                     type="file"
                     accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleMediaUpload(file, 'image');
-                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={handleImageUpload}
                     disabled={uploadingMedia || sending}
                   />
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50"
+                    className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50 relative"
                     disabled={uploadingMedia || sending}
                   >
                     <ImageIcon className="w-3 h-3 mr-1" />
                     Ảnh
                   </Button>
-                </label>
+                </div>
                 
-                <label className="cursor-pointer">
+                {/* Video Upload */}
+                <div className="relative">
                   <input
                     type="file"
                     accept="video/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleMediaUpload(file, 'video');
-                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={handleVideoUpload}
                     disabled={uploadingMedia || sending}
                   />
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50"
+                    className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50 relative"
                     disabled={uploadingMedia || sending}
                   >
                     <VideoIcon className="w-3 h-3 mr-1" />
                     Video
                   </Button>
-                </label>
+                </div>
               </div>
             </div>
             

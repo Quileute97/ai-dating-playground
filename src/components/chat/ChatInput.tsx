@@ -107,7 +107,7 @@ export default function ChatInput({ onSendMessage, sending }: ChatInputProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50"
+                className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50 transition-all duration-200 hover:scale-105 active:scale-95 active:bg-purple-100"
                 disabled={uploadingMedia || sending}
               >
                 <ImageIcon className="w-3 h-3 mr-1" />
@@ -128,7 +128,7 @@ export default function ChatInput({ onSendMessage, sending }: ChatInputProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50"
+                className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50 transition-all duration-200 hover:scale-105 active:scale-95 active:bg-purple-100"
                 disabled={uploadingMedia || sending}
               >
                 <VideoIcon className="w-3 h-3 mr-1" />
@@ -141,7 +141,7 @@ export default function ChatInput({ onSendMessage, sending }: ChatInputProps) {
         <Button
           onClick={handleSendMessage}
           size="sm"
-          className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full p-2 h-8 w-8 shadow-md hover:shadow-lg transition-all duration-200"
+          className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full p-2 h-8 w-8 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-110 active:scale-95"
           disabled={!message.trim() || sending || uploadingMedia}
         >
           {sending || uploadingMedia ? (
@@ -153,7 +153,7 @@ export default function ChatInput({ onSendMessage, sending }: ChatInputProps) {
       </div>
       
       {uploadingMedia && (
-        <div className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+        <div className="text-xs text-purple-600 mt-1 flex items-center gap-1 animate-pulse">
           <div className="w-3 h-3 border border-purple-500 border-t-transparent rounded-full animate-spin"></div>
           Đang upload media...
         </div>

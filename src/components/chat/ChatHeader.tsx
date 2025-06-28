@@ -25,7 +25,7 @@ export default function ChatHeader({ user, onClose, onToggleFullScreen }: ChatHe
             className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" 
             alt={user.name}
           />
-          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>
         </div>
         <div className="min-w-0">
           <div className="font-medium text-sm truncate text-gray-900">{user.name}</div>
@@ -37,7 +37,7 @@ export default function ChatHeader({ user, onClose, onToggleFullScreen }: ChatHe
           variant="ghost"
           size="sm"
           onClick={onToggleFullScreen}
-          className="text-gray-500 hover:bg-gray-100 p-1 h-auto rounded-full"
+          className="text-gray-500 hover:bg-gray-100 p-1 h-auto rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
           title="Mở rộng toàn màn hình"
         >
           <Maximize2 className="w-4 h-4" />
@@ -46,7 +46,7 @@ export default function ChatHeader({ user, onClose, onToggleFullScreen }: ChatHe
           variant="ghost"
           size="sm"
           onClick={onClose}
-          className="text-gray-500 hover:bg-gray-100 p-1 h-auto rounded-full"
+          className="text-gray-500 hover:bg-gray-100 p-1 h-auto rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
         >
           <X className="w-4 h-4" />
         </Button>

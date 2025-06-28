@@ -30,7 +30,7 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
         targetUserName={activeChatUser.name}
         targetUserAvatar={activeChatUser.avatar}
         currentUserId={myUserId}
-        onClose={() => toggleFullScreen()}
+        onClose={toggleFullScreen}
       />
     );
   }

@@ -40,7 +40,7 @@ export default function ChatInput({ onSendMessage, sending }: ChatInputProps) {
   };
 
   const handleMediaUpload = async (file: File, type: 'image' | 'video') => {
-    if (uploadingMedia) return;
+    if (uploadingMedia || sending) return;
     
     setUploadingMedia(true);
     try {
@@ -65,7 +65,7 @@ export default function ChatInput({ onSendMessage, sending }: ChatInputProps) {
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (file && file.type.startsWith('image/')) {
       handleMediaUpload(file, 'image');
     }
     event.target.value = '';
@@ -73,7 +73,7 @@ export default function ChatInput({ onSendMessage, sending }: ChatInputProps) {
 
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (file && file.type.startsWith('video/')) {
       handleMediaUpload(file, 'video');
     }
     event.target.value = '';
@@ -107,7 +107,7 @@ export default function ChatInput({ onSendMessage, sending }: ChatInputProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50 relative"
+                className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50"
                 disabled={uploadingMedia || sending}
               >
                 <ImageIcon className="w-3 h-3 mr-1" />
@@ -128,7 +128,7 @@ export default function ChatInput({ onSendMessage, sending }: ChatInputProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50 relative"
+                className="h-7 px-2 text-xs border-gray-300 hover:bg-purple-50"
                 disabled={uploadingMedia || sending}
               >
                 <VideoIcon className="w-3 h-3 mr-1" />

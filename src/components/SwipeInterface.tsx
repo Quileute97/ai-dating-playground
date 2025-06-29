@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Heart, X, Zap, Crown, Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -47,7 +48,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const { dailyMatches, loading: dailyMatchesLoading } = useDailyMatches(user?.id);
 
   // Get user matches
-  const { matches: userMatches } = useUserMatches(user?.id);
+  const { data: userMatches = [] } = useUserMatches(user?.id);
 
   // Get real data from database with expanded range (50km for dating vs 5km for nearby)
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, 50);

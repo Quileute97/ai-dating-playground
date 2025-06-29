@@ -13,7 +13,7 @@ interface MatchesManagerProps {
 }
 
 export default function MatchesManager({ userId, onBack }: MatchesManagerProps) {
-  const { matches, loading } = useUserMatches(userId);
+  const { data: matches = [], isLoading: loading } = useUserMatches(userId);
   const { startChatWith } = useChatIntegration();
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
 

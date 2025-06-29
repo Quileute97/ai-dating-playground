@@ -114,15 +114,32 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
     
     try {
       for (const file of Array.from(files)) {
-        console.log('Uploading album image:', file.name);
+        console.log('Uploading album image:', file.name, 'Size:', file.size, 'Type:', file.type);
+        
+        // Kiểm tra file type
+        if (!file.type.startsWith('image/')) {
+          console.error('Invalid file type:', file.type);
+          toast.error(`File ${file.name} không phải là ảnh hợp lệ!`);
+          continue;
+        }
+        
+        // Kiểm tra file size (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          console.error('File too large:', file.size);
+          toast.error(`File ${file.name} quá lớn! Vui lòng chọn file nhỏ hơn 10MB.`);
+          continue;
+        }
+        
         const url = await uploadAlbumImage(file);
         console.log('Album image uploaded:', url);
         uploadedUrls.push(url);
       }
       
-      const newAlbum = [...profileData.album, ...uploadedUrls];
-      setProfileData({ ...profileData, album: newAlbum });
-      toast.success(`Tải thành công ${uploadedUrls.length} ảnh vào album!`);
+      if (uploadedUrls.length > 0) {
+        const newAlbum = [...(profileData.album || []), ...uploadedUrls];
+        setProfileData({ ...profileData, album: newAlbum });
+        toast.success(`Tải thành công ${uploadedUrls.length} ảnh vào album!`);
+      }
     } catch (err: any) {
       console.error('Album upload error:', err);
       toast.error(err.message || "Đã có lỗi xảy ra khi upload ảnh!");

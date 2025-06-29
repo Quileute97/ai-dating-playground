@@ -39,6 +39,7 @@ const AlbumSection = ({
               size="sm"
               className="bg-pink-500 hover:bg-pink-600"
               disabled={isUploading}
+              type="button"
             >
               <ImagePlus className="w-4 h-4 mr-1" />
               Thêm ảnh vào album
@@ -51,6 +52,7 @@ const AlbumSection = ({
               className="hidden"
               multiple
               onChange={onAlbumUpload}
+              disabled={isUploading}
             />
           </div>
         )}
@@ -69,6 +71,7 @@ const AlbumSection = ({
                     variant="destructive"
                     className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => removeAlbumImage(idx)}
+                    type="button"
                   >
                     <X className="w-3 h-3" />
                   </Button>

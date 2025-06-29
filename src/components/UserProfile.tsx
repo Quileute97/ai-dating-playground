@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Camera, Edit, Save, X, Plus, Loader2, ImagePlus } from 'lucide-react';
 import { uploadAvatar } from '@/utils/uploadAvatar';
 import { uploadAlbumImage } from '@/utils/uploadAlbumImage';
+import { toast } from 'sonner';
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -56,8 +57,10 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
     try {
       const url = await uploadAvatar(file);
       setProfileData({ ...profileData, avatar: url });
+      toast.success('Tải ảnh đại diện thành công!');
     } catch (err: any) {
-      alert(err.message || "Đã có lỗi xảy ra khi upload ảnh đại diện!");
+      console.error('Avatar upload error:', err);
+      toast.error(err.message || "Đã có lỗi xảy ra khi upload ảnh đại diện!");
     }
     setIsUploading(false);
   };
@@ -65,19 +68,48 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
   const handleAlbumFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !files.length) return;
+    
+    console.log('Starting album upload for UserProfile, files count:', files.length);
     setIsUploading(true);
     const uploadedUrls: string[] = [];
+    
     try {
       for (const file of Array.from(files)) {
+        console.log('Uploading album image:', file.name, 'Size:', file.size, 'Type:', file.type);
+        
+        // Kiểm tra file type
+        if (!file.type.startsWith('image/')) {
+          console.error('Invalid file type:', file.type);
+          toast.error(`File ${file.name} không phải là ảnh hợp lệ!`);
+          continue;
+        }
+        
+        // Kiểm tra file size (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          console.error('File too large:', file.size);
+          toast.error(`File ${file.name} quá lớn! Vui lòng chọn file nhỏ hơn 10MB.`);
+          continue;
+        }
+        
         const url = await uploadAlbumImage(file);
+        console.log('Album image uploaded successfully:', url);
         uploadedUrls.push(url);
       }
-      setProfileData({ ...profileData, album: [...profileData.album, ...uploadedUrls] });
+      
+      if (uploadedUrls.length > 0) {
+        const newAlbum = [...(profileData.album || []), ...uploadedUrls];
+        setProfileData({ ...profileData, album: newAlbum });
+        toast.success(`Tải thành công ${uploadedUrls.length} ảnh vào album!`);
+      }
     } catch (err: any) {
-      alert(err.message || "Đã có lỗi xảy ra khi upload ảnh vào album!");
+      console.error('Album upload error:', err);
+      toast.error(err.message || "Đã có lỗi xảy ra khi upload ảnh!");
+    } finally {
+      setIsUploading(false);
+      if (albumInputRef.current) {
+        albumInputRef.current.value = "";
+      }
     }
-    setIsUploading(false);
-    if (albumInputRef.current) albumInputRef.current.value = ""; // reset input
   };
 
   return (
@@ -200,6 +232,7 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
                     size="sm"
                     type="button"
                     className="bg-purple-500 hover:bg-purple-600"
+                    disabled={isUploading}
                   >
                     <ImagePlus className="w-4 h-4 mr-1" />
                     Thêm ảnh vào album
@@ -211,6 +244,7 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
                     className="hidden"
                     multiple
                     onChange={handleAlbumFileChange}
+                    disabled={isUploading}
                   />
                   {isUploading && <Loader2 className="ml-2 w-5 h-5 text-purple-500 animate-spin" />}
                 </div>
@@ -250,4 +284,3 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
 };
 
 export default UserProfile;
-

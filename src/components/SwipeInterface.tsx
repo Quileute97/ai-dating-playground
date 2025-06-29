@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Heart, X, Zap, Crown, Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -18,6 +17,7 @@ import { useDailyMatches } from "@/hooks/useDailyMatches";
 import { useUserMatches } from "@/hooks/useUserMatches";
 import { createDatingPackagePayment } from "@/services/datingPackageService";
 import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { usePremiumFeatureStatus } from '@/hooks/usePremiumFeatureStatus';
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -56,6 +56,9 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   // Import the chat integration hook
   const { startChatWith } = useChatIntegration();
   
+  // Check if premium features are enabled
+  const { premiumDatingEnabled } = usePremiumFeatureStatus();
+  
   const availableProfiles = useMemo(() => {
     const matchedUserIds = userMatches.map(match => match.id);
     
@@ -88,13 +91,25 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const handleSwipe = async (direction: 'left' | 'right' | 'super') => {
     if (!currentProfile) return;
     
+    // Check if premium dating is disabled by admin
+    if (!premiumDatingEnabled && (direction === 'right' || direction === 'super')) {
+      toast({
+        title: "Tính năng tạm thời không khả dụng",
+        description: "Tính năng Premium Hẹn Hò hiện đang được bảo trì",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (!isDatingActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
       toast({
         title: "Đã hết lượt match miễn phí!",
         description: "Nâng cấp Premium để có không giới hạn lượt match",
         variant: "destructive"
       });
-      setShowDatingPackageModal(true);
+      if (premiumDatingEnabled) {
+        setShowDatingPackageModal(true);
+      }
       return;
     }
 
@@ -294,7 +309,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       )}
 
       {/* Daily Matches Counter */}
-      {!isDatingActive && (
+      {!isDatingActive && premiumDatingEnabled && (
         <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
           {remainingMatches <= 3 && (
             <span className="text-red-500">⚠️ </span>
@@ -381,7 +396,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             size="icon"
             className="w-14 h-14 rounded-full border-blue-200 hover:bg-blue-50 hover:border-blue-300"
             onClick={() => handleSwipe('super')}
-            disabled={!isDatingActive && dailyMatches >= maxFreeMatches}
+            disabled={(!isDatingActive && dailyMatches >= maxFreeMatches) || !premiumDatingEnabled}
           >
             <Zap className="w-6 h-6 text-blue-500" />
           </Button>
@@ -391,21 +406,23 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             size="icon"
             className="w-14 h-14 rounded-full border-green-200 hover:bg-green-50 hover:border-green-300"
             onClick={() => handleSwipe('right')}
-            disabled={!isDatingActive && dailyMatches >= maxFreeMatches}
+            disabled={(!isDatingActive && dailyMatches >= maxFreeMatches) || !premiumDatingEnabled}
           >
             <Heart className="w-6 h-6 text-green-500" />
           </Button>
         </div>
 
-        {/* Dating Feature Banner - Replace the old upgrade banner */}
-        <DatingFeatureBanner
-          isDatingActive={isDatingActive}
-          datingLoading={datingLoading}
-          onClickUpgrade={() => setShowDatingPackageModal(true)}
-          userId={user?.id}
-          dailyMatches={dailyMatches}
-          maxFreeMatches={maxFreeMatches}
-        />
+        {/* Dating Feature Banner - Only show if premium dating is enabled */}
+        {premiumDatingEnabled && (
+          <DatingFeatureBanner
+            isDatingActive={isDatingActive}
+            datingLoading={datingLoading}
+            onClickUpgrade={() => setShowDatingPackageModal(true)}
+            userId={user?.id}
+            dailyMatches={dailyMatches}
+            maxFreeMatches={maxFreeMatches}
+          />
+        )}
 
         {/* Stats */}
         <div className="text-center text-sm text-gray-600 mt-2">
@@ -414,62 +431,64 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         </div>
       </div>
 
-      {/* Dating Package Modal */}
-      <DatingPackageModal
-        isOpen={showDatingPackageModal}
-        onClose={() => setShowDatingPackageModal(false)}
-        onSelectPackage={async (packageId: string) => {
-          if (!user) {
-            toast({
-              title: "Cần đăng nhập",
-              description: "Vui lòng đăng nhập để mua gói Premium",
-              variant: "destructive"
-            });
-            return;
-          }
-
-          try {
-            toast({
-              title: "Đang tạo thanh toán...",
-              description: "Vui lòng chờ trong giây lát",
-            });
-
-            const result = await createDatingPackagePayment(packageId, user.id, user.email);
-            
-            if (result.error) {
+      {/* Dating Package Modal - Only show if premium dating is enabled */}
+      {premiumDatingEnabled && (
+        <DatingPackageModal
+          isOpen={showDatingPackageModal}
+          onClose={() => setShowDatingPackageModal(false)}
+          onSelectPackage={async (packageId: string) => {
+            if (!user) {
               toast({
-                title: "Có lỗi xảy ra!",
-                description: result.message || "Không thể tạo thanh toán",
+                title: "Cần đăng nhập",
+                description: "Vui lòng đăng nhập để mua gói Premium",
                 variant: "destructive"
               });
               return;
             }
 
-            if (result.checkoutUrl) {
-              window.location.href = result.checkoutUrl;
-            } else {
+            try {
+              toast({
+                title: "Đang tạo thanh toán...",
+                description: "Vui lòng chờ trong giây lát",
+              });
+
+              const result = await createDatingPackagePayment(packageId, user.id, user.email);
+              
+              if (result.error) {
+                toast({
+                  title: "Có lỗi xảy ra!",
+                  description: result.message || "Không thể tạo thanh toán",
+                  variant: "destructive"
+                });
+                return;
+              }
+
+              if (result.checkoutUrl) {
+                window.location.href = result.checkoutUrl;
+              } else {
+                toast({
+                  title: "Có lỗi xảy ra!",
+                  description: "Không nhận được URL thanh toán",
+                  variant: "destructive"
+                });
+              }
+            } catch (error) {
+              console.error('Payment error:', error);
               toast({
                 title: "Có lỗi xảy ra!",
-                description: "Không nhận được URL thanh toán",
+                description: "Vui lòng thử lại sau",
                 variant: "destructive"
               });
             }
-          } catch (error) {
-            console.error('Payment error:', error);
-            toast({
-              title: "Có lỗi xảy ra!",
-              description: "Vui lòng thử lại sau",
-              variant: "destructive"
-            });
+          }}
+          currentUser={user}
+          bankInfo={
+            !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 
+            ? bankInfoHook.bankInfo 
+            : undefined
           }
-        }}
-        currentUser={user}
-        bankInfo={
-          !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 
-          ? bankInfoHook.bankInfo 
-          : undefined
-        }
-      />
+        />
+      )}
     </div>
   );
 };

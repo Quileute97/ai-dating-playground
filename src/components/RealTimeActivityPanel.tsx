@@ -35,6 +35,8 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
   };
 
   const handleActivityClick = (activity: any) => {
+    console.log('🎯 Activity clicked:', activity);
+    
     // Navigate to related content based on activity type
     if (activity.type === "like" && activity.post_id) {
       // Hiển thị modal bài viết cho post likes
@@ -44,6 +46,7 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
       setSelectedPostId(activity.post_id);
     } else if (activity.type === "friend_request" && activity.friend_request_id) {
       // Hiển thị modal chi tiết lời mời kết bạn
+      console.log('🎯 Opening friend request modal for ID:', activity.friend_request_id);
       setSelectedFriendRequestId(activity.friend_request_id);
     } else if (activity.type === "friend") {
       // For friend activities, navigate to user profile
@@ -51,6 +54,34 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
     } else {
       // Default: navigate to user profile
       navigate(`/profile/${activity.user_id}`);
+    }
+  };
+
+  const getActivityIcon = (activity: any) => {
+    switch (activity.type) {
+      case "like":
+        return <Heart className="w-6 h-6 text-pink-500" />;
+      case "friend":
+        return <UserPlus className="w-6 h-6 text-green-500" />;
+      case "friend_request":
+        return <UserPlus className="w-6 h-6 text-blue-500 animate-pulse" />;
+      case "comment":
+      default:
+        return <MessageCircle className="w-6 h-6 text-blue-500" />;
+    }
+  };
+
+  const getActivityBorderColor = (activity: any) => {
+    switch (activity.type) {
+      case "like":
+        return "border-pink-200";
+      case "friend":
+        return "border-green-200";
+      case "friend_request":
+        return "border-blue-200";
+      case "comment":
+      default:
+        return "border-purple-200";
     }
   };
 
@@ -70,18 +101,10 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
             {activities?.map(a => (
               <Card
                 key={a.id}
-                className={`flex items-center gap-3 py-2 px-3 shadow-sm border-l-4 border-purple-200 relative cursor-pointer hover:bg-gray-50 transition-colors`}
+                className={`flex items-center gap-3 py-2 px-3 shadow-sm border-l-4 ${getActivityBorderColor(a)} relative cursor-pointer hover:bg-gray-50 transition-colors`}
                 onClick={() => handleActivityClick(a)}
               >
-                {a.type === "like" ? (
-                  <Heart className="w-6 h-6 text-pink-500" />
-                ) : a.type === "friend" ? (
-                  <UserPlus className="w-6 h-6 text-green-500" />
-                ) : a.type === "friend_request" ? (
-                  <UserPlus className="w-6 h-6 text-blue-500" />
-                ) : (
-                  <MessageCircle className="w-6 h-6 text-blue-500" />
-                )}
+                {getActivityIcon(a)}
                 <img
                   src={a.user_avatar || "/placeholder.svg"}
                   alt={a.user_name || "user"}
@@ -99,6 +122,9 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
                     {a.text.replace(a.user_name || "Ai đó", "").trim()}
                   </span>
                   <div className="text-[11px] text-gray-400">{a.created_at && new Date(a.created_at).toLocaleString("vi-VN")}</div>
+                  {a.type === "friend_request" && (
+                    <div className="text-[10px] text-blue-600 font-semibold mt-1">● Lời mời mới</div>
+                  )}
                 </div>
               </Card>
             ))}

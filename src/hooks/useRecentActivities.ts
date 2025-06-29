@@ -43,7 +43,7 @@ export function useRecentActivities(userId: string | undefined) {
         ])
       );
 
-      // Lấy hoạt động kết bạn gần đây
+      // Lấy hoạt động kết bạn gần đây (chỉ những người đã kết bạn)
       const { data: newFriends } = await supabase
         .from("friends")
         .select("id, user_id, friend_id, created_at, profiles:user_id(name,avatar)")
@@ -51,14 +51,13 @@ export function useRecentActivities(userId: string | undefined) {
         .order("created_at", { ascending: false })
         .limit(5);
 
-      // Lấy lời mời kết bạn nhận được (pending và mình là friend_id)
-      const { data: friendRequests } = await supabase
+      // Lấy TẤT CẢ lời mời kết bạn pending (cả gửi và nhận)
+      const { data: allFriendRequests } = await supabase
         .from("friends")
         .select("id, user_id, friend_id, created_at, profiles:user_id(name,avatar)")
-        .eq("friend_id", userId)
         .eq("status", "pending")
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(10);
 
       // Lấy hoạt động like user (like profile)
       const { data: userLikes } = await supabase
@@ -84,7 +83,7 @@ export function useRecentActivities(userId: string | undefined) {
       // Kết hợp - căn theo thời gian
       let all: Activity[] = [];
 
-      // Bạn mới
+      // Bạn mới (đã chấp nhận)
       newFriends?.forEach((f: any) => {
         all.push({
           id: "friend-" + f.id,
@@ -98,19 +97,29 @@ export function useRecentActivities(userId: string | undefined) {
         });
       });
 
-      // Lời mời kết bạn
-      friendRequests?.forEach((f: any) => {
-        all.push({
-          id: "friend-request-" + f.id,
-          type: "friend_request",
-          text: `${f.profiles?.name || "Ai đó"} đã gửi lời mời kết bạn`,
-          icon: null,
-          created_at: f.created_at,
-          user_id: f.user_id,
-          user_name: f.profiles?.name || null,
-          user_avatar: f.profiles?.avatar || null,
-          friend_request_id: f.id,
-        });
+      // Lời mời kết bạn - hiển thị TẤT CẢ lời mời (cả gửi và nhận)
+      allFriendRequests?.forEach((f: any) => {
+        const isReceived = f.friend_id === userId;
+        const issent = f.user_id === userId;
+        
+        if (isReceived) {
+          // Lời mời nhận được
+          all.push({
+            id: "friend-request-received-" + f.id,
+            type: "friend_request",
+            text: `${f.profiles?.name || "Ai đó"} đã gửi lời mời kết bạn`,
+            icon: null,
+            created_at: f.created_at,
+            user_id: f.user_id,
+            user_name: f.profiles?.name || null,
+            user_avatar: f.profiles?.avatar || null,
+            friend_request_id: f.id,
+          });
+        } else if (isReceived || isReceived) {
+          // Có thể hiển thị cả lời mời đã gửi (tùy chọn)
+          // Bỏ comment dòng dưới nếu muốn hiển thị lời mời đã gửi
+          // all.push({...})
+        }
       });
 
       // Like profile
@@ -157,14 +166,15 @@ export function useRecentActivities(userId: string | undefined) {
         });
       });
 
-      // Sắp xếp theo thời gian mới -> cũ, lấy 8 hoạt động mới nhất
+      // Sắp xếp theo thời gian mới -> cũ, lấy 12 hoạt động mới nhất (tăng từ 8 lên 12)
       all = all
         .filter(x => !!x.created_at)
         .sort((a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
-        .slice(0, 8);
+        .slice(0, 12);
 
+      console.log('🎯 Recent activities loaded:', all);
       return all;
     }
   });
@@ -176,7 +186,10 @@ export function useRecentActivities(userId: string | undefined) {
     const channels = [
       supabase.channel('activities-friends').on('postgres_changes', {
         event: '*', schema: 'public', table: 'friends'
-      }, () => queryClient.invalidateQueries({ queryKey: ["recent-activities", userId] })),
+      }, (payload) => {
+        console.log('🔄 Friends table changed:', payload);
+        queryClient.invalidateQueries({ queryKey: ["recent-activities", userId] });
+      }),
 
       supabase.channel('activities-user-likes').on('postgres_changes', {
         event: '*', schema: 'public', table: 'user_likes'

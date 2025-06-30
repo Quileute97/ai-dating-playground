@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -31,15 +30,40 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const albumInputRef = useRef<HTMLInputElement>(null);
 
+  // Update profileData when user prop changes
+  React.useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name || '',
+        age: user.age || '',
+        bio: user.bio || 'Chào mọi người! Tôi đang tìm kiếm những kết nối thú vị.',
+        avatar: user.avatar || '',
+        album: user.album || [],
+      });
+    }
+  }, [user]);
+
   const handleSave = () => {
+    // Only update fields that have actually changed
+    const updatedFields: any = {};
+    
+    if (profileData.name !== user?.name) updatedFields.name = profileData.name;
+    if (profileData.age !== user?.age) updatedFields.age = profileData.age;
+    if (profileData.bio !== user?.bio) updatedFields.bio = profileData.bio;
+    if (profileData.avatar !== user?.avatar) updatedFields.avatar = profileData.avatar;
+    if (JSON.stringify(profileData.album) !== JSON.stringify(user?.album)) {
+      updatedFields.album = profileData.album;
+    }
+
+    // Merge with existing user data, preserving unchanged fields
     const updatedUser = {
       ...user,
-      ...profileData,
-      album: profileData.album,
-      avatar: profileData.avatar,
+      ...updatedFields
     };
+
     onUpdateProfile(updatedUser);
     setIsEditing(false);
+    toast.success('Cập nhật hồ sơ thành công!');
   };
 
   const handleCameraClick = () => {
@@ -112,6 +136,11 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
     }
   };
 
+  const removeAlbumImage = (index: number) => {
+    const newAlbum = profileData.album.filter((_: any, idx: number) => idx !== index);
+    setProfileData({ ...profileData, album: newAlbum });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
@@ -180,7 +209,7 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
                       onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                     />
                   ) : (
-                    <p className="font-medium">{user?.name}</p>
+                    <p className="font-medium">{profileData.name}</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -193,7 +222,7 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
                       onChange={(e) => setProfileData({ ...profileData, age: e.target.value })}
                     />
                   ) : (
-                    <p className="font-medium">{user?.age}</p>
+                    <p className="font-medium">{profileData.age}</p>
                   )}
                 </div>
               </div>
@@ -252,12 +281,24 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
               {profileData.album && profileData.album.length > 0 ? (
                 <div className="grid grid-cols-3 gap-2">
                   {profileData.album.map((img: string, idx: number) => (
-                    <img
-                      key={idx}
-                      src={img}
-                      alt={`Ảnh ${idx + 1}`}
-                      className="rounded-lg object-cover w-full h-24 border"
-                    />
+                    <div key={idx} className="relative group">
+                      <img
+                        src={img}
+                        alt={`Ảnh ${idx + 1}`}
+                        className="rounded-lg object-cover w-full h-24 border"
+                      />
+                      {isEditing && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeAlbumImage(idx)}
+                          type="button"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
                   ))}
                 </div>
               ) : (

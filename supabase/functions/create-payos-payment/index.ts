@@ -73,16 +73,21 @@ serve(async (req) => {
 
     // Tạo payment data theo đúng format PayOS API v2
     const paymentData = {
-      orderCode,
+      orderCode: orderCode, // Đảm bảo là number
       amount: selectedPackage.amount,
       description: selectedPackage.description,
+      buyerName: userEmail ? userEmail.split('@')[0] : 'Customer', // Thêm buyerName
+      buyerEmail: userEmail || 'noreply@example.com', // Thêm buyerEmail
+      buyerPhone: '', // Có thể để trống
+      buyerAddress: '', // Có thể để trống
       items: [{
         name: selectedPackage.description,
         quantity: 1,
         price: selectedPackage.amount
       }],
       returnUrl: returnUrl || 'https://preview--ai-dating-playground.lovable.app/payment-success',
-      cancelUrl: cancelUrl || 'https://preview--ai-dating-playground.lovable.app/payment-cancel'
+      cancelUrl: cancelUrl || 'https://preview--ai-dating-playground.lovable.app/payment-cancel',
+      expiredAt: Math.floor(Date.now() / 1000) + (15 * 60) // Hết hạn sau 15 phút
     };
 
     console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));

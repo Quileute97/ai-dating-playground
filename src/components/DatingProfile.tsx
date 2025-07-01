@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Heart, Edit, Save, X } from 'lucide-react';
@@ -28,27 +28,60 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
   const albumInputRef = useRef<HTMLInputElement>(null);
 
   const [profileData, setProfileData] = useState({
-    name: user?.name || '',
-    age: user?.age || 25,
-    bio: user?.bio || 'Xin chào! Tôi đang tìm kiếm những kết nối ý nghĩa.',
-    avatar: user?.avatar || '',
-    album: user?.album || [],
-    height: user?.height || 170,
-    job: user?.job || '',
-    education: user?.education || '',
-    location_name: user?.location_name || '',
-    gender: user?.gender || 'other',
-    is_dating_active: user?.is_dating_active !== false,
-    interests: user?.interests || [],
-    dating_preferences: user?.dating_preferences || {
+    name: '',
+    age: 25,
+    bio: 'Xin chào! Tôi đang tìm kiếm những kết nối ý nghĩa.',
+    avatar: '',
+    album: [],
+    height: 170,
+    job: '',
+    education: '',
+    location_name: '',
+    gender: 'other',
+    is_dating_active: true,
+    interests: [],
+    dating_preferences: {
       age_range: { min: 18, max: 35 },
       distance: 50,
       gender_preference: 'all'
     }
   });
 
+  // Update profileData when user prop changes - use real data
+  useEffect(() => {
+    if (user) {
+      console.log('🔄 Updating DatingProfile with real user data:', user);
+      setProfileData({
+        name: user?.name || '',
+        age: user?.age || 25,
+        bio: user?.bio || 'Xin chào! Tôi đang tìm kiếm những kết nối ý nghĩa.',
+        avatar: user?.avatar || '',
+        album: user?.album || [],
+        height: user?.height || 170,
+        job: user?.job || '',
+        education: user?.education || '',
+        location_name: user?.location_name || '',
+        gender: user?.gender || 'other',
+        is_dating_active: user?.is_dating_active !== false,
+        interests: user?.interests || [],
+        dating_preferences: user?.dating_preferences || {
+          age_range: { min: 18, max: 35 },
+          distance: 50,
+          gender_preference: 'all'
+        }
+      });
+    }
+  }, [user]);
+
   const handleSave = async () => {
+    if (!user?.id) {
+      toast.error('Không thể cập nhật: Thiếu thông tin người dùng');
+      return;
+    }
+
     try {
+      console.log('🔄 Saving dating profile with data:', profileData);
+      
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -69,14 +102,21 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
         })
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error saving dating profile:', error);
+        throw error;
+      }
 
+      console.log('✅ Dating profile saved successfully');
+      
+      // Update the parent component with the new data
       const updatedUser = { ...user, ...profileData };
       onUpdateProfile(updatedUser);
+      
       setIsEditing(false);
       toast.success('Cập nhật hồ sơ thành công!');
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      console.error('❌ Error updating dating profile:', error);
       toast.error('Có lỗi khi cập nhật hồ sơ: ' + error.message);
     }
   };
@@ -85,16 +125,16 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
     const file = e.target.files?.[0];
     if (!file) return;
     
-    console.log('Starting avatar upload:', file.name);
+    console.log('🔄 Starting avatar upload:', file.name);
     setIsUploading(true);
     
     try {
       const url = await uploadAvatar(file);
-      console.log('Avatar uploaded successfully:', url);
+      console.log('✅ Avatar uploaded successfully:', url);
       setProfileData({ ...profileData, avatar: url });
       toast.success('Tải ảnh đại diện thành công!');
     } catch (err: any) {
-      console.error('Avatar upload error:', err);
+      console.error('❌ Avatar upload error:', err);
       toast.error(err.message || "Đã có lỗi xảy ra khi upload ảnh đại diện!");
     } finally {
       setIsUploading(false);
@@ -108,30 +148,30 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
     const files = e.target.files;
     if (!files || !files.length) return;
     
-    console.log('Starting album upload, files count:', files.length);
+    console.log('🔄 Starting album upload, files count:', files.length);
     setIsUploading(true);
     const uploadedUrls: string[] = [];
     
     try {
       for (const file of Array.from(files)) {
-        console.log('Uploading album image:', file.name, 'Size:', file.size, 'Type:', file.type);
+        console.log('🔄 Uploading album image:', file.name, 'Size:', file.size, 'Type:', file.type);
         
         // Kiểm tra file type
         if (!file.type.startsWith('image/')) {
-          console.error('Invalid file type:', file.type);
+          console.error('❌ Invalid file type:', file.type);
           toast.error(`File ${file.name} không phải là ảnh hợp lệ!`);
           continue;
         }
         
         // Kiểm tra file size (10MB)
         if (file.size > 10 * 1024 * 1024) {
-          console.error('File too large:', file.size);
+          console.error('❌ File too large:', file.size);
           toast.error(`File ${file.name} quá lớn! Vui lòng chọn file nhỏ hơn 10MB.`);
           continue;
         }
         
         const url = await uploadAlbumImage(file);
-        console.log('Album image uploaded:', url);
+        console.log('✅ Album image uploaded:', url);
         uploadedUrls.push(url);
       }
       
@@ -141,7 +181,7 @@ const DatingProfile = ({ isOpen, onClose, user, onUpdateProfile }: DatingProfile
         toast.success(`Tải thành công ${uploadedUrls.length} ảnh vào album!`);
       }
     } catch (err: any) {
-      console.error('Album upload error:', err);
+      console.error('❌ Album upload error:', err);
       toast.error(err.message || "Đã có lỗi xảy ra khi upload ảnh!");
     } finally {
       setIsUploading(false);

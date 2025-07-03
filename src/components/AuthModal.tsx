@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -85,7 +84,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [info, setInfo] = useState(''); // Thông báo thành công/xác nhận
+  const [info, setInfo] = useState('');
   const [showForgot, setShowForgot] = useState(false);
 
   // Utility: Cleanup all Supabase Auth keys in localStorage and sessionStorage

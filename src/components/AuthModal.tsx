@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -186,6 +187,8 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
           last_active: new Date().toISOString(),
           created_at: new Date().toISOString(),
           tai_khoan_hoat_dong: true,
+          is_premium: false,
+          premium_expires: null,
           dating_preferences: {
             age_range: { min: 18, max: 35 },
             distance: 50,

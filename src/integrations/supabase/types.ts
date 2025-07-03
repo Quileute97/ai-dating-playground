@@ -235,6 +235,42 @@ export type Database = {
           },
         ]
       }
+      payos_invoices: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          order_code: number
+          payos_data: Json | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_code: number
+          payos_data?: Json | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_code?: number
+          payos_data?: Json | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       post_likes: {
         Row: {
           created_at: string | null
@@ -326,12 +362,14 @@ export type Database = {
           id: string
           interests: Json | null
           is_dating_active: boolean | null
+          is_premium: boolean | null
           job: string | null
           last_active: string | null
           lat: number | null
           lng: number | null
           location_name: string | null
           name: string | null
+          premium_expires: string | null
           tai_khoan_hoat_dong: boolean | null
         }
         Insert: {
@@ -347,12 +385,14 @@ export type Database = {
           id: string
           interests?: Json | null
           is_dating_active?: boolean | null
+          is_premium?: boolean | null
           job?: string | null
           last_active?: string | null
           lat?: number | null
           lng?: number | null
           location_name?: string | null
           name?: string | null
+          premium_expires?: string | null
           tai_khoan_hoat_dong?: boolean | null
         }
         Update: {
@@ -368,12 +408,14 @@ export type Database = {
           id?: string
           interests?: Json | null
           is_dating_active?: boolean | null
+          is_premium?: boolean | null
           job?: string | null
           last_active?: string | null
           lat?: number | null
           lng?: number | null
           location_name?: string | null
           name?: string | null
+          premium_expires?: string | null
           tai_khoan_hoat_dong?: boolean | null
         }
         Relationships: []

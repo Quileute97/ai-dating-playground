@@ -3,7 +3,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { useRealTimeMessages } from '@/hooks/useRealTimeMessages';
 import { useChatContext } from '@/hooks/useChatContext';
-import ProfileChatWindow from './ProfileChatWindow';
+import FullScreenChat from './FullScreenChat';
 import ChatHeader from './chat/ChatHeader';
 import ChatMessages from './chat/ChatMessages';
 import ChatInput from './chat/ChatInput';
@@ -25,37 +25,17 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
     return null;
   }
 
-  // Full screen mode - use ProfileChatWindow with error boundary
+  // Full screen mode - use the new FullScreenChat component
   if (isFullScreen) {
-    try {
-      return (
-        <ProfileChatWindow
-          targetUserId={activeChatUser.id}
-          targetUserName={activeChatUser.name}
-          targetUserAvatar={activeChatUser.avatar}
-          currentUserId={myUserId}
-          onClose={toggleFullScreen}
-        />
-      );
-    } catch (error) {
-      console.error('Error rendering ProfileChatWindow:', error);
-      // Fallback to small widget mode
-      return (
-        <div className="fixed bottom-4 right-4 z-50">
-          <Card className="w-80 bg-white shadow-xl border border-gray-200 rounded-lg overflow-hidden">
-            <div className="p-4 text-center text-red-500">
-              <p>Lỗi hiển thị chat toàn màn hình</p>
-              <button 
-                onClick={toggleFullScreen}
-                className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
-              >
-                Quay về chế độ nhỏ
-              </button>
-            </div>
-          </Card>
-        </div>
-      );
-    }
+    return (
+      <FullScreenChat
+        targetUserId={activeChatUser.id}
+        targetUserName={activeChatUser.name}
+        targetUserAvatar={activeChatUser.avatar}
+        currentUserId={myUserId}
+        onClose={toggleFullScreen}
+      />
+    );
   }
 
   // Small widget mode

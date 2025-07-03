@@ -2,8 +2,22 @@
 import { PaymentData, PackageDetails } from './types.ts';
 
 export const generateOrderCode = (): number => {
+  // Generate a more reliable order code
   const timestamp = Date.now();
-  return parseInt(timestamp.toString().slice(-8)); // Lấy 8 chữ số cuối
+  const random = Math.floor(Math.random() * 1000);
+  
+  // Create order code by combining timestamp and random number
+  let orderCode = parseInt(timestamp.toString().slice(-8) + random.toString().padStart(3, '0'));
+  
+  // Ensure it's within PayOS valid range (1-9999999999)
+  if (orderCode > 9999999999) {
+    orderCode = orderCode % 9999999999;
+  }
+  if (orderCode < 1) {
+    orderCode = Math.floor(Math.random() * 999999999) + 1;
+  }
+  
+  return orderCode;
 };
 
 export const createPaymentData = (
@@ -13,22 +27,39 @@ export const createPaymentData = (
   returnUrl?: string,
   cancelUrl?: string
 ): PaymentData => {
+  // Clean and validate buyer name
+  const buyerName = userEmail 
+    ? userEmail.split('@')[0].substring(0, 20) // Limit length
+    : 'Customer';
+  
+  // Clean and validate buyer email
+  const buyerEmail = userEmail || 'noreply@example.com';
+  
+  // Ensure description is within PayOS limits
+  let description = selectedPackage.description;
+  if (description.length > 25) {
+    description = description.substring(0, 25);
+  }
+  
+  // Calculate expiration time (15 minutes from now)
+  const expiredAt = Math.floor(Date.now() / 1000) + (15 * 60);
+  
   return {
     orderCode: orderCode,
     amount: selectedPackage.amount,
-    description: selectedPackage.description,
-    buyerName: userEmail ? userEmail.split('@')[0] : 'Customer',
-    buyerEmail: userEmail || 'noreply@example.com',
+    description: description,
+    buyerName: buyerName,
+    buyerEmail: buyerEmail,
     buyerPhone: '',
     buyerAddress: '',
     items: [{
-      name: selectedPackage.description,
+      name: description,
       quantity: 1,
       price: selectedPackage.amount
     }],
     returnUrl: returnUrl || 'https://preview--ai-dating-playground.lovable.app/payment-success',
     cancelUrl: cancelUrl || 'https://preview--ai-dating-playground.lovable.app/payment-cancel',
-    expiredAt: Math.floor(Date.now() / 1000) + (15 * 60)
+    expiredAt: expiredAt
   };
 };
 
@@ -64,6 +95,14 @@ export const validateInput = (userId: string, packageType: string) => {
   if (!userId || !packageType) {
     throw new Error('Missing required fields: userId or packageType');
   }
+  
+  if (typeof userId !== 'string' || userId.trim().length === 0) {
+    throw new Error('Invalid userId: must be non-empty string');
+  }
+  
+  if (typeof packageType !== 'string' || packageType.trim().length === 0) {
+    throw new Error('Invalid packageType: must be non-empty string');
+  }
 };
 
 export const createErrorResponse = (error: Error) => {
@@ -89,6 +128,10 @@ export const createErrorResponse = (error: Error) => {
     userFriendlyMessage = error.message;
   } else if (error.message?.includes('PayOS không trả về URL')) {
     userFriendlyMessage = error.message;
+  } else if (error.message?.includes('Invalid order code')) {
+    userFriendlyMessage = 'Mã đơn hàng không hợp lệ';
+  } else if (error.message?.includes('Invalid amount')) {
+    userFriendlyMessage = 'Số tiền thanh toán không hợp lệ';
   }
   
   return {

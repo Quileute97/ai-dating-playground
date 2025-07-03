@@ -51,11 +51,16 @@ serve(async (req) => {
 
     console.log('✅ PayOS credentials verified');
 
-    // Generate orderCode
+    // Generate orderCode with better validation
     const orderCode = generateOrderCode();
     console.log('📝 Generated order code:', orderCode);
 
-    // Create payment data
+    // Validate orderCode is within PayOS limits (1-9999999999)
+    if (orderCode < 1 || orderCode > 9999999999) {
+      throw new Error(`Invalid order code: ${orderCode}. Must be between 1 and 9999999999`);
+    }
+
+    // Create payment data with proper validation
     const paymentData = createPaymentData(
       orderCode,
       selectedPackage,
@@ -64,7 +69,41 @@ serve(async (req) => {
       cancelUrl
     );
 
-    console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
+    // Additional validation for PayOS requirements
+    if (!paymentData.buyerName || paymentData.buyerName.trim().length === 0) {
+      paymentData.buyerName = 'Customer';
+    }
+    
+    if (!paymentData.buyerEmail || paymentData.buyerEmail.trim().length === 0) {
+      paymentData.buyerEmail = 'noreply@example.com';
+    }
+
+    // Ensure description is within PayOS limits (max 25 characters)
+    if (paymentData.description.length > 25) {
+      paymentData.description = paymentData.description.substring(0, 25);
+    }
+
+    // Validate amount is positive integer
+    if (!Number.isInteger(paymentData.amount) || paymentData.amount <= 0) {
+      throw new Error(`Invalid amount: ${paymentData.amount}. Must be positive integer`);
+    }
+
+    // Ensure items array is properly formatted
+    if (!paymentData.items || !Array.isArray(paymentData.items) || paymentData.items.length === 0) {
+      paymentData.items = [{
+        name: selectedPackage.description.substring(0, 20), // Limit item name length
+        quantity: 1,
+        price: selectedPackage.amount
+      }];
+    }
+
+    // Validate expiredAt is in future
+    const now = Math.floor(Date.now() / 1000);
+    if (paymentData.expiredAt <= now) {
+      paymentData.expiredAt = now + (15 * 60); // 15 minutes from now
+    }
+
+    console.log('✅ Payment data prepared and validated:', JSON.stringify(paymentData, null, 2));
 
     // Call PayOS API
     const payosResult = await payosClient.createPayment(paymentData);

@@ -1,19 +1,19 @@
 import { PaymentData, PackageDetails } from './types.ts';
 
 export const generateOrderCode = (): number => {
-  // Generate a more reliable order code
+  // Generate a simpler, more reliable order code
   const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000);
+  const random = Math.floor(Math.random() * 100);
   
-  // Create order code by combining timestamp and random number
-  let orderCode = parseInt(timestamp.toString().slice(-8) + random.toString().padStart(3, '0'));
+  // Create a shorter order code to avoid PayOS limits
+  let orderCode = parseInt((timestamp.toString().slice(-6) + random.toString().padStart(2, '0')));
   
-  // Ensure it's within PayOS valid range (1-9999999999)
-  if (orderCode > 9999999999) {
-    orderCode = orderCode % 9999999999;
+  // Ensure it's within PayOS valid range (1-9999999999) and keep it shorter
+  if (orderCode > 99999999) {
+    orderCode = orderCode % 99999999;
   }
-  if (orderCode < 1) {
-    orderCode = Math.floor(Math.random() * 999999999) + 1;
+  if (orderCode < 100000) {
+    orderCode = 100000 + Math.floor(Math.random() * 899999);
   }
   
   return orderCode;
@@ -26,33 +26,33 @@ export const createPaymentData = (
   returnUrl?: string,
   cancelUrl?: string
 ): PaymentData => {
-  // Clean and validate buyer name - PayOS requires specific format
+  // Very simple and clean data for PayOS
   const buyerName = userEmail 
-    ? userEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 15) // Remove special chars
+    ? userEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 10)
     : 'Customer';
   
-  // Clean and validate buyer email
-  const buyerEmail = userEmail || 'customer@example.com';
+  const buyerEmail = userEmail && userEmail.includes('@') ? userEmail : 'test@example.com';
   
-  // Ensure description is within PayOS limits (max 25 chars, no special chars)
-  let description = selectedPackage.description.replace(/[^a-zA-Z0-9\s]/g, '');
-  if (description.length > 25) {
-    description = description.substring(0, 25).trim();
-  }
+  // Super simple description without special characters
+  const description = selectedPackage.description
+    .replace(/[^a-zA-Z0-9\s]/g, '') // Remove all special chars
+    .replace(/\s+/g, ' ') // Normalize spaces
+    .trim()
+    .substring(0, 20); // Keep it short
   
-  // Calculate expiration time (15 minutes from now)
-  const expiredAt = Math.floor(Date.now() / 1000) + (15 * 60);
+  // Calculate expiration time (30 minutes from now)
+  const expiredAt = Math.floor(Date.now() / 1000) + (30 * 60);
   
   return {
     orderCode: orderCode,
     amount: selectedPackage.amount,
-    description: description,
+    description: description || 'Premium Package',
     buyerName: buyerName,
     buyerEmail: buyerEmail,
     buyerPhone: '',
     buyerAddress: '',
     items: [{
-      name: description.substring(0, 20), // Ensure item name is also limited
+      name: description.substring(0, 15) || 'Premium',
       quantity: 1,
       price: selectedPackage.amount
     }],

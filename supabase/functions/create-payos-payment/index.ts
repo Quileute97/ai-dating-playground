@@ -51,16 +51,11 @@ serve(async (req) => {
 
     console.log('✅ PayOS credentials verified');
 
-    // Generate orderCode with better validation
+    // Generate orderCode
     const orderCode = generateOrderCode();
     console.log('📝 Generated order code:', orderCode);
 
-    // Validate orderCode is within PayOS limits (1-9999999999)
-    if (orderCode < 1 || orderCode > 9999999999) {
-      throw new Error(`Invalid order code: ${orderCode}. Must be between 1 and 9999999999`);
-    }
-
-    // Create payment data with proper validation
+    // Create payment data with minimal validation
     const paymentData = createPaymentData(
       orderCode,
       selectedPackage,
@@ -69,53 +64,7 @@ serve(async (req) => {
       cancelUrl
     );
 
-    // Additional PayOS format validation
-    if (!paymentData.buyerName || paymentData.buyerName.trim().length === 0) {
-      paymentData.buyerName = 'Customer';
-    }
-    
-    if (!paymentData.buyerEmail || !paymentData.buyerEmail.includes('@')) {
-      paymentData.buyerEmail = 'customer@example.com';
-    }
-
-    // Ensure description contains only allowed characters
-    paymentData.description = paymentData.description
-      .replace(/[^a-zA-Z0-9\s]/g, '')
-      .trim()
-      .substring(0, 25);
-
-    if (!paymentData.description) {
-      paymentData.description = 'Premium Package';
-    }
-
-    // Validate amount is positive integer
-    if (!Number.isInteger(paymentData.amount) || paymentData.amount <= 0) {
-      throw new Error(`Invalid amount: ${paymentData.amount}. Must be positive integer`);
-    }
-
-    // Ensure items array is properly formatted with clean data
-    paymentData.items = [{
-      name: paymentData.description.substring(0, 20).trim() || 'Premium',
-      quantity: 1,
-      price: paymentData.amount
-    }];
-
-    // Validate expiredAt is in future and reasonable
-    const now = Math.floor(Date.now() / 1000);
-    if (paymentData.expiredAt <= now || paymentData.expiredAt > now + (24 * 60 * 60)) {
-      paymentData.expiredAt = now + (15 * 60); // 15 minutes from now
-    }
-
-    // Clean URLs to ensure they're valid
-    if (!paymentData.returnUrl || !paymentData.returnUrl.startsWith('http')) {
-      paymentData.returnUrl = 'https://preview--ai-dating-playground.lovable.app/payment-success';
-    }
-    
-    if (!paymentData.cancelUrl || !paymentData.cancelUrl.startsWith('http')) {
-      paymentData.cancelUrl = 'https://preview--ai-dating-playground.lovable.app/payment-cancel';
-    }
-
-    console.log('✅ Payment data prepared and validated:', JSON.stringify(paymentData, null, 2));
+    console.log('✅ Payment data prepared:', JSON.stringify(paymentData, null, 2));
 
     // Call PayOS API
     const payosResult = await payosClient.createPayment(paymentData);

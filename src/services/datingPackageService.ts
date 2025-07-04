@@ -79,21 +79,21 @@ export const createDatingPackagePayment = async (
     
     console.log('✅ Package validated:', selectedPackage);
     
-    // Generate unique orderCode following PayOS requirements (max 9999999999)
-    const timestamp = Math.floor(Date.now() / 1000);
+    // Generate a simpler orderCode to avoid PayOS validation issues
+    const timestamp = Date.now();
     const random = Math.floor(Math.random() * 999) + 1;
-    let orderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`);
+    // Create a shorter orderCode (max 9 digits to be safe)
+    let orderCode = parseInt(`${timestamp.toString().slice(-5)}${random.toString().padStart(3, '0')}`);
     
-    // Ensure orderCode is within PayOS limits
-    if (orderCode > 9999999999 || orderCode <= 0) {
-      orderCode = Math.floor(Math.random() * 999999999) + 100000000;
+    // Ensure orderCode is within safe limits (1-999999999)
+    if (orderCode > 999999999 || orderCode <= 0) {
+      orderCode = Math.floor(Math.random() * 99999999) + 10000000;
     }
     
     console.log('📝 Generated order code:', orderCode);
     
-    // Prepare request data with clean URLs
+    // Prepare clean request data
     const requestData = {
-      orderCode: orderCode,
       userId: userId.trim(),
       userEmail: userEmail?.trim() || '',
       packageType: packageId,

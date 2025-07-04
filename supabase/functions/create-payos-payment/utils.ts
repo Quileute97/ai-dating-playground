@@ -1,19 +1,17 @@
+
 import { PaymentData, PackageDetails } from './types.ts';
 
 export const generateOrderCode = (): number => {
-  // Generate a simpler, more reliable order code
+  // Generate a safer, shorter order code for PayOS
   const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 100);
+  const random = Math.floor(Math.random() * 99) + 1;
   
-  // Create a shorter order code to avoid PayOS limits
-  let orderCode = parseInt((timestamp.toString().slice(-6) + random.toString().padStart(2, '0')));
+  // Use only the last 6 digits of timestamp + 2 digit random (8 digits total)
+  let orderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(2, '0')}`);
   
-  // Ensure it's within PayOS valid range (1-9999999999) and keep it shorter
-  if (orderCode > 99999999) {
-    orderCode = orderCode % 99999999;
-  }
-  if (orderCode < 100000) {
-    orderCode = 100000 + Math.floor(Math.random() * 899999);
+  // Ensure it's within PayOS valid range (1-999999999) and not too large
+  if (orderCode > 99999999 || orderCode <= 0) {
+    orderCode = Math.floor(Math.random() * 99999999) + 10000000;
   }
   
   return orderCode;
@@ -26,40 +24,64 @@ export const createPaymentData = (
   returnUrl?: string,
   cancelUrl?: string
 ): PaymentData => {
-  // Very simple and clean data for PayOS
+  // Create a very clean buyer name without special characters
   const buyerName = userEmail 
-    ? userEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 10)
+    ? userEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)
     : 'Customer';
   
-  const buyerEmail = userEmail && userEmail.includes('@') ? userEmail : 'test@example.com';
+  // Ensure valid email format
+  const buyerEmail = userEmail && userEmail.includes('@') && userEmail.includes('.') 
+    ? userEmail 
+    : 'customer@example.com';
   
-  // Super simple description without special characters
+  // Create very simple description (max 25 chars for PayOS)
   const description = selectedPackage.description
-    .replace(/[^a-zA-Z0-9\s]/g, '') // Remove all special chars
+    .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special chars
     .replace(/\s+/g, ' ') // Normalize spaces
     .trim()
-    .substring(0, 20); // Keep it short
+    .substring(0, 20); // Keep under 25 chars limit
   
   // Calculate expiration time (30 minutes from now)
   const expiredAt = Math.floor(Date.now() / 1000) + (30 * 60);
   
-  return {
+  // Ensure amount is valid integer
+  const amount = Math.floor(selectedPackage.amount);
+  if (amount <= 0) {
+    throw new Error('Invalid amount: must be positive integer');
+  }
+  
+  const paymentData: PaymentData = {
     orderCode: orderCode,
-    amount: selectedPackage.amount,
+    amount: amount,
     description: description || 'Premium Package',
-    buyerName: buyerName,
+    buyerName: buyerName || 'Customer',
     buyerEmail: buyerEmail,
     buyerPhone: '',
     buyerAddress: '',
     items: [{
-      name: description.substring(0, 15) || 'Premium',
+      name: (description || 'Premium').substring(0, 12),
       quantity: 1,
-      price: selectedPackage.amount
+      price: amount
     }],
     returnUrl: returnUrl || 'https://preview--ai-dating-playground.lovable.app/payment-success',
     cancelUrl: cancelUrl || 'https://preview--ai-dating-playground.lovable.app/payment-cancel',
     expiredAt: expiredAt
   };
+  
+  // Validate required fields
+  if (!paymentData.orderCode || paymentData.orderCode <= 0) {
+    throw new Error('Invalid orderCode');
+  }
+  
+  if (!paymentData.amount || paymentData.amount <= 0) {
+    throw new Error('Invalid amount');
+  }
+  
+  if (!paymentData.description || paymentData.description.trim().length === 0) {
+    throw new Error('Invalid description');
+  }
+  
+  return paymentData;
 };
 
 export const createUpgradeRequestData = (
@@ -131,6 +153,8 @@ export const createErrorResponse = (error: Error) => {
     userFriendlyMessage = 'Mã đơn hàng không hợp lệ';
   } else if (error.message?.includes('Invalid amount')) {
     userFriendlyMessage = 'Số tiền thanh toán không hợp lệ';
+  } else if (error.message?.includes('Invalid description')) {
+    userFriendlyMessage = 'Mô tả thanh toán không hợp lệ';
   }
   
   return {

@@ -1,163 +1,264 @@
 
-import React, { useState } from "react";
-import { Heart, MessageCircle, UserPlus } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { useRecentActivities } from "@/hooks/useRecentActivities";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useNavigate } from "react-router-dom";
-import PostDetailModal from "./PostDetailModal";
-import FriendRequestDetailModal from "./FriendRequestDetailModal";
-import ChatWidget from "./ChatWidget";
-import { useChatWidget } from "@/hooks/useChatWidget";
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Heart, UserPlus, MessageCircle, Eye, Clock, Calendar } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
-interface PanelProps {
-  userId?: string;
+interface Activity {
+  id: string;
+  type: 'like' | 'friend_request' | 'message' | 'profile_view';
+  user_id: string;
+  target_user_id?: string;
+  created_at: string;
+  user_name?: string;
+  user_avatar?: string;
+  content?: string;
 }
 
-export default function RealTimeActivityPanel({ userId }: PanelProps) {
-  const { data: activities, isLoading } = useRecentActivities(userId);
-  const navigate = useNavigate();
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [selectedFriendRequestId, setSelectedFriendRequestId] = useState<string | null>(null);
-  
-  const { isOpen, chatUser, openChat, closeChat } = useChatWidget();
+interface RealTimeActivityPanelProps {
+  currentUserId?: string;
+}
 
-  const handleUserClick = (e: React.MouseEvent, activityUserId: string, activityUserName: string, activityUserAvatar: string) => {
-    e.stopPropagation();
-    if (activityUserId && userId) {
-      // Mở chat widget thay vì navigate
-      openChat({
-        id: activityUserId,
-        name: activityUserName || "Người dùng",
-        avatar: activityUserAvatar || "/placeholder.svg"
-      });
-    }
-  };
+const RealTimeActivityPanel: React.FC<RealTimeActivityPanelProps> = ({ currentUserId }) => {
+  const { data: activities, isLoading } = useQuery({
+    queryKey: ['real-time-activities', currentUserId],
+    queryFn: async () => {
+      if (!currentUserId) return [];
 
-  const handleActivityClick = (activity: any) => {
-    console.log('🎯 Activity clicked:', activity);
-    
-    // Navigate to related content based on activity type
-    if (activity.type === "like" && activity.post_id) {
-      // Hiển thị modal bài viết cho post likes
-      setSelectedPostId(activity.post_id);
-    } else if (activity.type === "comment" && activity.post_id) {
-      // Hiển thị modal bài viết cho comments
-      setSelectedPostId(activity.post_id);
-    } else if (activity.type === "friend_request" && activity.friend_request_id) {
-      // Hiển thị modal chi tiết lời mời kết bạn
-      console.log('🎯 Opening friend request modal for ID:', activity.friend_request_id);
-      setSelectedFriendRequestId(activity.friend_request_id);
-    } else if (activity.type === "friend") {
-      // For friend activities, navigate to user profile
-      navigate(`/profile/${activity.user.id}`);
-    } else {
-      // Default: navigate to user profile
-      navigate(`/profile/${activity.user.id}`);
-    }
-  };
+      // Get recent likes on user's profile
+      const { data: likesData } = await supabase
+        .from('user_likes')
+        .select(`
+          id,
+          created_at,
+          liker_id,
+          profiles!user_likes_liker_id_fkey (
+            name,
+            avatar
+          )
+        `)
+        .eq('liked_id', currentUserId)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-  const getActivityIcon = (activity: any) => {
-    switch (activity.type) {
-      case "like":
-        return <Heart className="w-6 h-6 text-pink-500" />;
-      case "friend":
-        return <UserPlus className="w-6 h-6 text-green-500" />;
-      case "friend_request":
-        return <UserPlus className="w-6 h-6 text-blue-500 animate-pulse" />;
-      case "comment":
+      // Get recent friend requests
+      const { data: friendRequestsData } = await supabase
+        .from('friends')
+        .select(`
+          id,
+          created_at,
+          user_id,
+          profiles!friends_user_id_fkey (
+            name,
+            avatar
+          )
+        `)
+        .eq('friend_id', currentUserId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      // Get recent messages
+      const { data: messagesData } = await supabase
+        .from('timeline_messages')
+        .select(`
+          id,
+          created_at,
+          sender_id,
+          content,
+          profiles!timeline_messages_sender_id_fkey (
+            name,
+            avatar
+          )
+        `)
+        .eq('receiver_id', currentUserId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      // Combine and format activities
+      const activities: Activity[] = [];
+
+      if (likesData) {
+        likesData.forEach(like => {
+          activities.push({
+            id: `like_${like.id}`,
+            type: 'like',
+            user_id: like.liker_id,
+            created_at: like.created_at,
+            user_name: like.profiles?.name || 'Unknown',
+            user_avatar: like.profiles?.avatar,
+          });
+        });
+      }
+
+      if (friendRequestsData) {
+        friendRequestsData.forEach(request => {
+          activities.push({
+            id: `friend_request_${request.id}`,
+            type: 'friend_request',
+            user_id: request.user_id,
+            created_at: request.created_at,
+            user_name: request.profiles?.name || 'Unknown',
+            user_avatar: request.profiles?.avatar,
+          });
+        });
+      }
+
+      if (messagesData) {
+        messagesData.forEach(message => {
+          activities.push({
+            id: `message_${message.id}`,
+            type: 'message',
+            user_id: message.sender_id,
+            created_at: message.created_at,
+            user_name: message.profiles?.name || 'Unknown',
+            user_avatar: message.profiles?.avatar,
+            content: message.content?.substring(0, 50) + (message.content && message.content.length > 50 ? '...' : ''),
+          });
+        });
+      }
+
+      // Sort by created_at desc
+      return activities.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    },
+    enabled: !!currentUserId,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  const getActivityIcon = (type: Activity['type']) => {
+    switch (type) {
+      case 'like':
+        return <Heart className="w-4 h-4 text-red-500" />;
+      case 'friend_request':
+        return <UserPlus className="w-4 h-4 text-blue-500" />;
+      case 'message':
+        return <MessageCircle className="w-4 h-4 text-green-500" />;
+      case 'profile_view':
+        return <Eye className="w-4 h-4 text-purple-500" />;
       default:
-        return <MessageCircle className="w-6 h-6 text-blue-500" />;
+        return <Clock className="w-4 h-4 text-gray-500" />;
     }
   };
 
-  const getActivityBorderColor = (activity: any) => {
+  const getActivityText = (activity: Activity) => {
     switch (activity.type) {
-      case "like":
-        return "border-pink-200";
-      case "friend":
-        return "border-green-200";
-      case "friend_request":
-        return "border-blue-200";
-      case "comment":
+      case 'like':
+        return 'đã thích bạn';
+      case 'friend_request':
+        return 'đã gửi lời mời kết bạn';
+      case 'message':
+        return `đã gửi tin nhắn: ${activity.content}`;
+      case 'profile_view':
+        return 'đã xem hồ sơ của bạn';
       default:
-        return "border-purple-200";
+        return 'có hoạt động mới';
     }
   };
+
+  const getActivityColor = (type: Activity['type']) => {
+    switch (type) {
+      case 'like':
+        return 'bg-red-50 border-red-200';
+      case 'friend_request':
+        return 'bg-blue-50 border-blue-200';
+      case 'message':
+        return 'bg-green-50 border-green-200';
+      case 'profile_view':
+        return 'bg-purple-50 border-purple-200';
+      default:
+        return 'bg-gray-50 border-gray-200';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Hoạt động gần đây
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-gray-500">Đang tải...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!activities || activities.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Hoạt động gần đây
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-gray-500">Chưa có hoạt động nào</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <>
-      <aside className="hidden lg:flex flex-col gap-4 w-[300px] max-w-xs min-w-[240px] pt-6 pl-4">
-        {/* Recent Activities */}
-        <div className="flex-1 flex flex-col gap-2">
-          <h3 className="font-bold text-gray-700 text-base pb-1">Hoạt động mới</h3>
-          <div className="flex flex-col gap-2">
-            {isLoading && Array.from({ length: 5 }).map((_, idx) => (
-              <Skeleton key={idx} className="h-14 w-full" />
-            ))}
-            {activities && activities.length === 0 && (
-              <p className="text-xs text-gray-400 py-4 text-center">Không có hoạt động mới.</p>
-            )}
-            {activities?.map(a => (
-              <Card
-                key={a.id}
-                className={`flex items-center gap-3 py-2 px-3 shadow-sm border-l-4 ${getActivityBorderColor(a)} relative cursor-pointer hover:bg-gray-50 transition-colors`}
-                onClick={() => handleActivityClick(a)}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="w-5 h-5" />
+          Hoạt động gần đây
+          <Badge variant="secondary">{activities.length}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <ScrollArea className="h-80">
+          <div className="space-y-2 p-4">
+            {activities.map((activity) => (
+              <div
+                key={activity.id}
+                className={`p-3 rounded-lg border transition-colors hover:shadow-sm ${getActivityColor(activity.type)}`}
               >
-                {getActivityIcon(a)}
-                <img
-                  src={a.user.avatar || "/placeholder.svg"}
-                  alt={a.user.name || "user"}
-                  className="w-7 h-7 rounded-full object-cover border border-purple-100 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={(e) => handleUserClick(e, a.user.id, a.user.name || "", a.user.avatar || "")}
-                />
-                <div className="flex-1">
-                  <span 
-                    className="text-sm text-gray-700 cursor-pointer hover:text-purple-600 transition-colors font-medium"
-                    onClick={(e) => handleUserClick(e, a.user.id, a.user.name || "", a.user.avatar || "")}
-                  >
-                    {a.user.name || "Ai đó"}
-                  </span>
-                  <span className="text-sm text-gray-700 ml-1">
-                    {a.message.replace(a.user.name || "Ai đó", "").trim()}
-                  </span>
-                  <div className="text-[11px] text-gray-400">{a.created_at && new Date(a.created_at).toLocaleString("vi-VN")}</div>
-                  {a.type === "friend_request" && (
-                    <div className="text-[10px] text-blue-600 font-semibold mt-1">● Lời mời mới</div>
-                  )}
+                <div className="flex items-start gap-3">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={activity.user_avatar} />
+                    <AvatarFallback>{activity.user_name?.[0]?.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      {getActivityIcon(activity.type)}
+                      <span className="font-medium text-sm truncate">
+                        {activity.user_name}
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 mb-1">
+                      {getActivityText(activity)}
+                    </p>
+                    
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <Calendar className="w-3 h-3" />
+                      {formatDistanceToNow(new Date(activity.created_at), {
+                        addSuffix: true,
+                        locale: vi,
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
-        </div>
-      </aside>
-
-      {/* Post Detail Modal - Truyền userId để có thể tương tác */}
-      <PostDetailModal
-        postId={selectedPostId}
-        isOpen={!!selectedPostId}
-        onClose={() => setSelectedPostId(null)}
-        userId={userId}
-      />
-
-      {/* Friend Request Detail Modal */}
-      <FriendRequestDetailModal
-        friendRequestId={selectedFriendRequestId}
-        isOpen={!!selectedFriendRequestId}
-        onClose={() => setSelectedFriendRequestId(null)}
-      />
-
-      {/* Chat Widget */}
-      {chatUser && userId && (
-        <ChatWidget
-          isOpen={isOpen}
-          onClose={closeChat}
-          userId={chatUser.id}
-          userName={chatUser.name}
-          userAvatar={chatUser.avatar}
-          myUserId={userId}
-        />
-      )}
-    </>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default RealTimeActivityPanel;

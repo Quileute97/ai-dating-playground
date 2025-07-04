@@ -17,20 +17,26 @@ export class PayOSClient {
   }
 
   async createPayment(paymentData: PaymentData) {
-    console.log('🚀 Calling PayOS API with data:', JSON.stringify(paymentData, null, 2));
+    console.log('🚀 Calling PayOS API with validated data:', JSON.stringify(paymentData, null, 2));
     
-    // Validate required fields before sending
-    if (!paymentData.orderCode || paymentData.orderCode <= 0) {
-      throw new Error('Invalid orderCode');
+    // Final validation before sending to PayOS
+    if (!paymentData.orderCode || paymentData.orderCode <= 0 || paymentData.orderCode > 999999999) {
+      throw new Error('Invalid orderCode: must be between 1 and 999999999');
     }
     if (!paymentData.amount || paymentData.amount <= 0) {
-      throw new Error('Invalid amount');
+      throw new Error('Invalid amount: must be positive number');
     }
     if (!paymentData.description || paymentData.description.trim().length === 0) {
-      throw new Error('Invalid description');
+      throw new Error('Invalid description: cannot be empty');
+    }
+    if (paymentData.description.length > 25) {
+      throw new Error('Invalid description: must be 25 characters or less');
     }
     if (!paymentData.buyerEmail || !paymentData.buyerEmail.includes('@')) {
-      throw new Error('Invalid buyer email');
+      throw new Error('Invalid buyer email format');
+    }
+    if (!paymentData.returnUrl || !paymentData.cancelUrl) {
+      throw new Error('Invalid return or cancel URL');
     }
     
     try {

@@ -2,15 +2,22 @@
 import { PaymentData, PackageDetails } from './types.ts';
 
 export const generateOrderCode = (): number => {
-  // Generate a simpler, more reliable order code
-  const timestamp = Math.floor(Date.now() / 1000);
-  const random = Math.floor(Math.random() * 999) + 1;
+  // Generate a unique order code that's always different
+  const now = Date.now();
+  const random = Math.floor(Math.random() * 1000);
   
-  // Create 8-digit order code: 5 digits from timestamp + 3 random digits
-  const orderCode = parseInt(`${timestamp.toString().slice(-5)}${random.toString().padStart(3, '0')}`);
+  // Create a unique order code using timestamp + random
+  let orderCode = parseInt(`${now}${random}`.slice(-9));
   
-  // Ensure it's within valid range (1-999999999)
-  return Math.max(1, Math.min(orderCode, 999999999));
+  // Ensure it's within PayOS valid range (1-999999999)
+  if (orderCode > 999999999) {
+    orderCode = orderCode % 999999999;
+  }
+  if (orderCode <= 0) {
+    orderCode = Math.floor(Math.random() * 999999999) + 1;
+  }
+  
+  return orderCode;
 };
 
 export const createPaymentData = (
@@ -20,77 +27,83 @@ export const createPaymentData = (
   returnUrl?: string,
   cancelUrl?: string
 ): PaymentData => {
+  // Validate and clean input data
+  const cleanOrderCode = Math.abs(Math.floor(orderCode));
+  const cleanAmount = Math.abs(Math.floor(selectedPackage.amount));
+  
+  // Validate order code
+  if (cleanOrderCode <= 0 || cleanOrderCode > 999999999) {
+    throw new Error('Invalid order code: must be between 1 and 999999999');
+  }
+  
+  // Validate amount
+  if (cleanAmount <= 0) {
+    throw new Error('Invalid amount: must be positive');
+  }
+  
   // Clean and validate email
-  const cleanEmail = userEmail?.trim();
-  const isValidEmail = cleanEmail && cleanEmail.includes('@') && cleanEmail.includes('.');
+  const cleanEmail = userEmail?.trim() || '';
+  const isValidEmail = cleanEmail && cleanEmail.includes('@') && cleanEmail.length > 5;
   const buyerEmail = isValidEmail ? cleanEmail : 'customer@example.com';
   
-  // Create simple buyer name (no special characters)
+  // Create buyer name from email (remove special chars)
   const buyerName = cleanEmail 
-    ? cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 10) || 'Customer'
+    ? cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) || 'Customer'
     : 'Customer';
   
-  // Create simple description (max 25 chars, no special characters)
+  // Clean description (remove special chars, max 25 chars)
   let description = selectedPackage.description
-    .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special chars
+    .replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g, 'a')
+    .replace(/[èéẹẻẽêềếệểễ]/g, 'e')
+    .replace(/[ìíịỉĩ]/g, 'i')
+    .replace(/[òóọỏõôồốộổỗơờứụửữ]/g, 'o')
+    .replace(/[ùúụủũưừứựửữ]/g, 'u')
+    .replace(/[ỳýỵỷỹ]/g, 'y')
+    .replace(/[đ]/g, 'd')
+    .replace(/[ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴ]/g, 'A')
+    .replace(/[ÈÉẸẺẼÊỀẾỆỂỄ]/g, 'E')
+    .replace(/[ÌÍỊỈĨ]/g, 'I')
+    .replace(/[ÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠ]/g, 'O')
+    .replace(/[ÙÚỤỦŨƯỪỨỰỬỮ]/g, 'U')
+    .replace(/[ỲÝỴỶỸ]/g, 'Y')
+    .replace(/[Đ]/g, 'D')
+    .replace(/[^a-zA-Z0-9\s]/g, '') // Remove remaining special chars
     .replace(/\s+/g, ' ') // Normalize spaces
     .trim();
   
-  // Ensure description is not empty and within limits
   if (!description || description.length === 0) {
-    description = 'Premium Package';
+    description = 'Dating Package Payment';
   }
   if (description.length > 25) {
     description = description.substring(0, 25).trim();
   }
   
-  // Validate amount
-  const amount = Math.floor(Math.abs(selectedPackage.amount));
-  if (amount <= 0) {
-    throw new Error('Invalid amount: must be positive');
-  }
+  // Validate URLs
+  const validReturnUrl = returnUrl?.trim() || 'https://preview--ai-dating-playground.lovable.app/payment-success';
+  const validCancelUrl = cancelUrl?.trim() || 'https://preview--ai-dating-playground.lovable.app/payment-cancel';
   
   // Create expiration time (2 hours from now)
   const expiredAt = Math.floor(Date.now() / 1000) + (2 * 60 * 60);
   
-  // Ensure URLs are valid
-  const validReturnUrl = returnUrl || 'https://preview--ai-dating-playground.lovable.app/payment-success';
-  const validCancelUrl = cancelUrl || 'https://preview--ai-dating-playground.lovable.app/payment-cancel';
-  
   const paymentData: PaymentData = {
-    orderCode: Math.abs(orderCode),
-    amount: amount,
+    orderCode: cleanOrderCode,
+    amount: cleanAmount,
     description: description,
     buyerName: buyerName,
     buyerEmail: buyerEmail,
     buyerPhone: '',
     buyerAddress: '',
     items: [{
-      name: description.substring(0, 12), // Keep item name shorter
+      name: description.substring(0, 12),
       quantity: 1,
-      price: amount
+      price: cleanAmount
     }],
     returnUrl: validReturnUrl,
     cancelUrl: validCancelUrl,
     expiredAt: expiredAt
   };
   
-  // Final validation
-  if (!paymentData.orderCode || paymentData.orderCode <= 0) {
-    throw new Error('Invalid order code');
-  }
-  
-  if (!paymentData.amount || paymentData.amount <= 0) {
-    throw new Error('Invalid amount');
-  }
-  
-  if (!paymentData.description || paymentData.description.trim().length === 0) {
-    throw new Error('Invalid description');
-  }
-  
-  if (paymentData.description.length > 25) {
-    throw new Error('Description too long');
-  }
+  console.log('✅ Final PayOS payment data:', JSON.stringify(paymentData, null, 2));
   
   return paymentData;
 };
@@ -144,7 +157,6 @@ export const createErrorResponse = (error: Error) => {
     stack: error.stack,
     name: error.name
   });
-  console.log('=== PayOS Payment Request Failed ===');
   
   let userFriendlyMessage = 'Có lỗi xảy ra khi tạo thanh toán';
   
@@ -156,16 +168,10 @@ export const createErrorResponse = (error: Error) => {
     userFriendlyMessage = 'Thiếu thông tin bắt buộc';
   } else if (error.message?.includes('PayOS credentials')) {
     userFriendlyMessage = 'Cấu hình PayOS chưa đúng';
-  } else if (error.message?.includes('Lỗi kết nối PayOS')) {
-    userFriendlyMessage = error.message;
-  } else if (error.message?.includes('PayOS không trả về URL')) {
-    userFriendlyMessage = error.message;
   } else if (error.message?.includes('Invalid order code')) {
     userFriendlyMessage = 'Mã đơn hàng không hợp lệ';
   } else if (error.message?.includes('Invalid amount')) {
     userFriendlyMessage = 'Số tiền thanh toán không hợp lệ';
-  } else if (error.message?.includes('Invalid description')) {
-    userFriendlyMessage = 'Mô tả thanh toán không hợp lệ';
   }
   
   return {

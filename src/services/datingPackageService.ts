@@ -12,7 +12,7 @@ export const DATING_PACKAGES: DatingPackage[] = [
   {
     id: 'dating_week',
     name: 'Premium 1 Tuần',
-    description: 'Trải nghiệm premium trong 7 ngày',
+    description: 'Premium 1 Tuan',
     price: 49000,
     duration: 7,
     features: [
@@ -26,7 +26,7 @@ export const DATING_PACKAGES: DatingPackage[] = [
   {
     id: 'dating_month',
     name: 'Premium 1 Tháng',
-    description: 'Gói phổ biến nhất cho trải nghiệm tối ưu',
+    description: 'Premium 1 Thang',
     price: 149000,
     duration: 30,
     features: [
@@ -41,7 +41,7 @@ export const DATING_PACKAGES: DatingPackage[] = [
   {
     id: 'dating_unlimited',
     name: 'Premium Vĩnh Viễn',
-    description: 'Sở hữu tất cả tính năng premium mãi mãi',
+    description: 'Premium Vinh Vien',
     price: 399000,
     duration: -1,
     features: [
@@ -79,13 +79,17 @@ export const createDatingPackagePayment = async (
     
     console.log('✅ Package validated:', selectedPackage);
     
+    // Generate unique order code
+    const orderCode = Date.now() + Math.floor(Math.random() * 1000);
+    console.log('📝 Generated order code:', orderCode);
+    
     // Prepare clean request data
     const requestData = {
       userId: userId.trim(),
-      userEmail: userEmail?.trim() || '',
+      userEmail: userEmail?.trim() || 'customer@example.com',
       packageType: packageId.trim(),
-      returnUrl: `${window.location.origin}/payment-success`,
-      cancelUrl: `${window.location.origin}/payment-cancel`,
+      returnUrl: `${window.location.origin}/payment-success?orderCode=${orderCode}`,
+      cancelUrl: `${window.location.origin}/payment-cancel?orderCode=${orderCode}`,
     };
     
     console.log('📤 Sending payment request:', requestData);

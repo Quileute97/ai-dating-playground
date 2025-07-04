@@ -1,4 +1,3 @@
-
 import { PaymentData, PackageDetails } from './types.ts';
 
 export const generateOrderCode = (): number => {
@@ -27,18 +26,18 @@ export const createPaymentData = (
   returnUrl?: string,
   cancelUrl?: string
 ): PaymentData => {
-  // Clean and validate buyer name
+  // Clean and validate buyer name - PayOS requires specific format
   const buyerName = userEmail 
-    ? userEmail.split('@')[0].substring(0, 20) // Limit length
+    ? userEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 15) // Remove special chars
     : 'Customer';
   
   // Clean and validate buyer email
-  const buyerEmail = userEmail || 'noreply@example.com';
+  const buyerEmail = userEmail || 'customer@example.com';
   
-  // Ensure description is within PayOS limits
-  let description = selectedPackage.description;
+  // Ensure description is within PayOS limits (max 25 chars, no special chars)
+  let description = selectedPackage.description.replace(/[^a-zA-Z0-9\s]/g, '');
   if (description.length > 25) {
-    description = description.substring(0, 25);
+    description = description.substring(0, 25).trim();
   }
   
   // Calculate expiration time (15 minutes from now)
@@ -53,7 +52,7 @@ export const createPaymentData = (
     buyerPhone: '',
     buyerAddress: '',
     items: [{
-      name: description,
+      name: description.substring(0, 20), // Ensure item name is also limited
       quantity: 1,
       price: selectedPackage.amount
     }],

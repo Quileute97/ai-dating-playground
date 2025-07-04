@@ -69,18 +69,23 @@ serve(async (req) => {
       cancelUrl
     );
 
-    // Additional validation for PayOS requirements
+    // Additional PayOS format validation
     if (!paymentData.buyerName || paymentData.buyerName.trim().length === 0) {
       paymentData.buyerName = 'Customer';
     }
     
-    if (!paymentData.buyerEmail || paymentData.buyerEmail.trim().length === 0) {
-      paymentData.buyerEmail = 'noreply@example.com';
+    if (!paymentData.buyerEmail || !paymentData.buyerEmail.includes('@')) {
+      paymentData.buyerEmail = 'customer@example.com';
     }
 
-    // Ensure description is within PayOS limits (max 25 characters)
-    if (paymentData.description.length > 25) {
-      paymentData.description = paymentData.description.substring(0, 25);
+    // Ensure description contains only allowed characters
+    paymentData.description = paymentData.description
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .trim()
+      .substring(0, 25);
+
+    if (!paymentData.description) {
+      paymentData.description = 'Premium Package';
     }
 
     // Validate amount is positive integer
@@ -88,19 +93,26 @@ serve(async (req) => {
       throw new Error(`Invalid amount: ${paymentData.amount}. Must be positive integer`);
     }
 
-    // Ensure items array is properly formatted
-    if (!paymentData.items || !Array.isArray(paymentData.items) || paymentData.items.length === 0) {
-      paymentData.items = [{
-        name: selectedPackage.description.substring(0, 20), // Limit item name length
-        quantity: 1,
-        price: selectedPackage.amount
-      }];
+    // Ensure items array is properly formatted with clean data
+    paymentData.items = [{
+      name: paymentData.description.substring(0, 20).trim() || 'Premium',
+      quantity: 1,
+      price: paymentData.amount
+    }];
+
+    // Validate expiredAt is in future and reasonable
+    const now = Math.floor(Date.now() / 1000);
+    if (paymentData.expiredAt <= now || paymentData.expiredAt > now + (24 * 60 * 60)) {
+      paymentData.expiredAt = now + (15 * 60); // 15 minutes from now
     }
 
-    // Validate expiredAt is in future
-    const now = Math.floor(Date.now() / 1000);
-    if (paymentData.expiredAt <= now) {
-      paymentData.expiredAt = now + (15 * 60); // 15 minutes from now
+    // Clean URLs to ensure they're valid
+    if (!paymentData.returnUrl || !paymentData.returnUrl.startsWith('http')) {
+      paymentData.returnUrl = 'https://preview--ai-dating-playground.lovable.app/payment-success';
+    }
+    
+    if (!paymentData.cancelUrl || !paymentData.cancelUrl.startsWith('http')) {
+      paymentData.cancelUrl = 'https://preview--ai-dating-playground.lovable.app/payment-cancel';
     }
 
     console.log('✅ Payment data prepared and validated:', JSON.stringify(paymentData, null, 2));

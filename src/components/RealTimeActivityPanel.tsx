@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,93 +31,119 @@ const RealTimeActivityPanel: React.FC<RealTimeActivityPanelProps> = ({ currentUs
       if (!currentUserId) return [];
 
       // Get recent likes on user's profile
-      const { data: likesData } = await supabase
+      const { data: likesData, error: likesError } = await supabase
         .from('user_likes')
-        .select(`
-          id,
-          created_at,
-          liker_id,
-          profiles!user_likes_liker_id_fkey (
-            name,
-            avatar
-          )
-        `)
+        .select('id, created_at, liker_id')
         .eq('liked_id', currentUserId)
         .order('created_at', { ascending: false })
         .limit(10);
 
+      if (likesError) {
+        console.error('Error fetching likes:', likesError);
+      }
+
       // Get recent friend requests
-      const { data: friendRequestsData } = await supabase
+      const { data: friendRequestsData, error: friendError } = await supabase
         .from('friends')
-        .select(`
-          id,
-          created_at,
-          user_id,
-          profiles!friends_user_id_fkey (
-            name,
-            avatar
-          )
-        `)
+        .select('id, created_at, user_id')
         .eq('friend_id', currentUserId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(10);
 
+      if (friendError) {
+        console.error('Error fetching friend requests:', friendError);
+      }
+
       // Get recent messages
-      const { data: messagesData } = await supabase
+      const { data: messagesData, error: messagesError } = await supabase
         .from('timeline_messages')
-        .select(`
-          id,
-          created_at,
-          sender_id,
-          content,
-          profiles!timeline_messages_sender_id_fkey (
-            name,
-            avatar
-          )
-        `)
+        .select('id, created_at, sender_id, content')
         .eq('receiver_id', currentUserId)
         .order('created_at', { ascending: false })
         .limit(10);
+
+      if (messagesError) {
+        console.error('Error fetching messages:', messagesError);
+      }
+
+      // Collect all user IDs that we need profile data for
+      const userIds = new Set<string>();
+      
+      if (likesData) {
+        likesData.forEach(like => userIds.add(like.liker_id));
+      }
+      
+      if (friendRequestsData) {
+        friendRequestsData.forEach(request => userIds.add(request.user_id));
+      }
+      
+      if (messagesData) {
+        messagesData.forEach(message => userIds.add(message.sender_id));
+      }
+
+      // Fetch all profile data in one query
+      let profilesData: any[] = [];
+      if (userIds.size > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, name, avatar')
+          .in('id', Array.from(userIds));
+        
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+        } else {
+          profilesData = profiles || [];
+        }
+      }
+
+      // Create a map for quick profile lookup
+      const profileMap = new Map();
+      profilesData.forEach(profile => {
+        profileMap.set(profile.id, profile);
+      });
 
       // Combine and format activities
       const activities: Activity[] = [];
 
       if (likesData) {
         likesData.forEach(like => {
+          const profile = profileMap.get(like.liker_id);
           activities.push({
             id: `like_${like.id}`,
             type: 'like',
             user_id: like.liker_id,
             created_at: like.created_at,
-            user_name: like.profiles?.name || 'Unknown',
-            user_avatar: like.profiles?.avatar,
+            user_name: profile?.name || 'Unknown',
+            user_avatar: profile?.avatar,
           });
         });
       }
 
       if (friendRequestsData) {
         friendRequestsData.forEach(request => {
+          const profile = profileMap.get(request.user_id);
           activities.push({
             id: `friend_request_${request.id}`,
             type: 'friend_request',
             user_id: request.user_id,
             created_at: request.created_at,
-            user_name: request.profiles?.name || 'Unknown',
-            user_avatar: request.profiles?.avatar,
+            user_name: profile?.name || 'Unknown',
+            user_avatar: profile?.avatar,
           });
         });
       }
 
       if (messagesData) {
         messagesData.forEach(message => {
+          const profile = profileMap.get(message.sender_id);
           activities.push({
             id: `message_${message.id}`,
             type: 'message',
             user_id: message.sender_id,
             created_at: message.created_at,
-            user_name: message.profiles?.name || 'Unknown',
-            user_avatar: message.profiles?.avatar,
+            user_name: profile?.name || 'Unknown',
+            user_avatar: profile?.avatar,
             content: message.content?.substring(0, 50) + (message.content && message.content.length > 50 ? '...' : ''),
           });
         });

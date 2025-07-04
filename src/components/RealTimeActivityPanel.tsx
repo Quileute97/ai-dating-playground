@@ -50,10 +50,10 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
       setSelectedFriendRequestId(activity.friend_request_id);
     } else if (activity.type === "friend") {
       // For friend activities, navigate to user profile
-      navigate(`/profile/${activity.user_id}`);
+      navigate(`/profile/${activity.user.id}`);
     } else {
       // Default: navigate to user profile
-      navigate(`/profile/${activity.user_id}`);
+      navigate(`/profile/${activity.user.id}`);
     }
   };
 
@@ -106,20 +106,20 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
               >
                 {getActivityIcon(a)}
                 <img
-                  src={a.user_avatar || "/placeholder.svg"}
-                  alt={a.user_name || "user"}
+                  src={a.user.avatar || "/placeholder.svg"}
+                  alt={a.user.name || "user"}
                   className="w-7 h-7 rounded-full object-cover border border-purple-100 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={(e) => handleUserClick(e, a.user_id, a.user_name || "", a.user_avatar || "")}
+                  onClick={(e) => handleUserClick(e, a.user.id, a.user.name || "", a.user.avatar || "")}
                 />
                 <div className="flex-1">
                   <span 
                     className="text-sm text-gray-700 cursor-pointer hover:text-purple-600 transition-colors font-medium"
-                    onClick={(e) => handleUserClick(e, a.user_id, a.user_name || "", a.user_avatar || "")}
+                    onClick={(e) => handleUserClick(e, a.user.id, a.user.name || "", a.user.avatar || "")}
                   >
-                    {a.user_name || "Ai đó"}
+                    {a.user.name || "Ai đó"}
                   </span>
                   <span className="text-sm text-gray-700 ml-1">
-                    {a.text.replace(a.user_name || "Ai đó", "").trim()}
+                    {a.message.replace(a.user.name || "Ai đó", "").trim()}
                   </span>
                   <div className="text-[11px] text-gray-400">{a.created_at && new Date(a.created_at).toLocaleString("vi-VN")}</div>
                   {a.type === "friend_request" && (

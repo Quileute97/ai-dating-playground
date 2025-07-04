@@ -63,40 +63,27 @@ export const createDatingPackagePayment = async (
   try {
     console.log('🚀 Creating dating package payment:', { packageId, userId, userEmail });
     
-    // Strict validation
-    if (!packageId || typeof packageId !== 'string' || packageId.trim() === '') {
+    // Validate inputs
+    if (!packageId?.trim()) {
       throw new Error('Package ID không hợp lệ');
     }
     
-    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+    if (!userId?.trim()) {
       throw new Error('User ID không hợp lệ');
     }
     
-    const selectedPackage = DATING_PACKAGES.find(pkg => pkg.id === packageId);
+    const selectedPackage = DATING_PACKAGES.find(pkg => pkg.id === packageId.trim());
     if (!selectedPackage) {
       throw new Error(`Gói ${packageId} không tồn tại`);
     }
     
     console.log('✅ Package validated:', selectedPackage);
     
-    // Generate a simpler orderCode to avoid PayOS validation issues
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 999) + 1;
-    // Create a shorter orderCode (max 9 digits to be safe)
-    let orderCode = parseInt(`${timestamp.toString().slice(-5)}${random.toString().padStart(3, '0')}`);
-    
-    // Ensure orderCode is within safe limits (1-999999999)
-    if (orderCode > 999999999 || orderCode <= 0) {
-      orderCode = Math.floor(Math.random() * 99999999) + 10000000;
-    }
-    
-    console.log('📝 Generated order code:', orderCode);
-    
     // Prepare clean request data
     const requestData = {
       userId: userId.trim(),
       userEmail: userEmail?.trim() || '',
-      packageType: packageId,
+      packageType: packageId.trim(),
       returnUrl: `${window.location.origin}/payment-success`,
       cancelUrl: `${window.location.origin}/payment-cancel`,
     };
@@ -153,8 +140,6 @@ export const createDatingPackagePayment = async (
       userMessage = 'Thông tin người dùng không hợp lệ';
     } else if (error.message?.includes('không tồn tại')) {
       userMessage = 'Gói thanh toán không tồn tại';
-    } else if (error.message?.includes('Dữ liệu thanh toán không hợp lệ')) {
-      userMessage = error.message;
     } else if (error.message?.includes('Phản hồi từ server')) {
       userMessage = 'Lỗi kết nối với server. Vui lòng thử lại.';
     } else if (error.message) {

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -203,86 +204,84 @@ const RealTimeActivityPanel: React.FC<RealTimeActivityPanelProps> = ({ currentUs
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
+      <div className="w-72 bg-white border-r border-gray-200 flex flex-col">
+        <div className="p-4">
+          <h2 className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+            <Clock className="w-4 h-4" />
             Hoạt động gần đây
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm text-gray-500">Đang tải...</div>
-        </CardContent>
-      </Card>
+          </h2>
+        </div>
+        <div className="flex-1 p-4">
+          <div className="text-center text-gray-500 text-sm">Đang tải...</div>
+        </div>
+      </div>
     );
   }
 
   if (!activities || activities.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
+      <div className="w-72 bg-white border-r border-gray-200 flex flex-col">
+        <div className="p-4">
+          <h2 className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+            <Clock className="w-4 h-4" />
             Hoạt động gần đây
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm text-gray-500">Chưa có hoạt động nào</div>
-        </CardContent>
-      </Card>
+          </h2>
+        </div>
+        <div className="flex-1 p-4">
+          <div className="text-center text-gray-500 text-sm">Chưa có hoạt động nào</div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="w-5 h-5" />
+    <div className="w-72 bg-white border-r border-gray-200 flex flex-col">
+      <div className="p-4">
+        <h2 className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+          <Clock className="w-4 h-4" />
           Hoạt động gần đây
-          <Badge variant="secondary">{activities.length}</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-80">
-          <div className="space-y-2 p-4">
-            {activities.map((activity) => (
-              <div
-                key={activity.id}
-                className={`p-3 rounded-lg border transition-colors hover:shadow-sm ${getActivityColor(activity.type)}`}
-              >
-                <div className="flex items-start gap-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={activity.user_avatar} />
-                    <AvatarFallback>{activity.user_name?.[0]?.toUpperCase()}</AvatarFallback>
-                  </Avatar>
+          <Badge variant="secondary" className="ml-auto">{activities.length}</Badge>
+        </h2>
+      </div>
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-2">
+          {activities.map((activity) => (
+            <div
+              key={activity.id}
+              className={`p-3 rounded-lg border transition-colors hover:shadow-sm ${getActivityColor(activity.type)}`}
+            >
+              <div className="flex items-start gap-3">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={activity.user_avatar} />
+                  <AvatarFallback>{activity.user_name?.[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    {getActivityIcon(activity.type)}
+                    <span className="font-medium text-sm truncate">
+                      {activity.user_name}
+                    </span>
+                  </div>
                   
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {getActivityIcon(activity.type)}
-                      <span className="font-medium text-sm truncate">
-                        {activity.user_name}
-                      </span>
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 mb-1">
-                      {getActivityText(activity)}
-                    </p>
-                    
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <Calendar className="w-3 h-3" />
-                      {formatDistanceToNow(new Date(activity.created_at), {
-                        addSuffix: true,
-                        locale: vi,
-                      })}
-                    </div>
+                  <p className="text-sm text-gray-600 mb-1">
+                    {getActivityText(activity)}
+                  </p>
+                  
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <Calendar className="w-3 h-3" />
+                    {formatDistanceToNow(new Date(activity.created_at), {
+                      addSuffix: true,
+                      locale: vi,
+                    })}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
   );
 };
 

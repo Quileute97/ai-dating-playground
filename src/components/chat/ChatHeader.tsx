@@ -47,6 +47,7 @@ export default function ChatHeader({ user, onClose, onToggleFullScreen }: ChatHe
           size="sm"
           onClick={onClose}
           className="text-gray-500 hover:bg-gray-100 p-1 h-auto rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
+          title="Đóng chat"
         >
           <X className="w-4 h-4" />
         </Button>

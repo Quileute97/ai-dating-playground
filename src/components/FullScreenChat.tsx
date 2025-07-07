@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Video, Settings } from 'lucide-react';
+import { Send, ArrowLeft, Video, Settings, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -48,6 +48,13 @@ export default function FullScreenChat({
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -63,12 +70,12 @@ export default function FullScreenChat({
             onClick={onClose}
             className="rounded-full p-2 hover:bg-purple-50 transition-colors duration-200 border-purple-200"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <Minimize2 className="w-4 h-4" />
           </Button>
           
           <div className="relative">
             <img 
-              src={targetUserAvatar} 
+              src={targetUserAvatar || '/placeholder.svg'} 
               alt={targetUserName}
               className="w-10 h-10 rounded-full object-cover border-2 border-purple-200 shadow-sm"
             />
@@ -156,7 +163,8 @@ export default function FullScreenChat({
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Nhập tin nhắn..."
               className="flex-1 border-purple-200 focus:border-purple-400 transition-all duration-200 rounded-2xl py-3 px-4 bg-white/80 backdrop-blur-sm"
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              onKeyPress={handleKeyPress}
+              disabled={sending}
             />
           </div>
           <Button

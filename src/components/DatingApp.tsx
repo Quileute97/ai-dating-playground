@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +7,7 @@ import DatingAppModals from './DatingAppModals';
 import UnifiedChatWidget from './UnifiedChatWidget';
 import { ChatProvider } from '@/hooks/useChatContext';
 import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { MessageCircle, Heart, MapPin, Star } from 'lucide-react';
 
 const DatingApp = () => {
   const [user, setUser] = useState(null);
@@ -143,10 +143,10 @@ const DatingApp = () => {
   };
 
   const customTabs = [
-    { id: 'chat', label: 'Chat với người lạ', icon: 'MessageCircle', color: 'from-purple-500 to-pink-500', locked: false },
-    { id: 'dating', label: 'Hẹn hò', icon: 'Heart', color: 'from-pink-500 to-red-500', locked: !user },
-    { id: 'nearby', label: 'Quanh đây', icon: 'MapPin', color: 'from-blue-500 to-purple-500', locked: !user },
-    { id: 'timeline', label: 'Timeline', icon: 'Star', color: 'from-yellow-400 to-pink-500', locked: false }
+    { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500', locked: false },
+    { id: 'dating', label: 'Hẹn hò', icon: Heart, color: 'from-pink-500 to-red-500', locked: !user },
+    { id: 'nearby', label: 'Quanh đây', icon: MapPin, color: 'from-blue-500 to-purple-500', locked: !user },
+    { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500', locked: false }
   ];
 
   return (

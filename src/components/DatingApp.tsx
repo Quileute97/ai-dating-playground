@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +14,7 @@ const DatingApp = () => {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState('chat');
   
   // Modal states
   const [showFilters, setShowFilters] = useState(false);
@@ -140,6 +142,13 @@ const DatingApp = () => {
     }
   };
 
+  const customTabs = [
+    { id: 'chat', label: 'Chat với người lạ', icon: 'MessageCircle', color: 'from-purple-500 to-pink-500', locked: false },
+    { id: 'dating', label: 'Hẹn hò', icon: 'Heart', color: 'from-pink-500 to-red-500', locked: !user },
+    { id: 'nearby', label: 'Quanh đây', icon: 'MapPin', color: 'from-blue-500 to-purple-500', locked: !user },
+    { id: 'timeline', label: 'Timeline', icon: 'Star', color: 'from-yellow-400 to-pink-500', locked: false }
+  ];
+
   return (
     <ChatProvider>
       <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -152,16 +161,12 @@ const DatingApp = () => {
           setIsRightPanelOpen={setIsRightPanelOpen}
         >
           <MainTabs
-            user={user}
-            onShowFilters={() => setShowFilters(true)}
-            onShowProfile={() => setShowProfile(true)}
-            onShowDatingProfile={() => setShowDatingProfile(true)}
-            onShowAIConfig={() => setShowAIConfig(true)}
-            onShowAdminLogin={() => setShowAdminLogin(true)}
-            onShowAuth={() => setShowAuth(true)}
-            onAdminLogin={handleAdminLogin}
-            onLogout={handleLogout}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
             isAdminMode={isAdminMode}
+            tabs={customTabs}
+            showLoginButton={!user}
+            onLoginClick={() => setShowAuth(true)}
           />
         </DatingAppLayout>
 

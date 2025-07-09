@@ -1,68 +1,73 @@
 
-import React from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { XCircle, Home, RefreshCw } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { XCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 
-const PaymentCancel = () => {
+export default function PaymentCancel() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [countdown, setCountdown] = useState(10);
+  
   const orderCode = searchParams.get('orderCode');
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          navigate('/');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-            <XCircle className="w-8 h-8 text-red-600" />
-          </div>
-          <CardTitle className="text-2xl text-red-600">
-            Thanh toán đã bị hủy
-          </CardTitle>
-        </CardHeader>
+      <Card className="max-w-md w-full p-8 text-center">
+        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <XCircle className="w-12 h-12 text-red-600" />
+        </div>
         
-        <CardContent className="text-center space-y-6">
-          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
-            <p className="text-sm">
-              Giao dịch của bạn đã bị hủy. Không có khoản tiền nào bị trừ từ tài khoản của bạn.
-            </p>
-          </div>
-
+        <h1 className="text-2xl font-bold text-red-800 mb-4">
+          Thanh toán bị hủy
+        </h1>
+        
+        <div className="space-y-3 text-gray-600 mb-6">
+          <p>Giao dịch thanh toán đã bị hủy.</p>
           {orderCode && (
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-sm text-gray-600">Mã đơn hàng:</p>
-              <p className="font-mono font-semibold">{orderCode}</p>
-            </div>
+            <p className="text-sm">
+              Mã đơn hàng: <span className="font-mono font-semibold">{orderCode}</span>
+            </p>
           )}
+          <p className="text-sm">
+            Bạn có thể thử lại thanh toán bất cứ lúc nào.
+          </p>
+        </div>
 
-          <div className="space-y-3">
-            <h4 className="font-semibold">Bạn có thể:</h4>
-            <ul className="text-left text-sm space-y-1">
-              <li>• Thử lại thanh toán với phương thức khác</li>
-              <li>• Kiểm tra thông tin thẻ/tài khoản</li>
-              <li>• Liên hệ hỗ trợ nếu cần giúp đỡ</li>
-            </ul>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Button asChild className="w-full">
-              <Link to="/" className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4" />
-                Thử lại thanh toán
-              </Link>
-            </Button>
-            
-            <Button variant="outline" asChild>
-              <Link to="/" className="flex items-center gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Quay về trang chủ
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
+        <div className="space-y-3">
+          <Button 
+            onClick={() => navigate('/')}
+            variant="outline"
+            className="w-full"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Thử lại thanh toán
+          </Button>
+          
+          <Button 
+            onClick={() => navigate('/')}
+            className="w-full"
+          >
+            <Home className="w-4 h-4 mr-2" />
+            Về trang chủ ({countdown}s)
+          </Button>
+        </div>
       </Card>
     </div>
   );
-};
-
-export default PaymentCancel;
+}

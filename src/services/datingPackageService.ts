@@ -12,7 +12,7 @@ export const DATING_PACKAGES: DatingPackage[] = [
   {
     id: 'dating_week',
     name: 'Premium 1 Tuần',
-    description: 'Premium 1 Tuan',
+    description: 'Trải nghiệm premium trong 7 ngày',
     price: 49000,
     duration: 7,
     features: [
@@ -26,7 +26,7 @@ export const DATING_PACKAGES: DatingPackage[] = [
   {
     id: 'dating_month',
     name: 'Premium 1 Tháng',
-    description: 'Premium 1 Thang',
+    description: 'Gói phổ biến nhất cho trải nghiệm tối ưu',
     price: 149000,
     duration: 30,
     features: [
@@ -41,7 +41,7 @@ export const DATING_PACKAGES: DatingPackage[] = [
   {
     id: 'dating_unlimited',
     name: 'Premium Vĩnh Viễn',
-    description: 'Premium Vinh Vien',
+    description: 'Sở hữu tất cả tính năng premium mãi mãi',
     price: 399000,
     duration: -1,
     features: [
@@ -63,33 +63,42 @@ export const createDatingPackagePayment = async (
   try {
     console.log('🚀 Creating dating package payment:', { packageId, userId, userEmail });
     
-    // Validate inputs
-    if (!packageId?.trim()) {
+    // Strict validation
+    if (!packageId || typeof packageId !== 'string' || packageId.trim() === '') {
       throw new Error('Package ID không hợp lệ');
     }
     
-    if (!userId?.trim()) {
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
       throw new Error('User ID không hợp lệ');
     }
     
-    const selectedPackage = DATING_PACKAGES.find(pkg => pkg.id === packageId.trim());
+    const selectedPackage = DATING_PACKAGES.find(pkg => pkg.id === packageId);
     if (!selectedPackage) {
       throw new Error(`Gói ${packageId} không tồn tại`);
     }
     
     console.log('✅ Package validated:', selectedPackage);
     
-    // Generate unique order code
-    const orderCode = Date.now() + Math.floor(Math.random() * 1000);
+    // Generate unique orderCode following PayOS requirements (max 9999999999)
+    const timestamp = Math.floor(Date.now() / 1000);
+    const random = Math.floor(Math.random() * 999) + 1;
+    let orderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`);
+    
+    // Ensure orderCode is within PayOS limits
+    if (orderCode > 9999999999 || orderCode <= 0) {
+      orderCode = Math.floor(Math.random() * 999999999) + 100000000;
+    }
+    
     console.log('📝 Generated order code:', orderCode);
     
-    // Prepare clean request data
+    // Prepare request data with clean URLs
     const requestData = {
+      orderCode: orderCode,
       userId: userId.trim(),
-      userEmail: userEmail?.trim() || 'customer@example.com',
-      packageType: packageId.trim(),
-      returnUrl: `${window.location.origin}/payment-success?orderCode=${orderCode}`,
-      cancelUrl: `${window.location.origin}/payment-cancel?orderCode=${orderCode}`,
+      userEmail: userEmail?.trim() || '',
+      packageType: packageId,
+      returnUrl: `${window.location.origin}/payment-success`,
+      cancelUrl: `${window.location.origin}/payment-cancel`,
     };
     
     console.log('📤 Sending payment request:', requestData);
@@ -144,6 +153,8 @@ export const createDatingPackagePayment = async (
       userMessage = 'Thông tin người dùng không hợp lệ';
     } else if (error.message?.includes('không tồn tại')) {
       userMessage = 'Gói thanh toán không tồn tại';
+    } else if (error.message?.includes('Dữ liệu thanh toán không hợp lệ')) {
+      userMessage = error.message;
     } else if (error.message?.includes('Phản hồi từ server')) {
       userMessage = 'Lỗi kết nối với server. Vui lòng thử lại.';
     } else if (error.message) {

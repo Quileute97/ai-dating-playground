@@ -1,82 +1,64 @@
 
-import React, { useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { CheckCircle, Home } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Crown, ArrowLeft } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
-const PaymentSuccess = () => {
+export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [countdown, setCountdown] = useState(5);
+  
   const orderCode = searchParams.get('orderCode');
-  const { toast } = useToast();
 
   useEffect(() => {
-    if (orderCode) {
-      toast({
-        title: "Thanh toán thành công!",
-        description: "Tài khoản Premium của bạn đã được kích hoạt.",
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          navigate('/');
+          return 0;
+        }
+        return prev -  1;
       });
-    }
-  }, [orderCode, toast]);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-8 h-8 text-green-600" />
-          </div>
-          <CardTitle className="text-2xl text-green-600">
-            Thanh toán thành công!
-          </CardTitle>
-        </CardHeader>
+      <Card className="max-w-md w-full p-8 text-center">
+        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <CheckCircle className="w-12 h-12 text-green-600" />
+        </div>
         
-        <CardContent className="text-center space-y-6">
-          <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white p-4 rounded-lg">
-            <Crown className="w-8 h-8 mx-auto mb-2" />
-            <h3 className="font-bold text-lg">Chúc mừng!</h3>
-            <p className="text-sm opacity-90">
-              Tài khoản Premium của bạn đã được kích hoạt
-            </p>
-          </div>
-
+        <h1 className="text-2xl font-bold text-green-800 mb-4">
+          Thanh toán thành công!
+        </h1>
+        
+        <div className="space-y-3 text-gray-600 mb-6">
+          <p>Cảm ơn bạn đã nâng cấp tài khoản!</p>
           {orderCode && (
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-sm text-gray-600">Mã đơn hàng:</p>
-              <p className="font-mono font-semibold">{orderCode}</p>
-            </div>
+            <p className="text-sm">
+              Mã đơn hàng: <span className="font-mono font-semibold">{orderCode}</span>
+            </p>
           )}
+          <p className="text-sm">
+            Tính năng premium đã được kích hoạt cho tài khoản của bạn.
+          </p>
+        </div>
 
-          <div className="space-y-3">
-            <h4 className="font-semibold">Tính năng Premium đã kích hoạt:</h4>
-            <ul className="text-left text-sm space-y-1">
-              <li>✅ Không giới hạn lượt like</li>
-              <li>✅ Xem ai đã thích bạn</li>
-              <li>✅ Super Like không giới hạn</li>
-              <li>✅ Boost hồ sơ</li>
-              <li>✅ Ẩn quảng cáo</li>
-            </ul>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Button asChild className="w-full">
-              <Link to="/">
-                Khám phá ngay
-              </Link>
-            </Button>
-            
-            <Button variant="outline" asChild>
-              <Link to="/" className="flex items-center gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Quay về trang chủ
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
+        <div className="space-y-3">
+          <Button 
+            onClick={() => navigate('/')}
+            className="w-full bg-green-600 hover:bg-green-700"
+          >
+            <Home className="w-4 h-4 mr-2" />
+            Về trang chủ ({countdown}s)
+          </Button>
+        </div>
       </Card>
     </div>
   );
-};
-
-export default PaymentSuccess;
+}

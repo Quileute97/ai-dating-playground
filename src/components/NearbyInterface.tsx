@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { MapPin, Heart, MessageCircle, Star, Crown, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,6 @@ import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { useChatIntegration } from "@/hooks/useChatIntegration";
 import NearbyFeatureBanner from "./NearbyFeatureBanner";
 import NearbyPackageModal from "./NearbyPackageModal";
 import { createNearbyPackagePayment } from "@/services/payosService";
@@ -37,7 +37,6 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const [likedUsers, setLikedUsers] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { startChatWith } = useChatIntegration();
   
   // Get user location
   const { position: userLocation } = useGeolocation();
@@ -87,13 +86,10 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     if (e) e.stopPropagation();
     
     const targetUser = users.find(u => u.id === userId);
-    if (targetUser) {
-      startChatWith({
-        id: targetUser.id,
-        name: targetUser.name,
-        avatar: targetUser.avatar
-      });
-    }
+    toast({
+      title: "💬 Chat",
+      description: `Bắt đầu chat với ${targetUser?.name}!`,
+    });
   };
 
   const handleExpandRange = () => {

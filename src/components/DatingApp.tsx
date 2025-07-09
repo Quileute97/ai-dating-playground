@@ -1,157 +1,234 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import MainTabs from './MainTabs';
-import DatingAppLayout from './DatingAppLayout';
-import DatingAppModals from './DatingAppModals';
-import UnifiedChatWidget from './UnifiedChatWidget';
-import { ChatProvider } from '@/hooks/useChatContext';
-import { useChatIntegration } from '@/hooks/useChatIntegration';
-import { MessageCircle, Heart, MapPin, Star } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import ChatInterface from "./ChatInterface";
+import SwipeInterface from "./SwipeInterface";
+import NearbyInterface from "./NearbyInterface";
+import AdminDashboard from "./AdminDashboard";
+import Timeline from "./Timeline";
+import MainTabs from "./MainTabs";
+import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
+import DatingAppModals from "./DatingAppModals";
+import UnifiedProfileButton from "./UnifiedProfileButton";
+import RequireLogin from "./RequireLogin";
+import DatingAppLayout from "./DatingAppLayout";
+import { useDatingAppUser } from "./hooks/useDatingAppUser";
+import { useUnifiedProfile } from "@/hooks/useUnifiedProfile";
+import { useGlobalSync } from "@/hooks/useGlobalSync";
+import { ChatProvider } from "@/hooks/useChatContext";
+import UnifiedChatWidget from "./UnifiedChatWidget";
 
 const DatingApp = () => {
-  const [user, setUser] = useState(null);
-  const [isAdminMode, setIsAdminMode] = useState(false);
-  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState('chat');
+  // User/session quản lý bằng custom hook
+  const { user, setUser, session, setSession, anonId } = useDatingAppUser();
   
-  // Modal states
+  // Unified profile hook - thay thế useDatingProfile
+  const { profile: unifiedProfile, updateProfile: updateUnifiedProfile } = useUnifiedProfile(user?.id);
+
+  // Global sync hook để đồng bộ giữa các tab
+  const { syncAll } = useGlobalSync(user?.id);
+
+  const [activeTab, setActiveTab] = useState("chat");
   const [showFilters, setShowFilters] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showDatingProfile, setShowDatingProfile] = useState(false);
   const [showAIConfig, setShowAIConfig] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
+  const [isFirstTime, setIsFirstTime] = useState(true);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
-  const { toast } = useToast();
+  // State quản lý thu gọn/hiện 2 panel
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+
+  // Kết nối matchmaking - không truyền tham số
+  const matchmaking = useStrangerMatchmaking();
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-          toast({
-            title: "Error fetching profile",
-            description: "Failed to retrieve user profile data.",
-            variant: "destructive",
+    if (user) {
+      import("@/integrations/supabase/client").then(({ supabase }) => {
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "admin")
+          .then(({ data }) => {
+            setIsAdminAuthenticated(data && data.length > 0);
           });
-        } else {
-          setUser(profileData);
-        }
-      }
-    };
-
-    fetchUser();
-
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        fetchUser();
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setIsAdminMode(false);
-      }
-    });
-  }, [toast]);
-
-  const handleUpdateProfile = async (updatedUser: any) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update(updatedUser)
-      .eq('id', user.id);
-
-    if (error) {
-      console.error('Error updating profile:', error);
-      toast({
-        title: "Error updating profile",
-        description: "Failed to update user profile data.",
-        variant: "destructive",
       });
     } else {
-      setUser(updatedUser);
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
-      });
-      setShowProfile(false);
-      setShowDatingProfile(false);
+      setIsAdminAuthenticated(false);
     }
+  }, [user]);
+
+  // Sync tất cả dữ liệu khi chuyển tab để đảm bảo consistency
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    // Trigger sync khi chuyển tab để đảm bảo dữ liệu được cập nhật
+    setTimeout(() => {
+      syncAll();
+    }, 100);
+  };
+
+  const tabs = [
+    { id: "chat", label: "Chat với người lạ", icon: MessageCircle, color: "from-purple-500 to-pink-500" },
+    { id: "dating", label: "Hẹn hò", icon: Heart, color: "from-pink-500 to-red-500" },
+    { id: "nearby", label: "Quanh đây", icon: MapPin, color: "from-blue-500 to-purple-500" },
+    { id: "timeline", label: "Timeline", icon: Star, color: "from-yellow-400 to-pink-500" },
+  ];
+
+  const handleLogin = (userData: any) => {
+    setUser(userData);
+    setShowAuth(false);
+    if (isFirstTime) {
+      setTimeout(() => setShowAIConfig(true), 500);
+    }
+    // Sync sau khi login
+    setTimeout(() => {
+      syncAll();
+    }, 1000);
+  };
+
+  const handleLogout = async () => {
+    setUser(null);
+    setIsAdminMode(false);
+    setIsAdminAuthenticated(false);
+    setActiveTab("chat");
+    matchmaking.reset();
+    const { supabase } = await import("@/integrations/supabase/client");
+    await supabase.auth.signOut();
+  };
+
+  const handleUpdateProfile = (updatedUser: any) => {
+    setUser(updatedUser);
+    // Sync sau khi update profile
+    setTimeout(() => {
+      syncAll();
+    }, 500);
   };
 
   const handleApplyFilters = (filters: any) => {
-    console.log('Applying filters:', filters);
-    toast({
-      title: "Filters applied",
-      description: "Your filters have been successfully applied.",
-    });
+    console.log("Applied filters:", filters);
+    // TODO: Apply filters logic
+  };
+
+  const handleAdminToggle = () => {
+    if (!isAdminMode) {
+      // Chỉ cho mở admin dashboard khi có quyền admin
+      if (!isAdminAuthenticated) {
+        setShowAdminLogin(true);
+      } else {
+        setIsAdminMode(true);
+      }
+    } else {
+      setIsAdminMode(false);
+    }
   };
 
   const handleAdminLogin = (loggedInUser: any) => {
     setUser(loggedInUser);
     setIsAdminMode(true);
-    setShowAdminLogin(false);
-    toast({
-      title: "Admin mode activated",
-      description: "You are now in admin mode.",
-    });
+    setIsAdminAuthenticated(true);
   };
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Error logging out:', error);
-      toast({
-        title: "Error logging out",
-        description: "Failed to log out.",
-        variant: "destructive",
-      });
-    } else {
-      setUser(null);
-      setIsAdminMode(false);
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
+  const renderTabContent = () => {
+    if (isAdminMode) {
+      return <AdminDashboard />;
+    }
+    switch (activeTab) {
+      case "chat":
+        return (
+          <ChatInterface
+            user={user}
+            isAdminMode={isAdminAuthenticated}
+            anonId={anonId}
+          />
+        );
+      case "dating":
+        return user ? <SwipeInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
+      case "nearby":
+        return user ? <NearbyInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
+      case "timeline":
+        return <Timeline user={{ ...user, ...unifiedProfile }} />;
+      default:
+        return null;
     }
   };
-
-  const handleAuthLogin = async (userData: any) => {
-    const { data: { user: authUser }, error } = await supabase.auth.signInWithOtp({ email: userData.email });
-  
-    if (error) {
-      console.error('Error during authentication:', error);
-      toast({
-        title: "Authentication Error",
-        description: "Failed to authenticate. Please check your credentials.",
-        variant: "destructive",
-      });
-    } else {
-      setUser(userData);
-      setShowAuth(false);
-      toast({
-        title: "Logged in",
-        description: "You have been successfully logged in.",
-      });
-    }
-  };
-
-  const customTabs = [
-    { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500', locked: false },
-    { id: 'dating', label: 'Hẹn hò', icon: Heart, color: 'from-pink-500 to-red-500', locked: !user },
-    { id: 'nearby', label: 'Quanh đây', icon: MapPin, color: 'from-blue-500 to-purple-500', locked: !user },
-    { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500', locked: false }
-  ];
 
   return (
     <ChatProvider>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+        {/* Tab Navigation */}
+        <MainTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          isAdminMode={isAdminMode}
+          tabs={tabs}
+          showLoginButton={!user}
+          onLoginClick={() => setShowAuth(true)}
+        />
+
+        {/* Top Action Bar */}
+        <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
+          {/* User Info */}
+          <div className="flex items-center gap-2">
+            {user ? (
+              <UnifiedProfileButton
+                user={{ ...user, ...unifiedProfile }}
+                onUpdateProfile={handleUpdateProfile}
+              />
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAuth(true)}
+                className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
+              >
+                Đăng nhập
+              </Button>
+            )}
+          </div>
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            {/* Admin Mode Toggle */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAdminToggle}
+              className={`backdrop-blur-sm border-purple-200 shadow-sm transition-all duration-200 ${
+                isAdminMode
+                  ? "bg-purple-500 text-white hover:bg-purple-600 shadow-lg"
+                  : "bg-white/90 hover:bg-purple-50"
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+            </Button>
+            {!isAdminMode && activeTab === "chat" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(true)}
+                className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+            )}
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 shadow-sm"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Main Layout (side panels + content) */}
         <DatingAppLayout
           user={user}
           isAdminMode={isAdminMode}
@@ -160,16 +237,10 @@ const DatingApp = () => {
           isRightPanelOpen={isRightPanelOpen}
           setIsRightPanelOpen={setIsRightPanelOpen}
         >
-          <MainTabs
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            isAdminMode={isAdminMode}
-            tabs={customTabs}
-            showLoginButton={!user}
-            onLoginClick={() => setShowAuth(true)}
-          />
+          {renderTabContent()}
         </DatingAppLayout>
 
+        {/* Modals */}
         <DatingAppModals
           showFilters={showFilters}
           setShowFilters={setShowFilters}
@@ -183,13 +254,15 @@ const DatingApp = () => {
           setShowAdminLogin={setShowAdminLogin}
           showAuth={showAuth}
           setShowAuth={setShowAuth}
-          user={user}
+          user={{ ...user, ...unifiedProfile }}
           onUpdateProfile={handleUpdateProfile}
           handleApplyFilters={handleApplyFilters}
-          onAuthLogin={handleAuthLogin}
+          onAIConfigClose={() => setShowAIConfig(false)}
+          onAdminLogin={handleAdminLogin}
+          onAuthLogin={handleLogin}
         />
 
-        {/* Unified Chat Widget */}
+        {/* Unified Chat Widget - only show when user is logged in */}
         {user && <UnifiedChatWidget myUserId={user.id} />}
       </div>
     </ChatProvider>

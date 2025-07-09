@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import BankInfoManager from "./BankInfoManager";
@@ -25,14 +24,6 @@ export default function AdminSettingsTab() {
   // Header ad code state
   const [headerAdCode, setHeaderAdCode] = useState(
     localStorage.getItem('headerAdCode') || ''
-  );
-
-  // Premium feature toggles
-  const [premiumDatingEnabled, setPremiumDatingEnabled] = useState(
-    localStorage.getItem('premiumDatingEnabled') === 'true'
-  );
-  const [premiumNearbyEnabled, setPremiumNearbyEnabled] = useState(
-    localStorage.getItem('premiumNearbyEnabled') === 'true'
   );
 
   // Settings state
@@ -116,24 +107,6 @@ export default function AdminSettingsTab() {
     });
   };
 
-  const handleTogglePremiumDating = (enabled: boolean) => {
-    setPremiumDatingEnabled(enabled);
-    localStorage.setItem('premiumDatingEnabled', enabled.toString());
-    toast({
-      title: enabled ? "Đã bật Premium Hẹn Hò" : "Đã tắt Premium Hẹn Hò",
-      description: enabled ? "Người dùng có thể mua gói Premium Hẹn Hò" : "Tính năng Premium Hẹn Hò đã bị vô hiệu hóa"
-    });
-  };
-
-  const handleTogglePremiumNearby = (enabled: boolean) => {
-    setPremiumNearbyEnabled(enabled);
-    localStorage.setItem('premiumNearbyEnabled', enabled.toString());
-    toast({
-      title: enabled ? "Đã bật Premium Quanh Đây" : "Đã tắt Premium Quanh Đây",
-      description: enabled ? "Người dùng có thể mua gói Premium Quanh Đây" : "Tính năng Premium Quanh Đây đã bị vô hiệu hóa"
-    });
-  };
-
   const handleSaveSettings = () => {
     localStorage.setItem('datingAppSettings', JSON.stringify(settings));
     toast({
@@ -144,48 +117,6 @@ export default function AdminSettingsTab() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Quản lý tính năng Premium</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <h3 className="font-semibold text-gray-800">Premium Hẹn Hò</h3>
-              <p className="text-sm text-gray-600">
-                Cho phép người dùng mua gói Premium để có không giới hạn lượt match và các tính năng đặc biệt
-              </p>
-            </div>
-            <Switch
-              checked={premiumDatingEnabled}
-              onCheckedChange={handleTogglePremiumDating}
-            />
-          </div>
-
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <h3 className="font-semibold text-gray-800">Premium Quanh Đây</h3>
-              <p className="text-sm text-gray-600">
-                Cho phép người dùng mua gói Premium để xem người dùng quanh đây và chat không giới hạn
-              </p>
-            </div>
-            <Switch
-              checked={premiumNearbyEnabled}
-              onCheckedChange={handleTogglePremiumNearby}
-            />
-          </div>
-
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-blue-800 mb-2">Lưu ý</h4>
-            <ul className="text-sm text-blue-600 space-y-1">
-              <li>• Khi tắt tính năng Premium, người dùng sẽ không thể mua gói mới</li>
-              <li>• Các gói Premium đã mua vẫn hoạt động bình thường cho đến khi hết hạn</li>
-              <li>• Cài đặt này áp dụng cho toàn bộ hệ thống</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle>Cài đặt hệ thống</CardTitle>

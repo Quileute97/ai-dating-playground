@@ -1,4 +1,3 @@
-
 import React, { useState, ChangeEvent } from "react";
 import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -9,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 import { VN_PROVINCES } from "@/utils/vnProvinces";
 import HashtagPostsModal from "./HashtagPostsModal";
-import PostDetailModal from "./PostDetailModal";
 import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -125,7 +123,6 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
   const { posts, isLoading, createPost, creating, refetch, deletePost, deleting } = useTimelinePosts(userId);
   const { profile } = useDatingProfile(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
-  const [selectedPostId, setSelectedPostId] = React.useState<string | null>(null);
   const { toast } = useToast();
 
   const handlePostSubmit = async (
@@ -188,7 +185,6 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
             onHashtagClick={setHashtag}
             onDeletePost={handleDeletePost}
             isDeleting={deleting}
-            onPostClick={setSelectedPostId}
           />
         ))}
         {posts?.length === 0 && !isLoading && (
@@ -202,15 +198,6 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
           open={!!hashtag}
           user={user}
           onClose={() => setHashtag(null)}
-        />
-      )}
-      
-      {selectedPostId && (
-        <PostDetailModal
-          postId={selectedPostId}
-          isOpen={!!selectedPostId}
-          onClose={() => setSelectedPostId(null)}
-          userId={userId}
         />
       )}
     </div>
@@ -347,8 +334,7 @@ const PostItem: React.FC<{
   onHashtagClick: (tag: string) => void;
   onDeletePost: (postId: string) => void;
   isDeleting: boolean;
-  onPostClick: (postId: string) => void;
-}> = ({ post, user, onHashtagClick, onDeletePost, isDeleting, onPostClick }) => {
+}> = ({ post, user, onHashtagClick, onDeletePost, isDeleting }) => {
   const [commentInput, setCommentInput] = React.useState("");
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
@@ -378,10 +364,6 @@ const PostItem: React.FC<{
   };
 
   const isPostOwner = user?.id === post.user_id;
-
-  const handlePostContentClick = () => {
-    onPostClick(post.id);
-  };
 
   return (
     <Card className="rounded-xl shadow-sm border border-gray-200 mb-3 p-4 bg-white transition hover:shadow-md">
@@ -424,18 +406,14 @@ const PostItem: React.FC<{
         )}
       </div>
 
-      {/* Content - Clickable */}
+      {/* Content */}
       {post.content && (
-        <div 
-          className="text-base text-gray-900 mb-3 whitespace-pre-line leading-relaxed cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors" 
-          style={{ wordBreak: 'break-word' }}
-          onClick={handlePostContentClick}
-        >
+        <div className="text-base text-gray-900 mb-3 whitespace-pre-line leading-relaxed" style={{ wordBreak: 'break-word' }}>
           {renderContent(post.content, onHashtagClick)}
         </div>
       )}
       
-      {/* Media - Clickable instead of opening in new tab */}
+      {/* Media - Optimized for better viewing */}
       {post.media_url && post.media_type === "image" && (
         <div className="relative mb-3 -mx-1">
           <img
@@ -443,7 +421,7 @@ const PostItem: React.FC<{
             alt="media"
             className="w-full rounded-lg object-cover cursor-pointer hover:opacity-95 transition-opacity"
             style={{ maxHeight: '500px' }}
-            onClick={handlePostContentClick}
+            onClick={() => window.open(post.media_url, '_blank')}
           />
         </div>
       )}
@@ -452,9 +430,8 @@ const PostItem: React.FC<{
           <video
             src={post.media_url}
             controls
-            className="w-full rounded-lg cursor-pointer"
+            className="w-full rounded-lg"
             style={{ maxHeight: '500px' }}
-            onClick={handlePostContentClick}
           />
         </div>
       )}
@@ -475,7 +452,8 @@ const PostItem: React.FC<{
           size="sm"
           variant="outline"
           className="rounded-full px-3 py-1.5 h-8 text-blue-500 border-gray-200"
-          onClick={handlePostContentClick}
+          tabIndex={-1}
+          disabled
         >
           <MessageCircle size={16} />
           <span className="ml-1 text-sm">{comments?.length ?? 0}</span>

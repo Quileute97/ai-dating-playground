@@ -84,7 +84,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [info, setInfo] = useState('');
+  const [info, setInfo] = useState(''); // Thông báo thành công/xác nhận
   const [showForgot, setShowForgot] = useState(false);
 
   // Utility: Cleanup all Supabase Auth keys in localStorage and sessionStorage
@@ -186,8 +186,6 @@ const AuthModal = ({ isOpen, onClose, onLogin }: AuthModalProps) => {
           last_active: new Date().toISOString(),
           created_at: new Date().toISOString(),
           tai_khoan_hoat_dong: true,
-          is_premium: false,
-          premium_expires: null,
           dating_preferences: {
             age_range: { min: 18, max: 35 },
             distance: 50,

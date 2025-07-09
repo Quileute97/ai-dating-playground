@@ -1,14 +1,15 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, Edit, Save, X, Plus, Loader2, ImagePlus } from 'lucide-react';
+import { Camera, Edit, Save, X, Loader2, ImagePlus } from 'lucide-react';
 import { uploadAvatar } from '@/utils/uploadAvatar';
 import { uploadAlbumImage } from '@/utils/uploadAlbumImage';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -20,25 +21,80 @@ interface UserProfileProps {
 const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
-    name: user?.name || '',
-    age: user?.age || '',
-    bio: user?.bio || 'Chào mọi người! Tôi đang tìm kiếm những kết nối thú vị.',
-    avatar: user?.avatar || '',
-    album: user?.album || [],
+    name: '',
+    age: '',
+    bio: 'Chào mọi người! Tôi đang tìm kiếm những kết nối thú vị.',
+    avatar: '',
+    album: [],
   });
   const [isUploading, setIsUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const albumInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSave = () => {
-    const updatedUser = {
-      ...user,
-      ...profileData,
-      album: profileData.album,
-      avatar: profileData.avatar,
-    };
-    onUpdateProfile(updatedUser);
-    setIsEditing(false);
+  // Update profileData when user prop changes - use real data
+  useEffect(() => {
+    if (user) {
+      console.log('🔄 Updating UserProfile with real user data:', user);
+      setProfileData({
+        name: user.name || '',
+        age: user.age || '',
+        bio: user.bio || 'Chào mọi người! Tôi đang tìm kiếm những kết nối thú vị.',
+        avatar: user.avatar || '',
+        album: user.album || [],
+      });
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!user?.id) {
+      toast.error('Không thể cập nhật: Thiếu thông tin người dùng');
+      return;
+    }
+
+    try {
+      console.log('🔄 Saving user profile with data:', profileData);
+      
+      // Only update fields that have actually changed
+      const updatedFields: any = {};
+      
+      if (profileData.name !== user?.name) updatedFields.name = profileData.name;
+      if (profileData.age !== user?.age) updatedFields.age = profileData.age;
+      if (profileData.bio !== user?.bio) updatedFields.bio = profileData.bio;
+      if (profileData.avatar !== user?.avatar) updatedFields.avatar = profileData.avatar;
+      if (JSON.stringify(profileData.album) !== JSON.stringify(user?.album)) {
+        updatedFields.album = profileData.album;
+      }
+
+      // If there are changes, update the database
+      if (Object.keys(updatedFields).length > 0) {
+        updatedFields.last_active = new Date().toISOString();
+        
+        const { error } = await supabase
+          .from('profiles')
+          .update(updatedFields)
+          .eq('id', user.id);
+
+        if (error) {
+          console.error('❌ Error updating user profile:', error);
+          throw error;
+        }
+
+        console.log('✅ User profile updated successfully:', updatedFields);
+      }
+
+      // Merge with existing user data, preserving unchanged fields
+      const updatedUser = {
+        ...user,
+        ...profileData
+      };
+
+      onUpdateProfile(updatedUser);
+      setIsEditing(false);
+      toast.success('Cập nhật hồ sơ thành công!');
+    } catch (error: any) {
+      console.error('❌ Error updating user profile:', error);
+      toast.error('Có lỗi khi cập nhật hồ sơ: ' + error.message);
+    }
   };
 
   const handleCameraClick = () => {
@@ -52,32 +108,73 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    console.log('🔄 Starting avatar upload for UserProfile:', file.name);
     setIsUploading(true);
+    
     try {
       const url = await uploadAvatar(file);
+      console.log('✅ Avatar uploaded successfully:', url);
       setProfileData({ ...profileData, avatar: url });
+      toast.success('Tải ảnh đại diện thành công!');
     } catch (err: any) {
-      alert(err.message || "Đã có lỗi xảy ra khi upload ảnh đại diện!");
+      console.error('❌ Avatar upload error:', err);
+      toast.error(err.message || "Đã có lỗi xảy ra khi upload ảnh đại diện!");
+    } finally {
+      setIsUploading(false);
     }
-    setIsUploading(false);
   };
 
   const handleAlbumFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !files.length) return;
+    
+    console.log('🔄 Starting album upload for UserProfile, files count:', files.length);
     setIsUploading(true);
     const uploadedUrls: string[] = [];
+    
     try {
       for (const file of Array.from(files)) {
+        console.log('🔄 Uploading album image:', file.name, 'Size:', file.size, 'Type:', file.type);
+        
+        // Kiểm tra file type
+        if (!file.type.startsWith('image/')) {
+          console.error('❌ Invalid file type:', file.type);
+          toast.error(`File ${file.name} không phải là ảnh hợp lệ!`);
+          continue;
+        }
+        
+        // Kiểm tra file size (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          console.error('❌ File too large:', file.size);
+          toast.error(`File ${file.name} quá lớn! Vui lòng chọn file nhỏ hơn 10MB.`);
+          continue;
+        }
+        
         const url = await uploadAlbumImage(file);
+        console.log('✅ Album image uploaded successfully:', url);
         uploadedUrls.push(url);
       }
-      setProfileData({ ...profileData, album: [...profileData.album, ...uploadedUrls] });
+      
+      if (uploadedUrls.length > 0) {
+        const newAlbum = [...(profileData.album || []), ...uploadedUrls];
+        setProfileData({ ...profileData, album: newAlbum });
+        toast.success(`Tải thành công ${uploadedUrls.length} ảnh vào album!`);
+      }
     } catch (err: any) {
-      alert(err.message || "Đã có lỗi xảy ra khi upload ảnh vào album!");
+      console.error('❌ Album upload error:', err);
+      toast.error(err.message || "Đã có lỗi xảy ra khi upload ảnh!");
+    } finally {
+      setIsUploading(false);
+      if (albumInputRef.current) {
+        albumInputRef.current.value = "";
+      }
     }
-    setIsUploading(false);
-    if (albumInputRef.current) albumInputRef.current.value = ""; // reset input
+  };
+
+  const removeAlbumImage = (index: number) => {
+    const newAlbum = profileData.album.filter((_: any, idx: number) => idx !== index);
+    setProfileData({ ...profileData, album: newAlbum });
   };
 
   return (
@@ -148,7 +245,7 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
                       onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                     />
                   ) : (
-                    <p className="font-medium">{user?.name}</p>
+                    <p className="font-medium">{profileData.name}</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -161,7 +258,7 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
                       onChange={(e) => setProfileData({ ...profileData, age: e.target.value })}
                     />
                   ) : (
-                    <p className="font-medium">{user?.age}</p>
+                    <p className="font-medium">{profileData.age}</p>
                   )}
                 </div>
               </div>
@@ -200,6 +297,7 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
                     size="sm"
                     type="button"
                     className="bg-purple-500 hover:bg-purple-600"
+                    disabled={isUploading}
                   >
                     <ImagePlus className="w-4 h-4 mr-1" />
                     Thêm ảnh vào album
@@ -211,6 +309,7 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
                     className="hidden"
                     multiple
                     onChange={handleAlbumFileChange}
+                    disabled={isUploading}
                   />
                   {isUploading && <Loader2 className="ml-2 w-5 h-5 text-purple-500 animate-spin" />}
                 </div>
@@ -218,12 +317,24 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
               {profileData.album && profileData.album.length > 0 ? (
                 <div className="grid grid-cols-3 gap-2">
                   {profileData.album.map((img: string, idx: number) => (
-                    <img
-                      key={idx}
-                      src={img}
-                      alt={`Ảnh ${idx + 1}`}
-                      className="rounded-lg object-cover w-full h-24 border"
-                    />
+                    <div key={idx} className="relative group">
+                      <img
+                        src={img}
+                        alt={`Ảnh ${idx + 1}`}
+                        className="rounded-lg object-cover w-full h-24 border"
+                      />
+                      {isEditing && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeAlbumImage(idx)}
+                          type="button"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -250,4 +361,3 @@ const UserProfile = ({ isOpen, onClose, user, onUpdateProfile }: UserProfileProp
 };
 
 export default UserProfile;
-

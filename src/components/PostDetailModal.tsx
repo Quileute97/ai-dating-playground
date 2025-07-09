@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, MessageCircle, User, Calendar, SendHorizonal } from "lucide-react";
+import { Heart, MessageCircle, User, Calendar, SendHorizonal, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePostLikes } from "@/hooks/usePostLikes";
@@ -25,50 +25,89 @@ interface LocationData {
 export default function PostDetailModal({ postId, isOpen, onClose, userId }: PostDetailModalProps) {
   const [commentInput, setCommentInput] = useState("");
   
-  const { data: post, isLoading } = useQuery({
+  const { data: post, isLoading, error } = useQuery({
     queryKey: ["post-detail", postId],
     enabled: !!postId && isOpen,
     queryFn: async () => {
       if (!postId) return null;
       
-      // Fetch post with profile data
-      const { data: postData, error: postError } = await supabase
-        .from("posts")
-        .select(`
-          *,
-          profiles: user_id (id, name, avatar)
-        `)
-        .eq("id", postId)
-        .single();
-        
-      if (postError) throw postError;
-      return postData;
+      try {
+        // Fetch post with profile data
+        const { data: postData, error: postError } = await supabase
+          .from("posts")
+          .select(`
+            *,
+            profiles: user_id (id, name, avatar)
+          `)
+          .eq("id", postId)
+          .single();
+          
+        if (postError) {
+          console.error("Error fetching post:", postError);
+          throw postError;
+        }
+        return postData;
+      } catch (err) {
+        console.error("Query error:", err);
+        throw err;
+      }
     }
   });
 
-  // Sử dụng hooks để xử lý likes và comments
+  // Use hooks to handle likes and comments
   const { likeCount, liked, like, unlike, isToggling } = usePostLikes(postId || undefined, userId);
   const { comments, createComment, creating } = useTimelineComments(postId || undefined);
 
   const handleLike = async () => {
     if (!userId) return;
-    if (liked) await unlike();
-    else await like();
+    try {
+      if (liked) await unlike();
+      else await like();
+    } catch (err) {
+      console.error("Error toggling like:", err);
+    }
   };
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentInput.trim() || !userId || !postId) return;
     
-    await createComment({
-      post_id: postId,
-      user_id: userId,
-      content: commentInput,
-    });
-    setCommentInput("");
+    try {
+      await createComment({
+        post_id: postId,
+        user_id: userId,
+        content: commentInput,
+      });
+      setCommentInput("");
+    } catch (err) {
+      console.error("Error creating comment:", err);
+    }
   };
 
+  // Don't render if not open
   if (!isOpen) return null;
+
+  // Show error state
+  if (error) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-5 h-5" />
+              Lỗi tải bài viết
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4 text-center">
+            <p className="text-gray-600 mb-4">Không thể tải bài viết. Vui lòng thử lại.</p>
+            <Button onClick={onClose} variant="outline">
+              Đóng
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const locationData = post?.location as LocationData | null;
 
@@ -81,6 +120,13 @@ export default function PostDetailModal({ postId, isOpen, onClose, userId }: Pos
         
         {isLoading ? (
           <div className="space-y-4 p-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-32 w-full" />
@@ -93,6 +139,9 @@ export default function PostDetailModal({ postId, isOpen, onClose, userId }: Pos
                 src={post.profiles?.avatar || "/placeholder.svg"}
                 alt={post.profiles?.name || "User"}
                 className="w-10 h-10 rounded-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder.svg";
+                }}
               />
               <div className="flex-1">
                 <div className="font-medium">{post.profiles?.name || "Người dùng"}</div>
@@ -104,7 +153,9 @@ export default function PostDetailModal({ postId, isOpen, onClose, userId }: Pos
             </div>
 
             {/* Content */}
-            <div className="text-gray-800">{post.content}</div>
+            {post.content && (
+              <div className="text-gray-800 whitespace-pre-line">{post.content}</div>
+            )}
 
             {/* Media */}
             {post.media_url && (
@@ -114,12 +165,18 @@ export default function PostDetailModal({ postId, isOpen, onClose, userId }: Pos
                     src={post.media_url}
                     alt="Post media"
                     className="w-full max-h-96 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 ) : post.media_type === "video" ? (
                   <video
                     src={post.media_url}
                     controls
                     className="w-full max-h-96"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 ) : null}
               </div>
@@ -132,7 +189,7 @@ export default function PostDetailModal({ postId, isOpen, onClose, userId }: Pos
               </div>
             )}
 
-            {/* Actions - Chỉ hiển thị khi có userId */}
+            {/* Actions - Only show when there's userId */}
             {userId && (
               <div className="flex items-center gap-4 pt-2 border-t">
                 <Button
@@ -162,7 +219,10 @@ export default function PostDetailModal({ postId, isOpen, onClose, userId }: Pos
                     <img 
                       src={cmt.profiles?.avatar || "/placeholder.svg"} 
                       alt={cmt.profiles?.name || "User"} 
-                      className="w-6 h-6 rounded-full object-cover border flex-shrink-0" 
+                      className="w-6 h-6 rounded-full object-cover border flex-shrink-0"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg";
+                      }}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 leading-none mb-1">
@@ -176,7 +236,7 @@ export default function PostDetailModal({ postId, isOpen, onClose, userId }: Pos
               </div>
             )}
 
-            {/* Comment Input - Chỉ hiển thị khi có userId */}
+            {/* Comment Input - Only show when there's userId */}
             {userId && (
               <form className="flex items-center gap-2 mt-2" onSubmit={handleCommentSubmit}>
                 <Input
@@ -198,7 +258,7 @@ export default function PostDetailModal({ postId, isOpen, onClose, userId }: Pos
               </form>
             )}
 
-            {/* Message khi chưa đăng nhập */}
+            {/* Message when not logged in */}
             {!userId && (
               <div className="text-center text-gray-500 py-4 border-t">
                 Vui lòng đăng nhập để tương tác với bài viết

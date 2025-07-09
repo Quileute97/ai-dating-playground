@@ -1,150 +1,191 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
 
-export interface Friend {
-  id: string;
-  user_id: string;
-  friend_id: string;
-  status: string;
-  created_at: string;
-  accepted_at: string | null;
-}
-
-// Lấy danh sách tất cả bạn bè (status = accepted)
-export function useFriendList(myId: string | undefined) {
-  const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: ["friends", myId],
-    enabled: !!myId,
-    queryFn: async () => {
-      if (!myId) return [];
-      const { data, error } = await supabase
-        .from("friends")
-        .select("*")
-        .or(`user_id.eq.${myId},friend_id.eq.${myId}`)
-        .eq("status", "accepted");
-      if (error) throw error;
-      return data as Friend[];
-    }
-  });
-
-  // Realtime subscription cho friends
-  useEffect(() => {
-    if (!myId) return;
-
-    const channel = supabase
-      .channel('friends-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'friends'
-      }, (payload) => {
-        console.log('👥 Friends realtime update:', payload);
-        queryClient.invalidateQueries({ queryKey: ["friends"] });
-        queryClient.invalidateQueries({ queryKey: ["sent-friend-requests"] });
-        queryClient.invalidateQueries({ queryKey: ["received-friend-requests"] });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [myId, queryClient]);
-
-  return query;
-}
-
-// Danh sách lời mời gửi đi ("pending" và mình là user_id)
-export function useSentFriendRequests(myId: string | undefined) {
+export function useFriends(userId: string | null | undefined, status: 'accepted' | 'pending' = 'accepted', limit: number = 5) {
   return useQuery({
-    queryKey: ["sent-friend-requests", myId],
-    enabled: !!myId,
+    queryKey: ["friends", userId, status, limit],
     queryFn: async () => {
-      if (!myId) return [];
+      if (!userId) return [];
+      
+      // Fixed: Remove the foreign key relationship that was causing 400 error
       const { data, error } = await supabase
         .from("friends")
-        .select("*")
-        .eq("user_id", myId)
-        .eq("status", "pending");
-      if (error) throw error;
-      return data as Friend[];
-    }
+        .select(`
+          id,
+          user_id,
+          friend_id,
+          created_at,
+          status
+        `)
+        .eq("status", status)
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      
+      if (error) {
+        console.error('Friends query error:', error);
+        return [];
+      }
+      
+      // Get profile information separately to avoid foreign key issues
+      if (data && data.length > 0) {
+        const friendIds = data.map(friend => 
+          friend.user_id === userId ? friend.friend_id : friend.user_id
+        );
+        
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, name, avatar")
+          .in("id", friendIds);
+        
+        // Combine the data
+        return data.map(friend => {
+          const friendId = friend.user_id === userId ? friend.friend_id : friend.user_id;
+          const profile = profiles?.find(p => p.id === friendId);
+          return {
+            ...friend,
+            profile: profile || { name: 'Unknown', avatar: null }
+          };
+        });
+      }
+      
+      return data || [];
+    },
+    staleTime: 30 * 1000,
+    enabled: !!userId
   });
 }
 
-// Danh sách lời mời nhận được ("pending" và mình là friend_id)
-export function useReceivedFriendRequests(myId: string | undefined) {
+export function useActiveFriends(userId: string | null | undefined) {
+  return useFriends(userId, 'accepted', 5);
+}
+
+export function usePendingFriendRequests(userId: string | null | undefined) {
+  return useFriends(userId, 'pending', 10);
+}
+
+// Add the missing functions that other components depend on
+export function useFriendList(userId: string | null | undefined) {
+  return useFriends(userId, 'accepted', 100); // Get all friends
+}
+
+export function useReceivedFriendRequests(userId: string | null | undefined) {
   return useQuery({
-    queryKey: ["received-friend-requests", myId],
-    enabled: !!myId,
+    queryKey: ["received-friend-requests", userId],
     queryFn: async () => {
-      if (!myId) return [];
+      if (!userId) return [];
+      
       const { data, error } = await supabase
         .from("friends")
         .select("*")
-        .eq("friend_id", myId)
-        .eq("status", "pending");
-      if (error) throw error;
-      return data as Friend[];
-    }
+        .eq("friend_id", userId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      
+      if (error) {
+        console.error('Received friend requests query error:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    staleTime: 30 * 1000,
+    enabled: !!userId
   });
 }
 
-// Gửi lời mời kết bạn
+export function useSentFriendRequests(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["sent-friend-requests", userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      
+      const { data, error } = await supabase
+        .from("friends")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      
+      if (error) {
+        console.error('Sent friend requests query error:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    staleTime: 30 * 1000,
+    enabled: !!userId
+  });
+}
+
 export function useSendFriendRequest() {
   const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: async ({
-      user_id,
-      friend_id,
-    }: { user_id: string; friend_id: string }) => {
+    mutationFn: async ({ user_id, friend_id }: { user_id: string; friend_id: string }) => {
       const { data, error } = await supabase
         .from("friends")
-        .insert([{ user_id, friend_id }])
+        .insert({
+          user_id,
+          friend_id,
+          status: "pending"
+        })
         .select()
-        .maybeSingle();
+        .single();
+      
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
       queryClient.invalidateQueries({ queryKey: ["sent-friend-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["received-friend-requests"] });
-    },
+    }
   });
 }
 
-// Chấp nhận lời mời
 export function useAcceptFriendRequest() {
   const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
+    mutationFn: async (requestId: string) => {
+      const { data, error } = await supabase
         .from("friends")
-        .update({ status: "accepted", accepted_at: new Date().toISOString() })
-        .eq("id", id);
+        .update({ 
+          status: "accepted",
+          accepted_at: new Date().toISOString()
+        })
+        .eq("id", requestId)
+        .select()
+        .single();
+      
       if (error) throw error;
-      return { id };
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
-    },
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      queryClient.invalidateQueries({ queryKey: ["received-friend-requests"] });
+    }
   });
 }
 
-// Từ chối/xoá lời mời hoặc huỷ kết bạn
 export function useDeleteFriend() {
   const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("friends").delete().eq("id", id);
+    mutationFn: async (requestId: string) => {
+      const { error } = await supabase
+        .from("friends")
+        .delete()
+        .eq("id", requestId);
+      
       if (error) throw error;
-      return { id };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries();
-    },
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      queryClient.invalidateQueries({ queryKey: ["received-friend-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["sent-friend-requests"] });
+    }
   });
 }

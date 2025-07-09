@@ -1,9 +1,9 @@
 
-import React from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Crown, Clock, AlertTriangle } from "lucide-react";
-import { useIsDatingActive } from "@/hooks/useDatingSubscription";
+import React from 'react';
+import { Crown, Heart, Zap } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { usePremiumFeatureStatus } from '@/hooks/usePremiumFeatureStatus';
 
 interface DatingFeatureBannerProps {
   isDatingActive: boolean;
@@ -14,89 +14,71 @@ interface DatingFeatureBannerProps {
   maxFreeMatches: number;
 }
 
-const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
-  isDatingActive,
-  datingLoading,
-  onClickUpgrade,
+export default function DatingFeatureBanner({ 
+  isDatingActive, 
+  datingLoading, 
+  onClickUpgrade, 
   userId,
   dailyMatches,
-  maxFreeMatches,
-}) => {
-  const { subscription, daysRemaining } = useIsDatingActive(userId);
+  maxFreeMatches
+}: DatingFeatureBannerProps) {
+  const { premiumDatingEnabled } = usePremiumFeatureStatus();
 
-  if (datingLoading) return null;
-  
-  // Show expired subscription banner
-  if (subscription && subscription.status === 'expired') {
-    return (
-      <Card className="mt-4 p-2 bg-gradient-to-r from-orange-500 to-red-500 text-white">
-        <div className="text-center">
-          <AlertTriangle className="w-8 h-8 mx-auto mb-1" />
-          <h3 className="font-semibold mb-0.5">Gói Premium đã hết hạn</h3>
-          <p className="text-sm opacity-90 mb-1.5">
-            Gia hạn ngay để tiếp tục sử dụng tính năng Premium
-          </p>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="text-red-600"
-            onClick={onClickUpgrade}
-          >
-            Gia hạn Premium
-          </Button>
-        </div>
-      </Card>
-    );
-  }
-  
-  // Show active subscription status
-  if (isDatingActive && subscription) {
-    return (
-      <Card className="mt-4 p-2 bg-gradient-to-r from-green-500 to-blue-500 text-white">
-        <div className="text-center">
-          <Crown className="w-8 h-8 mx-auto mb-1" />
-          <h3 className="font-semibold mb-0.5">Premium đã kích hoạt!</h3>
-          
-          {subscription?.duration_days === -1 ? (
-            <p className="text-sm opacity-90">Gói Vô Hạn - Không giới hạn thời gian</p>
-          ) : daysRemaining !== null ? (
-            <div className="flex items-center justify-center gap-1 text-sm opacity-90">
-              <Clock className="w-4 h-4" />
-              <span>Còn {daysRemaining} ngày</span>
-            </div>
-          ) : null}
-          
-          <p className="text-xs opacity-80 mt-1">Không giới hạn lượt match</p>
-        </div>
-      </Card>
-    );
+  // Don't show banner if premium dating is disabled by admin
+  if (!premiumDatingEnabled) {
+    return null;
   }
 
-  // Show upgrade banner when running out of free matches
-  const remainingMatches = maxFreeMatches - dailyMatches;
-  if (!isDatingActive && remainingMatches <= 3) {
-    return (
-      <Card className="mt-4 p-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-        <div className="text-center">
-          <Crown className="w-8 h-8 mx-auto mb-1" />
-          <h3 className="font-semibold mb-0.5">Nâng cấp Premium</h3>
-          <p className="text-sm opacity-90 mb-1.5">
-            Không giới hạn lượt match + nhiều tính năng khác
-          </p>
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="text-orange-600"
-            onClick={onClickUpgrade}
-          >
-            Xem gói Premium
-          </Button>
+  if (datingLoading || isDatingActive) return null;
+
+  const remainingMatches = Math.max(0, maxFreeMatches - dailyMatches);
+  const isLowMatches = remainingMatches <= 3;
+
+  return (
+    <Card className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+      <div className="text-center">
+        <div className="flex justify-center mb-3">
+          <div className="relative">
+            <Crown className="w-8 h-8 text-yellow-500" />
+            <Heart className="w-4 h-4 text-red-500 absolute -top-1 -right-1" />
+          </div>
         </div>
-      </Card>
-    );
-  }
+        
+        <h3 className="font-bold text-gray-800 mb-2">
+          {isLowMatches ? '⚠️ Sắp hết lượt match!' : 'Nâng cấp Premium'}
+        </h3>
+        
+        <p className="text-sm text-gray-600 mb-3">
+          {isLowMatches 
+            ? `Chỉ còn ${remainingMatches} lượt match miễn phí!`
+            : 'Không giới hạn lượt match & nhiều tính năng đặc biệt'
+          }
+        </p>
 
-  return null;
-};
+        <div className="flex items-center justify-center gap-4 mb-3 text-xs text-gray-600">
+          <div className="flex items-center gap-1">
+            <Zap className="w-3 h-3" />
+            <span>Super Like</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Heart className="w-3 h-3" />
+            <span>Vô hạn Like</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Crown className="w-3 h-3" />
+            <span>Boost Profile</span>
+          </div>
+        </div>
 
-export default DatingFeatureBanner;
+        <Button
+          onClick={onClickUpgrade}
+          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+          size="sm"
+        >
+          <Crown className="w-4 h-4 mr-2" />
+          Nâng cấp Premium
+        </Button>
+      </div>
+    </Card>
+  );
+}

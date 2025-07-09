@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Heart, X, Zap, Crown } from 'lucide-react';
+import { Heart, X, Zap, Crown, Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -7,14 +7,17 @@ import { useBankInfo } from "@/hooks/useBankInfo";
 import DatingProfileView from "./DatingProfileView";
 import DatingFeatureBanner from "./DatingFeatureBanner";
 import DatingPackageModal from "./DatingPackageModal";
+import MatchesManager from "./MatchesManager";
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
 import { useDailyMatches } from "@/hooks/useDailyMatches";
+import { useUserMatches } from "@/hooks/useUserMatches";
 import { createDatingPackagePayment } from "@/services/datingPackageService";
 import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { usePremiumFeatureStatus } from '@/hooks/usePremiumFeatureStatus';
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -27,6 +30,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [showMatch, setShowMatch] = useState(false);
   const [showDatingPackageModal, setShowDatingPackageModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
+  const [showMatches, setShowMatches] = useState(false);
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
   
@@ -43,15 +47,29 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   // Use daily matches hook to get real count from database
   const { dailyMatches, loading: dailyMatchesLoading } = useDailyMatches(user?.id);
 
-  // Use real data from database with expanded range (50km for dating vs 5km for nearby)
+  // Get user matches
+  const { data: userMatches = [] } = useUserMatches(user?.id);
+
+  // Get real data from database with expanded range (50km for dating vs 5km for nearby)
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, 50);
   
   // Import the chat integration hook
   const { startChatWith } = useChatIntegration();
   
-  const availableProfiles = useMemo(() =>
-    profiles
-      .filter(p => p.id !== user?.id && p.name && p.avatar && p.is_dating_active)
+  // Check if premium features are enabled
+  const { premiumDatingEnabled } = usePremiumFeatureStatus();
+  
+  const availableProfiles = useMemo(() => {
+    const matchedUserIds = userMatches.map(match => match.id);
+    
+    return profiles
+      .filter(p => 
+        p.id !== user?.id && 
+        p.name && 
+        p.avatar && 
+        p.is_dating_active &&
+        !matchedUserIds.includes(p.id) // Loại bỏ những người đã match
+      )
       .map(p => ({
         ...p,
         images: [p.avatar!],
@@ -63,8 +81,8 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         job: p.job,
         education: p.education,
         location_name: p.location_name
-      })), [profiles, user?.id]
-  );
+      }));
+  }, [profiles, user?.id, userMatches]);
 
   const maxFreeMatches = 10;
   const remainingMatches = maxFreeMatches - dailyMatches;
@@ -73,13 +91,25 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const handleSwipe = async (direction: 'left' | 'right' | 'super') => {
     if (!currentProfile) return;
     
+    // Check if premium dating is disabled by admin
+    if (!premiumDatingEnabled && (direction === 'right' || direction === 'super')) {
+      toast({
+        title: "Tính năng tạm thời không khả dụng",
+        description: "Tính năng Premium Hẹn Hò hiện đang được bảo trì",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (!isDatingActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
       toast({
         title: "Đã hết lượt match miễn phí!",
         description: "Nâng cấp Premium để có không giới hạn lượt match",
         variant: "destructive"
       });
-      setShowDatingPackageModal(true);
+      if (premiumDatingEnabled) {
+        setShowDatingPackageModal(true);
+      }
       return;
     }
 
@@ -189,6 +219,10 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     });
   };
 
+  if (showMatches) {
+    return <MatchesManager userId={user?.id} onBack={() => setShowMatches(false)} />;
+  }
+
   if (locationLoading || profilesLoading || dailyMatchesLoading) {
     return (
       <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50">
@@ -213,9 +247,21 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           <Heart className="w-16 h-16 text-pink-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-800 mb-2">Hết người rồi!</h2>
           <p className="text-gray-600 mb-4">Hãy quay lại sau để gặp thêm người dùng mới</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 mb-4">
             Tìm thấy {profiles.length} người dùng trong bán kính 50km
+            {userMatches.length > 0 && ` • ${userMatches.length} matches`}
           </p>
+          
+          {/* Button to view matches */}
+          {userMatches.length > 0 && (
+            <Button
+              onClick={() => setShowMatches(true)}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Xem Matches ({userMatches.length})
+            </Button>
+          )}
         </Card>
       </div>
     );
@@ -225,8 +271,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     return (
       <DatingProfileView
         profile={selectedProfile}
-        onClose={handleCloseProfile}
-        onSwipe={handleProfileSwipe}
+        onClose={() => setSelectedProfile(null)}
+        onSwipe={(direction) => {
+          setSelectedProfile(null);
+          handleSwipe(direction);
+        }}
         isDatingActive={isDatingActive}
         dailyMatches={dailyMatches}
         maxFreeMatches={maxFreeMatches}
@@ -244,8 +293,23 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         </div>
       )}
 
+      {/* Matches Counter */}
+      {userMatches.length > 0 && (
+        <div className="absolute top-4 right-16 z-10">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMatches(true)}
+            className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50"
+          >
+            <Users className="w-4 h-4 mr-1" />
+            {userMatches.length}
+          </Button>
+        </div>
+      )}
+
       {/* Daily Matches Counter */}
-      {!isDatingActive && (
+      {!isDatingActive && premiumDatingEnabled && (
         <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
           {remainingMatches <= 3 && (
             <span className="text-red-500">⚠️ </span>
@@ -273,7 +337,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             swipeDirection === 'right' ? 'transform translate-x-full -rotate-12 opacity-0' :
             'transform translate-x-0 rotate-0 opacity-100'
           }`}
-          onClick={handleProfileClick}
+          onClick={() => setSelectedProfile(currentProfile)}
         >
           {/* Profile Image */}
           <div className="relative h-2/3">
@@ -332,7 +396,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             size="icon"
             className="w-14 h-14 rounded-full border-blue-200 hover:bg-blue-50 hover:border-blue-300"
             onClick={() => handleSwipe('super')}
-            disabled={!isDatingActive && dailyMatches >= maxFreeMatches}
+            disabled={(!isDatingActive && dailyMatches >= maxFreeMatches) || !premiumDatingEnabled}
           >
             <Zap className="w-6 h-6 text-blue-500" />
           </Button>
@@ -342,40 +406,89 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             size="icon"
             className="w-14 h-14 rounded-full border-green-200 hover:bg-green-50 hover:border-green-300"
             onClick={() => handleSwipe('right')}
-            disabled={!isDatingActive && dailyMatches >= maxFreeMatches}
+            disabled={(!isDatingActive && dailyMatches >= maxFreeMatches) || !premiumDatingEnabled}
           >
             <Heart className="w-6 h-6 text-green-500" />
           </Button>
         </div>
 
-        {/* Dating Feature Banner - Replace the old upgrade banner */}
-        <DatingFeatureBanner
-          isDatingActive={isDatingActive}
-          datingLoading={datingLoading}
-          onClickUpgrade={() => setShowDatingPackageModal(true)}
-          userId={user?.id}
-          dailyMatches={dailyMatches}
-          maxFreeMatches={maxFreeMatches}
-        />
+        {/* Dating Feature Banner - Only show if premium dating is enabled */}
+        {premiumDatingEnabled && (
+          <DatingFeatureBanner
+            isDatingActive={isDatingActive}
+            datingLoading={datingLoading}
+            onClickUpgrade={() => setShowDatingPackageModal(true)}
+            userId={user?.id}
+            dailyMatches={dailyMatches}
+            maxFreeMatches={maxFreeMatches}
+          />
+        )}
 
         {/* Stats */}
         <div className="text-center text-sm text-gray-600 mt-2">
           {matches} matches • {availableProfiles.length - currentProfileIndex - 1} còn lại
+          {userMatches.length > 0 && ` • ${userMatches.length} total matches`}
         </div>
       </div>
 
-      {/* Dating Package Modal */}
-      <DatingPackageModal
-        isOpen={showDatingPackageModal}
-        onClose={() => setShowDatingPackageModal(false)}
-        onSelectPackage={handleSelectPackage}
-        currentUser={user}
-        bankInfo={
-          !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 
-          ? bankInfoHook.bankInfo 
-          : undefined
-        }
-      />
+      {/* Dating Package Modal - Only show if premium dating is enabled */}
+      {premiumDatingEnabled && (
+        <DatingPackageModal
+          isOpen={showDatingPackageModal}
+          onClose={() => setShowDatingPackageModal(false)}
+          onSelectPackage={async (packageId: string) => {
+            if (!user) {
+              toast({
+                title: "Cần đăng nhập",
+                description: "Vui lòng đăng nhập để mua gói Premium",
+                variant: "destructive"
+              });
+              return;
+            }
+
+            try {
+              toast({
+                title: "Đang tạo thanh toán...",
+                description: "Vui lòng chờ trong giây lát",
+              });
+
+              const result = await createDatingPackagePayment(packageId, user.id, user.email);
+              
+              if (result.error) {
+                toast({
+                  title: "Có lỗi xảy ra!",
+                  description: result.message || "Không thể tạo thanh toán",
+                  variant: "destructive"
+                });
+                return;
+              }
+
+              if (result.checkoutUrl) {
+                window.location.href = result.checkoutUrl;
+              } else {
+                toast({
+                  title: "Có lỗi xảy ra!",
+                  description: "Không nhận được URL thanh toán",
+                  variant: "destructive"
+                });
+              }
+            } catch (error) {
+              console.error('Payment error:', error);
+              toast({
+                title: "Có lỗi xảy ra!",
+                description: "Vui lòng thử lại sau",
+                variant: "destructive"
+              });
+            }
+          }}
+          currentUser={user}
+          bankInfo={
+            !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 
+            ? bankInfoHook.bankInfo 
+            : undefined
+          }
+        />
+      )}
     </div>
   );
 };

@@ -33,7 +33,7 @@ export default function DatingAppLayout({
         {!isAdminMode && user && (
           isLeftPanelOpen ? (
             <div className="relative flex-shrink-0">
-              <RealTimeActivityPanel userId={user?.id} />
+              <RealTimeActivityPanel currentUserId={user?.id} />
               <SidePanelToggle
                 isOpen={isLeftPanelOpen}
                 side="left"

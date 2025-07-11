@@ -14,6 +14,7 @@ import PostAsFakeUserModal from './PostAsFakeUserModal';
 import { supabase } from "@/integrations/supabase/client";
 
 import AdminOverviewTab from "./AdminOverviewTab";
+import AdminUserManagement from "./AdminUserManagement";
 import AdminFakeUsersTab from "./AdminFakeUsersTab";
 import AdminAIPromptsTab from "./AdminAIPromptsTab";
 import AdminSettingsTab from "./AdminSettingsTab";
@@ -241,8 +242,9 @@ const AdminDashboard = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+            <TabsTrigger value="admin-users">Admin Users</TabsTrigger>
             <TabsTrigger value="fake-users">Người dùng ảo</TabsTrigger>
             <TabsTrigger value="ai-prompts">AI Prompts</TabsTrigger>
             <TabsTrigger value="settings">Cài đặt</TabsTrigger>
@@ -250,6 +252,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="overview" className="space-y-6">
             <AdminOverviewTab />
+          </TabsContent>
+
+          <TabsContent value="admin-users" className="space-y-6">
+            <AdminUserManagement />
           </TabsContent>
 
           <TabsContent value="fake-users" className="space-y-6">

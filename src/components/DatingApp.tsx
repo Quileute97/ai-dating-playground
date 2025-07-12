@@ -17,8 +17,12 @@ import { useUnifiedProfile } from "@/hooks/useUnifiedProfile";
 import { useGlobalSync } from "@/hooks/useGlobalSync";
 import { ChatProvider } from "@/hooks/useChatContext";
 import UnifiedChatWidget from "./UnifiedChatWidget";
+import PremiumUpgradeModal from "./PremiumUpgradeModal";
+import { useToast } from "@/hooks/use-toast";
 
 const DatingApp = () => {
+  const { toast } = useToast();
+  
   // User/session quản lý bằng custom hook
   const { user, setUser, session, setSession, anonId } = useDatingAppUser();
   
@@ -38,6 +42,7 @@ const DatingApp = () => {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [isFirstTime, setIsFirstTime] = useState(true);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   // State quản lý thu gọn/hiện 2 panel
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
@@ -264,6 +269,19 @@ const DatingApp = () => {
 
         {/* Unified Chat Widget - only show when user is logged in */}
         {user && <UnifiedChatWidget myUserId={user.id} />}
+
+        {/* Premium Upgrade Modal */}
+        <PremiumUpgradeModal
+          isOpen={showPremiumModal}
+          onClose={() => setShowPremiumModal(false)}
+          onSuccess={() => {
+            setShowPremiumModal(false);
+            toast({
+              title: "🎉 Chuyển hướng thành công!",
+              description: "Hoàn tất thanh toán để kích hoạt Premium.",
+            });
+          }}
+        />
       </div>
     </ChatProvider>
   );

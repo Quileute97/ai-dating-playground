@@ -43,10 +43,13 @@ secret = ""
 redirect_uri = ""
 
 [functions.create-payos-payment]
-verify_jwt = false
+verify_jwt = true
 
 [functions.payos-webhook]
 verify_jwt = false
+
+[functions.check-payment-status]
+verify_jwt = true
 
 [edge_runtime]
 enabled = true

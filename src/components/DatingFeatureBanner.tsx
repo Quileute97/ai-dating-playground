@@ -1,9 +1,10 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Crown, Clock, AlertTriangle } from "lucide-react";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
+import PremiumUpgradeModal from "./PremiumUpgradeModal";
 
 interface DatingFeatureBannerProps {
   isDatingActive: boolean;
@@ -23,6 +24,7 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
   maxFreeMatches,
 }) => {
   const { subscription, daysRemaining } = useIsDatingActive(userId);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   if (datingLoading) return null;
   
@@ -87,7 +89,7 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
             variant="secondary" 
             size="sm" 
             className="text-orange-600"
-            onClick={onClickUpgrade}
+            onClick={() => setShowPremiumModal(true)}
           >
             Xem gói Premium
           </Button>
@@ -96,7 +98,14 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
     );
   }
 
-  return null;
+  return (
+    <>
+      <PremiumUpgradeModal
+        isOpen={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+      />
+    </>
+  );
 };
 
 export default DatingFeatureBanner;

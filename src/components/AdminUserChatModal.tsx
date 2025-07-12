@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -187,11 +188,10 @@ const AdminUserChatModal: React.FC<AdminUserChatModalProps> = ({
                       onClick={() => setActiveConversation(conv)}
                     >
                       <div className="flex items-center space-x-3">
-                        <img
-                          src={conv.real_user_profile.avatar || '/placeholder.svg'}
-                          alt={conv.real_user_profile.name}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={conv.real_user_profile.avatar || '/placeholder.svg'} />
+                          <AvatarFallback>{conv.real_user_profile.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">
                             {conv.real_user_profile.name}
@@ -215,11 +215,10 @@ const AdminUserChatModal: React.FC<AdminUserChatModalProps> = ({
                 {/* Chat Header */}
                 <div className="border-b pb-4 mb-4">
                   <div className="flex items-center space-x-3">
-                    <img
-                      src={activeConversation.real_user_profile.avatar || '/placeholder.svg'}
-                      alt={activeConversation.real_user_profile.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={activeConversation.real_user_profile.avatar || '/placeholder.svg'} />
+                      <AvatarFallback>{activeConversation.real_user_profile.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
                     <div>
                       <h4 className="font-semibold">
                         {activeConversation.real_user_profile.name}

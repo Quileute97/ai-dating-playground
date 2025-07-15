@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Heart, X, Zap, Crown } from 'lucide-react';
+import { Heart, X, Zap, Crown, Star, ArrowRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -264,15 +264,90 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   }
 
   if (!currentProfile) {
+    const outOfFreeMatches = !isDatingActive && dailyMatches >= maxFreeMatches;
+    const noMoreProfiles = availableProfiles.length === 0;
+    
     return (
-      <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50">
-        <Card className="p-8 text-center bg-white/70 backdrop-blur-sm">
-          <Heart className="w-16 h-16 text-pink-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Hết người rồi!</h2>
-          <p className="text-gray-600 mb-4">Hãy quay lại sau để gặp thêm người dùng mới</p>
-          <p className="text-sm text-gray-500">
-            Tìm thấy {profiles.length} người dùng trong bán kính 50km
-          </p>
+      <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50 p-4">
+        <Card className="p-8 text-center bg-white/80 backdrop-blur-sm max-w-md mx-auto">
+          {outOfFreeMatches ? (
+            <>
+              <div className="w-20 h-20 rounded-full mx-auto bg-gradient-to-r from-yellow-400 to-orange-400 flex items-center justify-center mb-6">
+                <Crown className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                Hết lượt thả tim miễn phí!
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Bạn đã sử dụng hết {maxFreeMatches} lượt thả tim hôm nay. Nâng cấp Premium để có không giới hạn lượt thả tim!
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  <span>Không giới hạn lượt thả tim</span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  <span>Xem ai đã thích bạn</span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  <span>Super Like không giới hạn</span>
+                </div>
+                <Button
+                  onClick={() => setShowDatingPackageModal(true)}
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2"
+                >
+                  <Crown className="w-5 h-5" />
+                  Nâng cấp Premium
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </>
+          ) : noMoreProfiles ? (
+            <>
+              <div className="w-20 h-20 rounded-full mx-auto bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center mb-6">
+                <Heart className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                Hết người trong khu vực!
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Bạn đã xem hết tất cả người dùng trong bán kính 50km. Nâng cấp Premium để mở rộng phạm vi tìm kiếm!
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  <span>Mở rộng phạm vi tìm kiếm</span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  <span>Ưu tiên hiển thị hồ sơ</span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  <span>Xem ai đã thích bạn</span>
+                </div>
+                <Button
+                  onClick={() => setShowDatingPackageModal(true)}
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2"
+                >
+                  <Crown className="w-5 h-5" />
+                  Nâng cấp Premium
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-sm text-gray-500 mt-6">
+                Đã kiểm tra {profiles.length} người dùng trong khu vực
+              </p>
+            </>
+          ) : (
+            <>
+              <Heart className="w-16 h-16 text-pink-500 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tải...</h2>
+              <p className="text-gray-600">Vui lòng chờ trong giây lát</p>
+            </>
+          )}
         </Card>
       </div>
     );

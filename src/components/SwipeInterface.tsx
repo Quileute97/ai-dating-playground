@@ -15,6 +15,8 @@ import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
 import { useDailyMatches } from "@/hooks/useDailyMatches";
 import { createDatingPackagePayment } from "@/services/datingPackageService";
 import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -27,6 +29,8 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const [showMatch, setShowMatch] = useState(false);
   const [showDatingPackageModal, setShowDatingPackageModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
+  const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
+  const [matchedProfiles, setMatchedProfiles] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
   
@@ -49,9 +53,56 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   // Import the chat integration hook
   const { startChatWith } = useChatIntegration();
   
+  // Fetch liked and matched profiles
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const fetchLikedAndMatchedProfiles = async () => {
+      try {
+        // Get all profiles this user has liked
+        const { data: likedData, error: likedError } = await supabase
+          .from('user_likes')
+          .select('liked_id')
+          .eq('liker_id', user.id);
+        
+        if (likedError) throw likedError;
+        
+        // Get all profiles that have mutual likes (matches)
+        const { data: matchedData, error: matchedError } = await supabase
+          .from('user_likes')
+          .select('liked_id, liker_id')
+          .or(`liker_id.eq.${user.id},liked_id.eq.${user.id}`);
+        
+        if (matchedError) throw matchedError;
+        
+        // Set liked profiles
+        const likedIds = new Set<string>(likedData?.map(item => item.liked_id) || []);
+        setLikedProfiles(likedIds);
+        
+        // Find mutual matches
+        const userLikes = matchedData?.filter(item => item.liker_id === user.id).map(item => item.liked_id) || [];
+        const otherLikes = matchedData?.filter(item => item.liked_id === user.id).map(item => item.liker_id) || [];
+        const mutualMatches = userLikes.filter(id => otherLikes.includes(id));
+        
+        setMatchedProfiles(new Set<string>(mutualMatches));
+      } catch (error) {
+        console.error('Error fetching liked/matched profiles:', error);
+      }
+    };
+    
+    fetchLikedAndMatchedProfiles();
+  }, [user?.id]);
+  
   const availableProfiles = useMemo(() =>
     profiles
-      .filter(p => p.id !== user?.id && p.name && p.avatar && p.is_dating_active)
+      .filter(p => 
+        p.id !== user?.id && 
+        p.name && 
+        p.avatar && 
+        p.is_dating_active &&
+        !likedProfiles.has(p.id) &&  // Filter out already liked profiles
+        !matchedProfiles.has(p.id)   // Filter out already matched profiles
+      )
       .map(p => ({
         ...p,
         images: [p.avatar!],
@@ -63,7 +114,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         job: p.job,
         education: p.education,
         location_name: p.location_name
-      })), [profiles, user?.id]
+      })), [profiles, user?.id, likedProfiles, matchedProfiles]
   );
 
   const maxFreeMatches = 10;
@@ -88,7 +139,13 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     if (direction === 'right' || direction === 'super') {
       try {
         const res = await likeUser(currentProfile.id);
+        
+        // Add to liked profiles to prevent showing again
+        setLikedProfiles(prev => new Set([...prev, currentProfile.id]));
+        
         if (res.matched) {
+          // Add to matched profiles to prevent showing again
+          setMatchedProfiles(prev => new Set([...prev, currentProfile.id]));
           setMatches(prev => prev + 1);
           setShowMatch(true);
           setTimeout(() => setShowMatch(false), 3000);

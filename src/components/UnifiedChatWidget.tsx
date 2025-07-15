@@ -134,7 +134,34 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
                       : 'bg-white border border-gray-200 text-gray-800 shadow-sm'
                   }`}>
-                    <p className="break-words leading-relaxed">{msg.content}</p>
+                    {/* Display image if media_url exists and is image */}
+                    {msg.media_url && msg.media_type?.startsWith('image') && (
+                      <div className="mb-2">
+                        <img 
+                          src={msg.media_url} 
+                          alt="Shared image" 
+                          className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(msg.media_url, '_blank')}
+                          style={{ maxHeight: '150px' }}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Display video if media_url exists and is video */}
+                    {msg.media_url && msg.media_type?.startsWith('video') && (
+                      <div className="mb-2">
+                        <video 
+                          src={msg.media_url} 
+                          controls 
+                          className="max-w-full h-auto rounded-lg"
+                          style={{ maxHeight: '150px' }}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Display text content if exists */}
+                    {msg.content && <p className="break-words leading-relaxed">{msg.content}</p>}
+                    
                     <p className={`text-xs mt-1 ${
                       msg.sender_id === myUserId ? 'text-purple-100' : 'text-gray-500'
                     }`}>

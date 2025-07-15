@@ -31,6 +31,8 @@ interface Message {
   sender: string;
   content: string;
   created_at: string;
+  media_url?: string;
+  media_type?: string;
 }
 
 const AdminUserChatModal: React.FC<AdminUserChatModalProps> = ({

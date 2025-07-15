@@ -7,6 +7,8 @@ interface Message {
   content: string;
   sender: string;
   created_at: string;
+  media_url?: string;
+  media_type?: string;
 }
 
 export function useNearbyConversation(currentUserId: string | null, targetUserId: string | null) {

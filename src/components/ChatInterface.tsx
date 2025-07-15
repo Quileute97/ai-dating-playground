@@ -278,7 +278,34 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
                       : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-purple-100 shadow-md'
                   }`}>
-                    <p className="text-sm">{message.content}</p>
+                    {/* Display image if media_url exists and is image */}
+                    {message.media_url && message.media_type?.startsWith('image') && (
+                      <div className="mb-2">
+                        <img 
+                          src={message.media_url} 
+                          alt="Shared image" 
+                          className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(message.media_url, '_blank')}
+                          style={{ maxHeight: '200px' }}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Display video if media_url exists and is video */}
+                    {message.media_url && message.media_type?.startsWith('video') && (
+                      <div className="mb-2">
+                        <video 
+                          src={message.media_url} 
+                          controls 
+                          className="max-w-full h-auto rounded-lg"
+                          style={{ maxHeight: '200px' }}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Display text content if exists */}
+                    {message.content && <p className="text-sm">{message.content}</p>}
+                    
                     <p className={`text-xs mt-1 ${
                       isFromMe ? 'text-purple-100' : 'text-gray-500'
                     }`}>

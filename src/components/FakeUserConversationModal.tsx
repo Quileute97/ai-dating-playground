@@ -27,6 +27,8 @@ interface Message {
   sender: "real" | "fake";
   content: string;
   created_at: string;
+  media_url?: string;
+  media_type?: string;
 }
 
 interface Props {

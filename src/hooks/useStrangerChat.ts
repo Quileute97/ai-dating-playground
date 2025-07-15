@@ -9,6 +9,8 @@ interface Message {
   sender_id: string;
   created_at: string;
   conversation_id: string;
+  media_url?: string;
+  media_type?: string;
 }
 
 export function useStrangerChat(currentUserId: string | null) {

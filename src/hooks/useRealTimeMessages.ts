@@ -45,7 +45,7 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
       
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select('id, content, created_at, sender_id, conversation_id, media_url, media_type')
         .eq('conversation_id', conversation.id)
         .order('created_at', { ascending: true });
 

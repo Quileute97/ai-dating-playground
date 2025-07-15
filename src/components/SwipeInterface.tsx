@@ -6,14 +6,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useBankInfo } from "@/hooks/useBankInfo";
 import DatingProfileView from "./DatingProfileView";
 import DatingFeatureBanner from "./DatingFeatureBanner";
-import DatingPackageModal from "./DatingPackageModal";
+import PremiumUpgradeModal from "./PremiumUpgradeModal";
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
 import { useDailyMatches } from "@/hooks/useDailyMatches";
-import { createDatingPackagePayment } from "@/services/datingPackageService";
 import { useChatIntegration } from '@/hooks/useChatIntegration';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -191,51 +190,6 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     handleSwipe(direction);
   };
 
-  const handleSelectPackage = async (packageId: string) => {
-    if (!user) {
-      toast({
-        title: "Cần đăng nhập",
-        description: "Vui lòng đăng nhập để mua gói Premium",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      toast({
-        title: "Đang tạo thanh toán...",
-        description: "Vui lòng chờ trong giây lát",
-      });
-
-      const result = await createDatingPackagePayment(packageId, user.id, user.email);
-      
-      if (result.error) {
-        toast({
-          title: "Có lỗi xảy ra!",
-          description: result.message || "Không thể tạo thanh toán",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
-      } else {
-        toast({
-          title: "Có lỗi xảy ra!",
-          description: "Không nhận được URL thanh toán",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast({
-        title: "Có lỗi xảy ra!",
-        description: "Vui lòng thử lại sau",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handleChatClick = (profile: any) => {
     // Use unified chat system instead of separate modal
@@ -496,17 +450,10 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         </div>
       </div>
 
-      {/* Dating Package Modal */}
-      <DatingPackageModal
+      {/* Premium Upgrade Modal */}
+      <PremiumUpgradeModal
         isOpen={showDatingPackageModal}
         onClose={() => setShowDatingPackageModal(false)}
-        onSelectPackage={handleSelectPackage}
-        currentUser={user}
-        bankInfo={
-          !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 
-          ? bankInfoHook.bankInfo 
-          : undefined
-        }
       />
     </div>
   );

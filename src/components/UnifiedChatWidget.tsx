@@ -159,8 +159,24 @@ export default function UnifiedChatWidget({ myUserId }: UnifiedChatWidgetProps) 
                       </div>
                     )}
                     
-                    {/* Display text content if exists */}
-                    {msg.content && <p className="break-words leading-relaxed">{msg.content}</p>}
+                    {/* Handle legacy image messages in content */}
+                    {!msg.media_url && msg.content?.includes('https://') && msg.content?.includes('[🖼️ Ảnh]') && (
+                      <div className="mb-2">
+                        <img 
+                          src={msg.content.split('] ')[1]} 
+                          alt="Shared image" 
+                          className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(msg.content.split('] ')[1], '_blank')}
+                          style={{ maxHeight: '150px' }}
+                        />
+                        <p className="text-xs mt-1 break-words">{msg.content.split('] ')[0]}]</p>
+                      </div>
+                    )}
+                    
+                    {/* Display regular text content */}
+                    {msg.content && (!msg.content.includes('[🖼️ Ảnh]') || msg.media_url) && (
+                      <p className="break-words leading-relaxed">{msg.content}</p>
+                    )}
                     
                     <p className={`text-xs mt-1 ${
                       msg.sender_id === myUserId ? 'text-purple-100' : 'text-gray-500'

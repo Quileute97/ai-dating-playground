@@ -303,8 +303,24 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
                       </div>
                     )}
                     
-                    {/* Display text content if exists */}
-                    {message.content && <p className="text-sm">{message.content}</p>}
+                    {/* Handle legacy image messages in content */}
+                    {!message.media_url && message.content?.includes('https://') && message.content?.includes('[🖼️ Ảnh]') && (
+                      <div className="mb-2">
+                        <img 
+                          src={message.content.split('] ')[1]} 
+                          alt="Shared image" 
+                          className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(message.content.split('] ')[1], '_blank')}
+                          style={{ maxHeight: '200px' }}
+                        />
+                        <p className="text-sm break-words mt-2">{message.content.split('] ')[0]}]</p>
+                      </div>
+                    )}
+                    
+                    {/* Display regular text content */}
+                    {message.content && (!message.content.includes('[🖼️ Ảnh]') || message.media_url) && (
+                      <p className="text-sm break-words">{message.content}</p>
+                    )}
                     
                     <p className={`text-xs mt-1 ${
                       isFromMe ? 'text-purple-100' : 'text-gray-500'

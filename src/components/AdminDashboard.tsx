@@ -218,10 +218,35 @@ const AdminDashboard = () => {
     setEditingAIPrompt(null);
   };
 
-  const handlePostAsFakeUser = (content: string, user: FakeUser) => {
-    // Chỉ hiển thị thông báo, chưa update trực tiếp vào Timeline
-    alert(`Đã đăng bài với tư cách ${user.name}:\n\n${content}`);
-    // Để tích hợp thực tế: cần truyền tới component Timeline thông qua global state hoặc props callback
+  const handlePostAsFakeUser = async (content: string, mediaUrl?: string, mediaType?: string) => {
+    if (!postFakeUser) return;
+    
+    try {
+      const { error } = await supabase.from("fake_user_posts").insert({
+        fake_user_id: postFakeUser.id,
+        content: content,
+        media_url: mediaUrl || null,
+        media_type: mediaType || null,
+        created_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Thành công",
+        description: `Đã đăng bài với tư cách ${postFakeUser.name}`,
+      });
+      
+      setPostFakeUser(null);
+    } catch (error: any) {
+      toast({
+        title: "Lỗi đăng bài",
+        description: error.message || "Có lỗi xảy ra",
+        variant: "destructive",
+      });
+    }
   };
 
   // Tab content
@@ -285,6 +310,7 @@ const AdminDashboard = () => {
                 user={user}
                 aiPrompts={aiPrompts}
                 handlePostAsFakeUser={handlePostAsFakeUser}
+                refetchFakeUsers={refetchFakeUsers}
               />
             )}
           </TabsContent>

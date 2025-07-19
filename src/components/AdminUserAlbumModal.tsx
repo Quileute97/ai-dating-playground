@@ -3,9 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { uploadAlbumImage } from '@/utils/uploadAlbumImage';
 
 interface AdminUserAlbumModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ const AdminUserAlbumModal: React.FC<AdminUserAlbumModalProps> = ({
   const [album, setAlbum] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (user && user.album) {
@@ -41,6 +43,48 @@ const AdminUserAlbumModal: React.FC<AdminUserAlbumModalProps> = ({
 
     setAlbum(prev => [...prev, newImageUrl.trim()]);
     setNewImageUrl('');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Chỉ hỗ trợ file ảnh",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File quá lớn. Vui lòng chọn file dưới 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const imageUrl = await uploadAlbumImage(file);
+      setAlbum(prev => [...prev, imageUrl]);
+      toast({
+        title: "Thành công",
+        description: "Đã upload ảnh"
+      });
+    } catch (error) {
+      toast({
+        title: "Lỗi upload ảnh",
+        description: "Vui lòng thử lại",
+        variant: "destructive"
+      });
+    }
+    setUploading(false);
+    
+    // Reset input
+    e.target.value = '';
   };
 
   const handleRemoveImage = (index: number) => {
@@ -99,18 +143,42 @@ const AdminUserAlbumModal: React.FC<AdminUserAlbumModalProps> = ({
 
           {/* Add New Image */}
           <div>
-            <Label htmlFor="newImage">Thêm hình ảnh mới</Label>
-            <div className="flex gap-2 mt-2">
-              <Input
-                id="newImage"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                onKeyPress={(e) => e.key === 'Enter' && handleAddImage()}
-              />
-              <Button onClick={handleAddImage} variant="outline">
-                <Plus className="w-4 h-4" />
-              </Button>
+            <Label>Thêm hình ảnh mới</Label>
+            <div className="space-y-3 mt-2">
+              {/* Upload from device */}
+              <div>
+                <Label htmlFor="fileUpload" className="text-sm text-gray-600">Từ thiết bị</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="fileUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="cursor-pointer"
+                    disabled={uploading}
+                  />
+                  <Button variant="outline" disabled={uploading}>
+                    <Upload className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Or URL */}
+              <div>
+                <Label htmlFor="newImage" className="text-sm text-gray-600">Hoặc từ URL</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="newImage"
+                    value={newImageUrl}
+                    onChange={(e) => setNewImageUrl(e.target.value)}
+                    placeholder="https://example.com/image.jpg"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddImage()}
+                  />
+                  <Button onClick={handleAddImage} variant="outline">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 

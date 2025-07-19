@@ -363,24 +363,25 @@ const PostItem: React.FC<{
     setShowDeleteDialog(false);
   };
 
-  const isPostOwner = user?.id === post.user_id;
+  const isPostOwner = user?.id === post.user_id && !post.is_fake_user;
 
   return (
     <Card className="rounded-xl shadow-sm border border-gray-200 mb-3 p-4 bg-white transition hover:shadow-md">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <img
-            src={post.profiles?.avatar || demoUser.avatar}
-            alt={post.profiles?.name || "User"}
+            src={post.user_avatar || demoUser.avatar}
+            alt={post.user_name || "User"}
             className="w-10 h-10 rounded-full object-cover border shadow cursor-pointer"
-            onClick={() => post.profiles?.id && navigate(`/profile/${post.profiles.id}`)}
+            onClick={() => !post.is_fake_user && post.user_id && navigate(`/profile/${post.user_id}`)}
           />
           <div className="flex flex-col">
             <span
               className="font-semibold text-gray-800 cursor-pointer hover:underline"
-              onClick={() => post.profiles?.id && navigate(`/profile/${post.profiles.id}`)}
+              onClick={() => !post.is_fake_user && post.user_id && navigate(`/profile/${post.user_id}`)}
             >
-              {post.profiles?.name || "Ẩn danh"}
+              {post.user_name || "Ẩn danh"}
+              {post.is_fake_user && <span className="text-xs text-gray-500 ml-1">(Bot)</span>}
             </span>
             <span className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</span>
           </div>

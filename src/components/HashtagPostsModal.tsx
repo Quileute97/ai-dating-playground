@@ -30,9 +30,9 @@ export default function HashtagPostsModal({ hashtag, open, onClose, user }: Hash
           {hashtagPosts.map(post => (
             <Card key={post.id} className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <img src={post.profiles?.avatar || "/placeholder.svg"} className="w-7 h-7 rounded-full object-cover" />
+                <img src={post.user_avatar || "/placeholder.svg"} className="w-7 h-7 rounded-full object-cover" />
                 <div>
-                  <div className="font-bold text-gray-800">{post.profiles?.name || "Ẩn danh"}</div>
+                  <div className="font-bold text-gray-800">{post.user_name || "Ẩn danh"}</div>
                   <div className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</div>
                 </div>
               </div>

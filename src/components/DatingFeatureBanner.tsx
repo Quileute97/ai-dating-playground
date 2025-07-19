@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Crown, Clock, AlertTriangle } from "lucide-react";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
-import PremiumUpgradeModal from "./PremiumUpgradeModal";
+import DatingPackageModal from "./DatingPackageModal";
 
 interface DatingFeatureBannerProps {
   isDatingActive: boolean;
@@ -100,9 +100,12 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
 
   return (
     <>
-      <PremiumUpgradeModal
+      <DatingPackageModal
         isOpen={showPremiumModal}
         onClose={() => setShowPremiumModal(false)}
+        onSelectPackage={(packageId) => {
+          setShowPremiumModal(false);
+        }}
       />
     </>
   );

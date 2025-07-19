@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useBankInfo } from "@/hooks/useBankInfo";
 import DatingProfileView from "./DatingProfileView";
 import DatingFeatureBanner from "./DatingFeatureBanner";
-import PremiumUpgradeModal from "./PremiumUpgradeModal";
+import DatingPackageModal from "./DatingPackageModal";
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
@@ -450,10 +450,18 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         </div>
       </div>
 
-      {/* Premium Upgrade Modal */}
-      <PremiumUpgradeModal
+      {/* Dating Package Modal */}
+      <DatingPackageModal
         isOpen={showDatingPackageModal}
         onClose={() => setShowDatingPackageModal(false)}
+        onSelectPackage={(packageId) => {
+          setShowDatingPackageModal(false);
+          toast({
+            title: "🎉 Chuyển hướng thành công!",
+            description: "Hoàn tất thanh toán để kích hoạt Premium.",
+          });
+        }}
+        currentUser={user}
       />
     </div>
   );

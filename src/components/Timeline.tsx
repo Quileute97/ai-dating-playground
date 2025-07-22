@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { Badge } from "@/components/ui/badge";
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
@@ -381,7 +382,11 @@ const PostItem: React.FC<{
               onClick={() => !post.is_fake_user && post.user_id && navigate(`/profile/${post.user_id}`)}
             >
               {post.user_name || "Ẩn danh"}
-              {post.is_fake_user && <span className="text-xs text-gray-500 ml-1">(Bot)</span>}
+              {post.is_fake_user && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  Bot
+                </Badge>
+              )}
             </span>
             <span className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</span>
           </div>

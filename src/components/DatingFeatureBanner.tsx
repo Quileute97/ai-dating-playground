@@ -103,8 +103,21 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
       <DatingPackageModal
         isOpen={showPremiumModal}
         onClose={() => setShowPremiumModal(false)}
-        onSelectPackage={(packageId) => {
-          setShowPremiumModal(false);
+        onSelectPackage={async (packageId) => {
+          try {
+            const { createDatingPackagePayment } = await import("@/services/datingPackageService");
+            setShowPremiumModal(false);
+            
+            const result = await createDatingPackagePayment(packageId, userId!, "user@example.com");
+            
+            if (result.checkoutUrl) {
+              window.open(result.checkoutUrl, '_blank');
+            } else {
+              throw new Error("Không thể tạo liên kết thanh toán");
+            }
+          } catch (error) {
+            console.error('Payment error:', error);
+          }
         }}
       />
     </>

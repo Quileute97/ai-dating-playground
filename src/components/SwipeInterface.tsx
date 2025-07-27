@@ -454,12 +454,30 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       <DatingPackageModal
         isOpen={showDatingPackageModal}
         onClose={() => setShowDatingPackageModal(false)}
-        onSelectPackage={(packageId) => {
-          setShowDatingPackageModal(false);
-          toast({
-            title: "🎉 Chuyển hướng thành công!",
-            description: "Hoàn tất thanh toán để kích hoạt Premium.",
-          });
+        onSelectPackage={async (packageId) => {
+          try {
+            const { createDatingPackagePayment } = await import("@/services/datingPackageService");
+            setShowDatingPackageModal(false);
+            
+            const result = await createDatingPackagePayment(packageId, user.id, user.email);
+            
+            if (result.checkoutUrl) {
+              window.open(result.checkoutUrl, '_blank');
+              toast({
+                title: "Chuyển hướng thanh toán",
+                description: "Vui lòng hoàn tất thanh toán để kích hoạt gói Premium",
+              });
+            } else {
+              throw new Error("Không thể tạo liên kết thanh toán");
+            }
+          } catch (error) {
+            console.error('Payment error:', error);
+            toast({
+              title: "Lỗi tạo thanh toán",
+              description: "Không thể tạo liên kết thanh toán. Vui lòng thử lại.",
+              variant: "destructive"
+            });
+          }
         }}
         currentUser={user}
       />

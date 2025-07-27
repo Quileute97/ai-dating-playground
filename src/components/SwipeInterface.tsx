@@ -92,29 +92,49 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     fetchLikedAndMatchedProfiles();
   }, [user?.id]);
   
-  const availableProfiles = useMemo(() =>
-    profiles
-      .filter(p => 
-        p.id !== user?.id && 
+  const availableProfiles = useMemo(() => {
+    console.log('Debug - All profiles:', profiles.length);
+    console.log('Debug - User location:', userLocation);
+    console.log('Debug - Liked profiles:', likedProfiles.size);
+    console.log('Debug - Matched profiles:', matchedProfiles.size);
+    
+    const filtered = profiles.filter(p => {
+      const isValid = p.id !== user?.id && 
         p.name && 
         p.avatar && 
         p.is_dating_active &&
         !likedProfiles.has(p.id) &&  // Filter out already liked profiles
-        !matchedProfiles.has(p.id)   // Filter out already matched profiles
-      )
-      .map(p => ({
-        ...p,
-        images: [p.avatar!],
-        bio: p.bio || "Chào bạn! Tôi đang tìm kiếm những kết nối thú vị trên ứng dụng này.",
-        distance: p.distance || Math.floor(Math.random() * 20) + 1,
-        interests: Array.isArray(p.interests) ? p.interests : [],
-        age: p.age || 25,
-        height: p.height,
-        job: p.job,
-        education: p.education,
-        location_name: p.location_name
-      })), [profiles, user?.id, likedProfiles, matchedProfiles]
-  );
+        !matchedProfiles.has(p.id);   // Filter out already matched profiles
+      
+      if (!isValid) {
+        console.log('Debug - Filtered out profile:', p.name, {
+          sameUser: p.id === user?.id,
+          hasName: !!p.name,
+          hasAvatar: !!p.avatar,
+          isDatingActive: p.is_dating_active,
+          isLiked: likedProfiles.has(p.id),
+          isMatched: matchedProfiles.has(p.id)
+        });
+      }
+      
+      return isValid;
+    });
+    
+    console.log('Debug - Available profiles after filter:', filtered.length);
+    
+    return filtered.map(p => ({
+      ...p,
+      images: [p.avatar!],
+      bio: p.bio || "Chào bạn! Tôi đang tìm kiếm những kết nối thú vị trên ứng dụng này.",
+      distance: p.distance || Math.floor(Math.random() * 20) + 1,
+      interests: Array.isArray(p.interests) ? p.interests : [],
+      age: p.age || 25,
+      height: p.height,
+      job: p.job,
+      education: p.education,
+      location_name: p.location_name
+    }));
+  }, [profiles, user?.id, likedProfiles, matchedProfiles, userLocation]);
 
   const maxFreeMatches = 10;
   const remainingMatches = maxFreeMatches - dailyMatches;

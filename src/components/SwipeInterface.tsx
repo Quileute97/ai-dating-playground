@@ -3,6 +3,7 @@ import { Heart, X, Zap, Crown, Star, ArrowRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 import { useBankInfo } from "@/hooks/useBankInfo";
 import DatingProfileView from "./DatingProfileView";
 import DatingFeatureBanner from "./DatingFeatureBanner";
@@ -22,6 +23,7 @@ interface SwipeInterfaceProps {
 }
 
 const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
+  const navigate = useNavigate();
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [matches, setMatches] = useState(0);
@@ -460,7 +462,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           datingLoading={datingLoading}
           onClickUpgrade={() => {
             // Navigate to payment page for dating
-            window.location.href = '/payment?type=dating&package=dating_premium';
+            navigate('/payment?type=dating&package=dating_week');
           }}
           userId={user?.id}
           dailyMatches={dailyMatches}

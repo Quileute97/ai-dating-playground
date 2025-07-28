@@ -458,7 +458,10 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         <DatingFeatureBanner
           isDatingActive={isDatingActive}
           datingLoading={datingLoading}
-          onClickUpgrade={() => setShowDatingPackageModal(true)}
+          onClickUpgrade={() => {
+            // Navigate to payment page for dating
+            window.location.href = '/payment?type=dating&package=dating_premium';
+          }}
           userId={user?.id}
           dailyMatches={dailyMatches}
           maxFreeMatches={maxFreeMatches}

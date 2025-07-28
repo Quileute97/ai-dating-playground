@@ -265,7 +265,10 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
           upgradeStatus={undefined}
           nearbyLoading={loading}
           hasExpandedRange={hasExpandedRange}
-          onClickUpgrade={() => setShowPackageModal(true)}
+          onClickUpgrade={() => {
+            // Navigate to payment page for nearby
+            window.location.href = '/payment?type=nearby&package=nearby_week';
+          }}
           onClickExpand={handleExpandRange}
           disableExpand={hasExpandedRange}
           userId={user?.id}

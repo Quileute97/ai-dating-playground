@@ -113,7 +113,10 @@ const NearbyMain: React.FC<NearbyMainProps> = ({
           upgradeStatus={upgradeStatus}
           nearbyLoading={nearbyLoading}
           hasExpandedRange={hasExpandedRange}
-          onClickUpgrade={() => setShowPackageModal(true)}
+          onClickUpgrade={() => {
+            // Navigate to payment page for nearby
+            window.location.href = '/payment?type=nearby&package=nearby_week';
+          }}
           onClickExpand={onExpandRange}
           disableExpand={disableExpand}
           userId={currentUser?.id}

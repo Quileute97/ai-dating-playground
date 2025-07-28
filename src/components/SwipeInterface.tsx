@@ -461,6 +461,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           isDatingActive={isDatingActive}
           datingLoading={datingLoading}
           onClickUpgrade={() => {
+            console.log('Upgrade button clicked, navigating to payment page');
             // Navigate to payment page for dating
             navigate('/payment?type=dating&package=dating_week');
           }}

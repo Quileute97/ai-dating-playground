@@ -89,7 +89,7 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
             variant="secondary" 
             size="sm" 
             className="text-orange-600"
-            onClick={() => setShowPremiumModal(true)}
+            onClick={onClickUpgrade}
           >
             Xem gói Premium
           </Button>

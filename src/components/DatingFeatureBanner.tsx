@@ -42,7 +42,10 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
             variant="secondary"
             size="sm"
             className="text-red-600"
-            onClick={onClickUpgrade}
+            onClick={() => {
+              console.log('Gia hạn Premium button clicked');
+              onClickUpgrade();
+            }}
           >
             Gia hạn Premium
           </Button>
@@ -89,7 +92,10 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
             variant="secondary" 
             size="sm" 
             className="text-orange-600"
-            onClick={onClickUpgrade}
+            onClick={() => {
+              console.log('Xem gói Premium button clicked');
+              onClickUpgrade();
+            }}
           >
             Xem gói Premium
           </Button>

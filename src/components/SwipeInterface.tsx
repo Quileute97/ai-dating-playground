@@ -364,11 +364,53 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
 
       {/* Match Notification */}
       {showMatch && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-pink-500/90 to-purple-500/90 backdrop-blur-sm">
-          <div className="text-center text-white animate-pulse">
-            <Heart className="w-20 h-20 mx-auto mb-4 text-red-300" />
-            <h2 className="text-3xl font-bold mb-2">It's a Match! 💖</h2>
-            <p className="text-lg">Bạn và {currentProfile.name} đã thích nhau!</p>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-pink-500/90 to-purple-500/90 backdrop-blur-sm animate-fade-in">
+          <div className="text-center text-white animate-scale-in">
+            {/* Sparkle Effects */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-yellow-300 rounded-full animate-ping" />
+              <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-white rounded-full animate-pulse" />
+              <div className="absolute bottom-1/3 left-1/3 w-1.5 h-1.5 bg-pink-200 rounded-full animate-bounce" />
+              <div className="absolute top-1/2 right-1/3 w-1 h-1 bg-purple-200 rounded-full animate-ping" />
+              <div className="absolute bottom-1/4 right-1/4 w-2 h-2 bg-yellow-200 rounded-full animate-pulse" />
+            </div>
+            
+            {/* Main Heart with Enhanced Animation */}
+            <div className="relative mb-6">
+              <Heart className="w-24 h-24 mx-auto text-red-400 animate-bounce fill-current" />
+              <div className="absolute inset-0 w-24 h-24 mx-auto">
+                <Heart className="w-24 h-24 text-red-300 animate-ping opacity-75" />
+              </div>
+            </div>
+            
+            {/* Match Text with Gradient */}
+            <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300 bg-clip-text text-transparent animate-pulse">
+              It's a Match! 💖
+            </h2>
+            
+            <p className="text-xl mb-8 opacity-90">
+              Bạn và <span className="font-semibold">{currentProfile.name}</span> đã thích nhau!
+            </p>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-4 justify-center">
+              <Button
+                onClick={() => {
+                  setShowMatch(false);
+                  handleChatClick(currentProfile);
+                }}
+                className="bg-white text-pink-600 hover:bg-pink-50 px-8 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+              >
+                💬 Nhắn tin ngay
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowMatch(false)}
+                className="border-white text-white hover:bg-white/20 px-8 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+              >
+                Tiếp tục khám phá
+              </Button>
+            </div>
           </div>
         </div>
       )}

@@ -75,8 +75,11 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
         cancelUrl: `${window.location.origin}/payment-cancel`,
         userId: user.id,
         userEmail: user.email || '',
-        packageType: `${packageType}_${packageId}`
+        packageType: packageId // Sử dụng trực tiếp packageId thay vì kết hợp
       };
+
+      console.log('Payment data:', paymentData);
+      console.log('Package info:', packageInfo);
 
       const response = await createPayOSPayment(paymentData);
 

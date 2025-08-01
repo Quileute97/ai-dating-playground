@@ -26,6 +26,16 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
   const { subscription, daysRemaining } = useIsDatingActive(userId);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
 
+  console.log('DatingFeatureBanner Debug:', {
+    isDatingActive,
+    datingLoading,
+    subscription,
+    daysRemaining,
+    dailyMatches,
+    maxFreeMatches,
+    remainingMatches: maxFreeMatches - dailyMatches
+  });
+
   if (datingLoading) return null;
   
   // Show expired subscription banner

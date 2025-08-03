@@ -14,14 +14,22 @@ import { supabase } from '@/integrations/supabase/client';
 interface PaymentPageProps {}
 
 const PaymentPage: React.FC<PaymentPageProps> = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'confirm' | 'processing' | 'success'>('confirm');
   const [user, setUser] = useState<any>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
 
   const packageType = searchParams.get('type'); // 'dating' or 'nearby'
   const packageId = searchParams.get('package');
+
+  // Initialize selected package
+  useEffect(() => {
+    if (packageId) {
+      setSelectedPackageId(packageId);
+    }
+  }, [packageId]);
 
   useEffect(() => {
     const getUser = async () => {
@@ -31,17 +39,38 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
     getUser();
   }, []);
 
-  // Get package details
+  // Get package details based on selected package
   const getPackageInfo = () => {
+    const currentPackageId = selectedPackageId || packageId;
     if (packageType === 'dating') {
-      return DATING_PACKAGES.find(p => p.id === packageId);
+      return DATING_PACKAGES.find(p => p.id === currentPackageId);
     } else if (packageType === 'nearby') {
-      return NEARBY_PACKAGES.find(p => p.id === packageId);
+      return NEARBY_PACKAGES.find(p => p.id === currentPackageId);
     }
     return null;
   };
 
+  // Get all available packages for selection
+  const getAvailablePackages = () => {
+    if (packageType === 'dating') {
+      return DATING_PACKAGES;
+    } else if (packageType === 'nearby') {
+      return NEARBY_PACKAGES;
+    }
+    return [];
+  };
+
   const packageInfo = getPackageInfo();
+  const availablePackages = getAvailablePackages();
+
+  // Handle package selection
+  const handlePackageSelect = (newPackageId: string) => {
+    setSelectedPackageId(newPackageId);
+    // Update URL parameters
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('package', newPackageId);
+    setSearchParams(newSearchParams);
+  };
 
   useEffect(() => {
     if (!packageType || !packageId || !packageInfo) {
@@ -68,7 +97,7 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
 
     try {
       const paymentData = {
-        packageType: packageId, // Sử dụng trực tiếp packageId  
+        packageType: selectedPackageId || packageId, // Use selected package  
         userId: user.id,
         userEmail: user.email || ''
       };
@@ -112,6 +141,49 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
             {packageType === 'dating' ? 'Tính năng Hẹn Hò' : 'Tính năng Quanh Đây'}
           </p>
         </div>
+
+        {/* Package Selection */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Chọn gói nâng cấp</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {availablePackages.map((pkg) => (
+                <div
+                  key={pkg.id}
+                  className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                    (selectedPackageId || packageId) === pkg.id
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                  onClick={() => handlePackageSelect(pkg.id)}
+                >
+                  <div className="text-center">
+                    <h3 className="font-semibold text-lg mb-2">{pkg.name}</h3>
+                    <div className="text-2xl font-bold text-primary mb-2">
+                      {formatPrice(pkg.price)}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {pkg.description}
+                    </p>
+                    {pkg.duration > 0 && (
+                      <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>{pkg.duration} ngày</span>
+                      </div>
+                    )}
+                    {(selectedPackageId || packageId) === pkg.id && (
+                      <div className="mt-3">
+                        <Badge className="w-full">Đã chọn</Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Payment Card */}
         <Card className="mb-6">

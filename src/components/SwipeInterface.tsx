@@ -503,9 +503,9 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           isDatingActive={isDatingActive}
           datingLoading={datingLoading}
           onClickUpgrade={() => {
-            console.log('Upgrade button clicked, navigating to payment page');
-            // Navigate to payment page for dating
-            navigate('/payment?type=dating&package=dating_week');
+            console.log('Upgrade button clicked, opening package modal');
+            // Show package modal instead of navigating to payment page
+            setShowDatingPackageModal(true);
           }}
           userId={user?.id}
           dailyMatches={dailyMatches}
@@ -522,32 +522,8 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       <DatingPackageModal
         isOpen={showDatingPackageModal}
         onClose={() => setShowDatingPackageModal(false)}
-        onSelectPackage={async (packageId) => {
-          try {
-            const { createDatingPackagePayment } = await import("@/services/datingPackageService");
-            setShowDatingPackageModal(false);
-            
-            const result = await createDatingPackagePayment(packageId, user.id, user.email);
-            
-            if (result.checkoutUrl) {
-              window.open(result.checkoutUrl, '_blank');
-              toast({
-                title: "Chuyển hướng thanh toán",
-                description: "Vui lòng hoàn tất thanh toán để kích hoạt gói Premium",
-              });
-            } else {
-              throw new Error("Không thể tạo liên kết thanh toán");
-            }
-          } catch (error) {
-            console.error('Payment error:', error);
-            toast({
-              title: "Lỗi tạo thanh toán",
-              description: "Không thể tạo liên kết thanh toán. Vui lòng thử lại.",
-              variant: "destructive"
-            });
-          }
-        }}
         currentUser={user}
+        bankInfo={bankInfoHook.bankInfo}
       />
     </div>
   );

@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 export interface PaymentData {
   packageType: string;
   userId: string;
@@ -62,6 +64,12 @@ export const createPayOSPayment = async (paymentData: PaymentData): Promise<Paym
     if (validationErrors.length > 0) {
       throw new Error(`Validation failed: ${validationErrors.join(', ')}`);
     }
+
+    // Get auth session for authorization header
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Vui lòng đăng nhập để tiếp tục');
+    }
     
     // Prepare the request with proper formatting
     const requestBody = {
@@ -79,6 +87,7 @@ export const createPayOSPayment = async (paymentData: PaymentData): Promise<Paym
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
       },
       body: JSON.stringify(requestBody),
     });
@@ -130,6 +139,12 @@ export const createNearbyPackagePayment = async (
     if (!packageId || !userId) {
       throw new Error('Package ID and User ID are required');
     }
+
+    // Get auth session for authorization header
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Vui lòng đăng nhập để tiếp tục');
+    }
     
     const requestBody = {
       orderCode: generateOrderCode(),
@@ -146,6 +161,7 @@ export const createNearbyPackagePayment = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
       },
       body: JSON.stringify(requestBody),
     });

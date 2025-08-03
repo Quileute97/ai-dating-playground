@@ -81,14 +81,9 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
 
     try {
       const result = await createPayOSPayment({
-        orderCode: Date.now(),
-        amount: packageData.price,
-        description: `Nang cap Premium Dating - ${packageData.name}`,
-        returnUrl: `${window.location.origin}/payment-success`,
-        cancelUrl: `${window.location.origin}/payment-cancel`,
+        packageType: packageData.id,
         userId: currentUser.id,
-        userEmail: currentUser.email || '',
-        packageType: packageData.id
+        userEmail: currentUser.email || ''
       });
 
       if (result.error === 0 && result.data?.checkoutUrl) {

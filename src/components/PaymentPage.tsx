@@ -68,14 +68,9 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
 
     try {
       const paymentData = {
-        orderCode: Date.now(),
-        amount: packageInfo.price,
-        description: `Nâng cấp ${packageType === 'dating' ? 'Hẹn Hò' : 'Quanh Đây'} - ${packageInfo.name}`,
-        returnUrl: `${window.location.origin}/payment-success`,
-        cancelUrl: `${window.location.origin}/payment-cancel`,
+        packageType: packageId, // Sử dụng trực tiếp packageId  
         userId: user.id,
-        userEmail: user.email || '',
-        packageType: packageId // Sử dụng trực tiếp packageId thay vì kết hợp
+        userEmail: user.email || ''
       };
 
       console.log('Payment data:', paymentData);

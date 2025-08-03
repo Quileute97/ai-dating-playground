@@ -1,13 +1,11 @@
 
 export interface PaymentData {
-  orderCode: number;
-  amount: number;
-  description: string;
-  returnUrl: string;
-  cancelUrl: string;
-  userId?: string;
-  userEmail?: string;
   packageType: string;
+  userId: string;
+  userEmail?: string;
+  orderCode?: number;
+  returnUrl?: string;
+  cancelUrl?: string;
 }
 
 export interface PaymentResponse {
@@ -44,28 +42,12 @@ export const generateOrderCode = (): number => {
 const validatePaymentData = (paymentData: PaymentData) => {
   const errors: string[] = [];
   
-  if (!paymentData.orderCode || paymentData.orderCode <= 0) {
-    errors.push('Order code must be positive');
-  }
-  
-  if (!paymentData.amount || paymentData.amount <= 0) {
-    errors.push('Amount must be positive');
-  }
-  
-  if (!paymentData.description || paymentData.description.trim().length === 0) {
-    errors.push('Description is required');
-  }
-  
-  if (paymentData.description && paymentData.description.length > 25) {
-    errors.push('Description must be 25 characters or less');
-  }
-  
   if (!paymentData.packageType) {
     errors.push('Package type is required');
   }
   
-  if (!paymentData.returnUrl || !paymentData.cancelUrl) {
-    errors.push('Return and cancel URLs are required');
+  if (!paymentData.userId) {
+    errors.push('User ID is required');
   }
   
   return errors;
@@ -83,12 +65,12 @@ export const createPayOSPayment = async (paymentData: PaymentData): Promise<Paym
     
     // Prepare the request with proper formatting
     const requestBody = {
-      orderCode: Math.abs(Math.floor(paymentData.orderCode)),
+      orderCode: paymentData.orderCode || generateOrderCode(),
       userId: paymentData.userId,
       userEmail: paymentData.userEmail || '',
       packageType: paymentData.packageType,
-      returnUrl: paymentData.returnUrl,
-      cancelUrl: paymentData.cancelUrl,
+      returnUrl: paymentData.returnUrl || `${window.location.origin}/payment-success`,
+      cancelUrl: paymentData.cancelUrl || `${window.location.origin}/payment-cancel`,
     };
     
     console.log('📤 Sending request:', requestBody);

@@ -53,10 +53,9 @@ const PremiumUpgradeModal = ({ isOpen, onClose, onSuccess }: PremiumUpgradeModal
       
       const { data, error } = await supabase.functions.invoke('create-payos-payment', {
         body: {
-          amount: 99000, // 99,000 VND
-          description: "Nang cap Premium",
-          returnUrl: `${window.location.origin}/payment-success`,
-          cancelUrl: `${window.location.origin}/payment-cancel`
+          packageType: "dating_week", // Default to 1 week premium
+          userId: "user-id-here", // TODO: Get actual user ID
+          userEmail: "user@email.com" // TODO: Get actual user email
         }
       });
 

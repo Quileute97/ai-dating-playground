@@ -7,11 +7,57 @@ const corsHeaders = {
 };
 
 interface PaymentRequest {
-  amount: number;
-  description: string;
+  packageType: string;
+  userId: string;
+  userEmail?: string;
   orderCode?: number;
   returnUrl?: string;
   cancelUrl?: string;
+}
+
+interface PackageInfo {
+  name: string;
+  price: number;
+  description: string; // Max 25 characters for PayOS
+}
+
+function getPackageInfo(packageType: string): PackageInfo | null {
+  const packages: Record<string, PackageInfo> = {
+    // Dating packages
+    "dating_week": {
+      name: "Premium 1 tuần",
+      price: 50000,
+      description: "Premium 1 tuan" // 14 chars
+    },
+    "dating_month": {
+      name: "Premium 1 tháng", 
+      price: 150000,
+      description: "Premium 1 thang" // 15 chars
+    },
+    "dating_lifetime": {
+      name: "Premium vĩnh viễn",
+      price: 500000,
+      description: "Premium vinh vien" // 17 chars
+    },
+    // Nearby packages
+    "nearby_week": {
+      name: "Nearby 1 tuần",
+      price: 30000,
+      description: "Nearby 1 tuan" // 13 chars
+    },
+    "nearby_month": {
+      name: "Nearby 1 tháng",
+      price: 100000,
+      description: "Nearby 1 thang" // 14 chars
+    },
+    "nearby_lifetime": {
+      name: "Nearby vĩnh viễn", 
+      price: 300000,
+      description: "Nearby vinh vien" // 16 chars
+    }
+  };
+
+  return packages[packageType] || null;
 }
 
 serve(async (req) => {
@@ -48,7 +94,18 @@ serve(async (req) => {
 
     // Parse request body
     const body: PaymentRequest = await req.json();
-    const { amount, description } = body;
+    const { packageType, userId, userEmail } = body;
+
+    console.log("📝 Received payment request:", { packageType, userId, userEmail });
+
+    // Get package info based on packageType
+    const packageInfo = getPackageInfo(packageType);
+    if (!packageInfo) {
+      throw new Error(`Invalid package type: ${packageType}`);
+    }
+
+    const { name, price: amount, description } = packageInfo;
+    console.log("📦 Package info:", { name, amount, description });
 
     // Generate unique order code
     const orderCode = body.orderCode || Date.now();

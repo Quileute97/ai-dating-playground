@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import UserProfilePage from "./pages/UserProfilePage";
+import FakeUserProfilePage from "./pages/FakeUserProfilePage";
 import ResetPassword from "./pages/ResetPassword";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
@@ -23,6 +24,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/profile/:userId" element={<UserProfilePage />} />
+          <Route path="/fake-profile/:userId" element={<FakeUserProfilePage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />

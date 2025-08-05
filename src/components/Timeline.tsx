@@ -374,19 +374,30 @@ const PostItem: React.FC<{
             src={post.user_avatar || demoUser.avatar}
             alt={post.user_name || "User"}
             className="w-10 h-10 rounded-full object-cover border shadow cursor-pointer"
-            onClick={() => !post.is_fake_user && post.user_id && navigate(`/profile/${post.user_id}`)}
+            onClick={() => {
+              if (post.user_id) {
+                if (post.is_fake_user) {
+                  navigate(`/fake-profile/${post.user_id}`);
+                } else {
+                  navigate(`/profile/${post.user_id}`);
+                }
+              }
+            }}
           />
           <div className="flex flex-col">
             <span
               className="font-semibold text-gray-800 cursor-pointer hover:underline"
-              onClick={() => !post.is_fake_user && post.user_id && navigate(`/profile/${post.user_id}`)}
+              onClick={() => {
+                if (post.user_id) {
+                  if (post.is_fake_user) {
+                    navigate(`/fake-profile/${post.user_id}`);
+                  } else {
+                    navigate(`/profile/${post.user_id}`);
+                  }
+                }
+              }}
             >
               {post.user_name || "Ẩn danh"}
-              {post.is_fake_user && (
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  Bot
-                </Badge>
-              )}
             </span>
             <span className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</span>
           </div>
@@ -449,7 +460,7 @@ const PostItem: React.FC<{
           variant={liked ? "secondary" : "outline"}
           className={`transition-all rounded-full px-3 py-1.5 h-8 ${liked ? "text-pink-500 border-pink-400" : "border-gray-200"}`}
           onClick={handleLike}
-          disabled={isToggling}
+          disabled={isToggling || !user?.id}
         >
           <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={16} />
           <span className="ml-1 text-sm">{likeCount > 0 ? likeCount : ""}</span>

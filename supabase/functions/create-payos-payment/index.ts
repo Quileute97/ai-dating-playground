@@ -42,17 +42,17 @@ function getPackageInfo(packageType: string): PackageInfo | null {
     // Nearby packages
     "nearby_week": {
       name: "Nearby 1 tuần",
-      price: 30000,
+      price: 20000,
       description: "Nearby 1 tuan" // 13 chars
     },
     "nearby_month": {
       name: "Nearby 1 tháng",
-      price: 100000,
+      price: 50000,
       description: "Nearby 1 thang" // 14 chars
     },
-    "nearby_lifetime": {
+    "nearby_unlimited": {
       name: "Nearby vĩnh viễn", 
-      price: 300000,
+      price: 500000,
       description: "Nearby vinh vien" // 16 chars
     }
   };

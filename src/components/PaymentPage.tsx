@@ -97,7 +97,7 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
 
     try {
       const paymentData = {
-        packageType: selectedPackageId || packageId, // Use selected package  
+        packageType: selectedPackageId || packageId, // This is the package ID
         userId: user.id,
         userEmail: user.email || ''
       };

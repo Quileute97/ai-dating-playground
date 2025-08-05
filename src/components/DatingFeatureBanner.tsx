@@ -53,7 +53,7 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
             size="sm"
             className="text-red-600"
             onClick={() => {
-              console.log('Gia hạn Premium button clicked');
+              console.log('Gia hạn Premium button clicked - DatingFeatureBanner');
               onClickUpgrade();
             }}
           >
@@ -103,7 +103,7 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
             size="sm" 
             className="text-orange-600"
             onClick={() => {
-              console.log('Xem gói Premium button clicked');
+              console.log('Xem gói Premium button clicked - DatingFeatureBanner');
               onClickUpgrade();
             }}
           >

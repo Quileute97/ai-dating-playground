@@ -256,12 +256,12 @@ const PostForm: React.FC<{
   return (
     <Card className="mb-2 p-2 shadow-sm">
       <form onSubmit={handleSubmit} className="flex gap-2 items-start">
-        <img src={currentAvatar} alt={currentName} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1" />
-        <div className="flex-1 w-full flex flex-col gap-1.5">
+        <img src={currentAvatar} alt={currentName} className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />
+        <div className="flex-1 w-full flex flex-col gap-1">
           <div className="relative">
             <Textarea
               ref={textAreaRef}
-              className="flex-1 min-h-[60px] resize-none text-sm border-gray-200"
+              className="flex-1 min-h-[50px] resize-none text-sm border-gray-200 py-2"
               placeholder="Bạn đang nghĩ gì?"
               value={content}
               onChange={e => setContent(e.target.value)}
@@ -290,9 +290,9 @@ const PostForm: React.FC<{
           )}
           
           <div className="flex justify-between items-center">
-            <div className="flex gap-1.5 items-center">
-              <label className="cursor-pointer flex gap-1 items-center text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors">
-                <ImageIcon size={12} />
+            <div className="flex gap-1 items-center">
+              <label className="cursor-pointer flex gap-0.5 items-center text-[10px] px-1.5 py-0.5 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors">
+                <ImageIcon size={10} />
                 <input
                   type="file"
                   accept="image/*"
@@ -302,8 +302,8 @@ const PostForm: React.FC<{
                 />
                 <span>Ảnh</span>
               </label>
-              <label className="cursor-pointer flex gap-1 items-center text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors">
-                <VideoIcon size={12} />
+              <label className="cursor-pointer flex gap-0.5 items-center text-[10px] px-1.5 py-0.5 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors">
+                <VideoIcon size={10} />
                 <input
                   type="file"
                   accept="video/*"
@@ -317,7 +317,7 @@ const PostForm: React.FC<{
             <Button
               type="submit"
               size="sm"
-              className="h-7 px-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 text-xs"
+              className="h-6 px-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 text-[10px]"
               disabled={posting || uploadingMedia}
             >
               {posting ? "Đang đăng..." : uploadingMedia ? "Đang tải..." : "Đăng"}

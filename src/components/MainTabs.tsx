@@ -38,9 +38,9 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
   ];
   if (isAdminMode) return null;
   return (
-    <div className="bg-white/90 backdrop-blur-sm border-b border-purple-100 px-4 py-3 shadow-sm">
+    <div className="bg-white/90 backdrop-blur-sm border-b border-purple-100 px-2 py-1.5 shadow-sm">
       <div className="flex justify-center items-center max-w-lg mx-auto">
-        <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
+        <div className="flex bg-gray-100 rounded-xl p-0.5 gap-0.5">
           {displayTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -51,19 +51,19 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 disabled={isLocked}
-                className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl min-w-[80px] transition-all duration-300 ${
+                className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg min-w-[60px] transition-all duration-300 ${
                   isActive 
-                    ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-lg scale-105 -translate-y-0.5'
+                    ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-md scale-102'
                     : isLocked
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-white hover:text-gray-800 hover:scale-102 hover:shadow-sm'
+                      : 'text-gray-600 hover:bg-white hover:text-gray-800 hover:scale-101 hover:shadow-sm'
                 }`}
                 title={isLocked ? 'Đăng nhập để dùng tính năng này' : undefined}
               >
-                <Icon className={`w-5 h-5 transition-all duration-200 ${isActive ? 'scale-110' : ''}`} />
-                <span className="text-xs font-medium leading-tight">{tab.label}</span>
+                <Icon className={`w-4 h-4 transition-all duration-200 ${isActive ? 'scale-105' : ''}`} />
+                <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
                 {isLocked && (
-                  <span className="absolute top-2 right-2 text-xs text-gray-500">🔒</span>
+                  <span className="absolute top-1 right-1 text-[8px] text-gray-500">🔒</span>
                 )}
               </button>
             );

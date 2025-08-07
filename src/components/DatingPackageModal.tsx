@@ -67,7 +67,11 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
   };
 
   const handleSelectPackage = async (packageData: DatingPackage) => {
+    console.log('🔥 DEBUG: DatingPackageModal - handleSelectPackage called', packageData);
+    console.log('🔥 DEBUG: Current user:', currentUser);
+    
     if (!currentUser?.id) {
+      console.log('🔥 DEBUG: No currentUser.id, showing login toast');
       toast({
         title: "Vui lòng đăng nhập",
         description: "Bạn cần đăng nhập để mua gói Premium",
@@ -80,13 +84,22 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
     setIsProcessing(true);
 
     try {
+      console.log('🔥 DEBUG: Calling createPayOSPayment with:', {
+        packageType: packageData.id,
+        userId: currentUser.id,
+        userEmail: currentUser.email || ''
+      });
+      
       const result = await createPayOSPayment({
         packageType: packageData.id,
         userId: currentUser.id,
         userEmail: currentUser.email || ''
       });
 
+      console.log('🔥 DEBUG: createPayOSPayment result:', result);
+
       if (result.error === 0 && result.data?.checkoutUrl) {
+        console.log('🔥 DEBUG: Opening checkout URL:', result.data.checkoutUrl);
         window.open(result.data.checkoutUrl, '_blank');
         toast({
           title: "Chuyển hướng thanh toán",
@@ -99,16 +112,18 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
           onSelectPackage(packageData.id);
         }
       } else {
+        console.log('🔥 DEBUG: Payment creation failed:', result);
         throw new Error(result.message || 'Không thể tạo liên kết thanh toán');
       }
     } catch (error) {
-      console.error('Payment error:', error);
+      console.error('🔥 DEBUG: Payment error in DatingPackageModal:', error);
       toast({
         title: "Lỗi tạo thanh toán",
         description: "Không thể tạo liên kết thanh toán. Vui lòng thử lại.",
         variant: "destructive"
       });
     } finally {
+      console.log('🔥 DEBUG: Cleanup - setting processing to false');
       setIsProcessing(false);
       setSelectedPackage(null);
     }

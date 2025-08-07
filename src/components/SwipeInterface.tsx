@@ -262,7 +262,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
                 Bạn đã sử dụng hết {maxFreeMatches} lượt thả tim hôm nay.
               </p>
               <Button
-                onClick={() => setShowDatingPackageModal(true)}
+                onClick={() => {
+                  console.log('🔥 DEBUG: Nâng cấp Premium button clicked in SwipeInterface (hết lượt)');
+                  console.log('🔥 DEBUG: setShowDatingPackageModal called');
+                  setShowDatingPackageModal(true);
+                }}
                 className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2 mb-4"
               >
                 <Crown className="w-4 h-4" />
@@ -329,7 +333,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
                 <span>Xem ai đã thích bạn</span>
               </div>
               <Button
-                onClick={() => setShowDatingPackageModal(true)}
+                onClick={() => {
+                  console.log('🔥 DEBUG: Nâng cấp Premium button clicked in SwipeInterface (hết người)');
+                  console.log('🔥 DEBUG: setShowDatingPackageModal called');
+                  setShowDatingPackageModal(true);
+                }}
                 className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2"
               >
                 <Crown className="w-5 h-5" />
@@ -537,7 +545,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
               size="sm"
               variant="secondary"
               className="h-6 px-3 text-xs text-orange-600 hover:text-orange-700"
-              onClick={() => setShowDatingPackageModal(true)}
+              onClick={() => {
+                console.log('🔥 DEBUG: Nâng cấp Premium button clicked in SwipeInterface (compact banner)');
+                console.log('🔥 DEBUG: setShowDatingPackageModal called');
+                setShowDatingPackageModal(true);
+              }}
             >
               Nâng cấp Premium
             </Button>

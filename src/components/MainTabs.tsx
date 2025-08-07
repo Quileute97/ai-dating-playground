@@ -38,9 +38,9 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
   ];
   if (isAdminMode) return null;
   return (
-    <div className="bg-white/90 backdrop-blur-sm border-b border-purple-100 px-2 py-1.5 shadow-sm">
-      <div className="flex justify-center items-center max-w-lg mx-auto">
-        <div className="flex bg-gray-100 rounded-xl p-0.5 gap-0.5">
+    <div className="bg-white/90 backdrop-blur-sm border-b border-purple-100 px-2 py-2 shadow-sm">
+      <div className="flex justify-center items-center max-w-full mx-auto">
+        <div className="flex bg-gray-100 rounded-xl p-1 gap-1 w-full max-w-md">
           {displayTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -51,19 +51,21 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 disabled={isLocked}
-                className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg min-w-[60px] transition-all duration-300 ${
+                className={`flex flex-col items-center justify-center gap-1 flex-1 min-h-[56px] py-2 px-1 rounded-lg transition-all duration-300 relative touch-manipulation ${
                   isActive 
-                    ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-md scale-102'
+                    ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-md scale-[1.02]'
                     : isLocked
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-white hover:text-gray-800 hover:scale-101 hover:shadow-sm'
+                      : 'text-gray-600 hover:bg-white hover:text-gray-800 hover:scale-[1.01] hover:shadow-sm active:scale-[0.98]'
                 }`}
                 title={isLocked ? 'Đăng nhập để dùng tính năng này' : undefined}
               >
-                <Icon className={`w-4 h-4 transition-all duration-200 ${isActive ? 'scale-105' : ''}`} />
-                <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
+                <Icon className={`w-5 h-5 md:w-4 md:h-4 transition-all duration-200 ${isActive ? 'scale-105' : ''}`} />
+                <span className="text-[10px] md:text-[9px] font-medium leading-tight text-center px-0.5">
+                  {tab.label}
+                </span>
                 {isLocked && (
-                  <span className="absolute top-1 right-1 text-[8px] text-gray-500">🔒</span>
+                  <span className="absolute top-1 right-1 text-[10px] text-gray-500">🔒</span>
                 )}
               </button>
             );

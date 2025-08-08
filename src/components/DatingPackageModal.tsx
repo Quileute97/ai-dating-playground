@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Star, Heart, Loader2, CheckCircle } from "lucide-react";
 import { DATING_PACKAGES, DatingPackage } from "@/services/datingPackageService";
 import { useToast } from "@/hooks/use-toast";
-import { createDatingPackagePayment } from "@/services/datingPackageService";
+import { useNavigate } from "react-router-dom";
 
 interface DatingPackageModalProps {
   isOpen: boolean;
@@ -32,6 +32,7 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -80,53 +81,15 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
       return;
     }
 
-    setSelectedPackage(packageData.id);
-    setIsProcessing(true);
-
-    try {
-      const packageType = packageData.id === 'dating_unlimited' ? 'dating_lifetime' : packageData.id;
-      console.log('🔥 DEBUG: Calling createDatingPackagePayment with:', {
-        packageId: packageType,
-        userId: currentUser.id,
-        userEmail: currentUser.email || ''
-      });
-      
-      const result = await createDatingPackagePayment(
-        packageType,
-        currentUser.id,
-        currentUser.email || ''
-      );
-
-      console.log('🔥 DEBUG: createPayOSPayment result:', result);
-
-      if (result.error === 0 && result.data?.checkoutUrl) {
-        console.log('🔥 DEBUG: Opening checkout URL:', result.data.checkoutUrl);
-        window.open(result.data.checkoutUrl, '_blank');
-        toast({
-          title: "Chuyển hướng thanh toán",
-          description: "Vui lòng hoàn tất thanh toán để kích hoạt gói Premium",
-        });
-        
-        onClose();
-        
-        if (onSelectPackage) {
-          onSelectPackage(packageData.id);
-        }
-      } else {
-        console.log('🔥 DEBUG: Payment creation failed:', result);
-        throw new Error(result.message || 'Không thể tạo liên kết thanh toán');
-      }
-    } catch (error) {
-      console.error('🔥 DEBUG: Payment error in DatingPackageModal:', error);
-      toast({
-        title: "Lỗi tạo thanh toán",
-        description: "Không thể tạo liên kết thanh toán. Vui lòng thử lại.",
-        variant: "destructive"
-      });
-    } finally {
-      console.log('🔥 DEBUG: Cleanup - setting processing to false');
-      setIsProcessing(false);
-      setSelectedPackage(null);
+    // Navigate to payment page instead of calling payment service directly
+    const packageType = packageData.id === 'dating_unlimited' ? 'dating_lifetime' : packageData.id;
+    console.log('🔥 DEBUG: Navigating to payment page with package:', packageType);
+    
+    onClose();
+    navigate(`/payment?type=dating&package=${packageType}`);
+    
+    if (onSelectPackage) {
+      onSelectPackage(packageData.id);
     }
   };
 

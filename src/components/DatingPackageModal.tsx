@@ -84,14 +84,15 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
     setIsProcessing(true);
 
     try {
+      const payosPackageType = packageData.id === 'dating_unlimited' ? 'dating_lifetime' : packageData.id;
       console.log('🔥 DEBUG: Calling createPayOSPayment with:', {
-        packageType: packageData.id,
+        packageType: payosPackageType,
         userId: currentUser.id,
         userEmail: currentUser.email || ''
       });
       
       const result = await createPayOSPayment({
-        packageType: packageData.id,
+        packageType: payosPackageType,
         userId: currentUser.id,
         userEmail: currentUser.email || ''
       });

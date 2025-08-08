@@ -83,30 +83,17 @@ export const createPayOSPayment = async (paymentData: PaymentData): Promise<Paym
     
     console.log('📤 Sending request:', requestBody);
     
-    const response = await fetch('https://oeepmsbttxfknkznbnym.supabase.co/functions/v1/create-payos-payment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(requestBody),
+    const { data: response, error: functionError } = await supabase.functions.invoke('create-payos-payment', {
+      body: requestBody
     });
 
-    let result;
-    try {
-      result = await response.json();
-    } catch (parseError) {
-      console.error('❌ Failed to parse response:', parseError);
-      throw new Error('Invalid response from payment service');
+    if (functionError) {
+      console.error('❌ Function error:', functionError);
+      throw new Error(functionError.message || 'Lỗi khi gọi function thanh toán');
     }
     
-    console.log('📥 Response:', { status: response.status, result });
-    
-    if (!response.ok) {
-      throw new Error(result?.message || `HTTP ${response.status}`);
-    }
-
-    return result;
+    console.log('📥 Function response:', response);
+    return response;
   } catch (error) {
     console.error('💥 PayOS payment error:', error);
     
@@ -157,30 +144,17 @@ export const createNearbyPackagePayment = async (
     
     console.log('📤 Sending nearby payment request:', requestBody);
     
-    const response = await fetch('https://oeepmsbttxfknkznbnym.supabase.co/functions/v1/create-payos-payment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(requestBody),
+    const { data: response, error: functionError } = await supabase.functions.invoke('create-payos-payment', {
+      body: requestBody
     });
 
-    let result;
-    try {
-      result = await response.json();
-    } catch (parseError) {
-      console.error('❌ Failed to parse nearby payment response:', parseError);
-      throw new Error('Invalid response from payment service');
+    if (functionError) {
+      console.error('❌ Function error:', functionError);
+      throw new Error(functionError.message || 'Lỗi khi gọi function thanh toán');
     }
     
-    console.log('📥 Nearby payment response:', { status: response.status, result });
-    
-    if (!response.ok) {
-      throw new Error(result?.message || `HTTP ${response.status}`);
-    }
-
-    return result;
+    console.log('📥 Nearby payment response:', response);
+    return response;
   } catch (error) {
     console.error('💥 PayOS nearby package payment error:', error);
     return {

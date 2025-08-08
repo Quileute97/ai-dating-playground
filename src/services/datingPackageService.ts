@@ -103,28 +103,20 @@ export const createDatingPackagePayment = async (
     
     console.log('📤 Sending payment request:', requestData);
     
-    const response = await fetch('https://oeepmsbttxfknkznbnym.supabase.co/functions/v1/create-payos-payment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(requestData),
+    // Import supabase at the top of the file
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    const { data: response, error: functionError } = await supabase.functions.invoke('create-payos-payment', {
+      body: requestData
     });
 
-    console.log('📥 Response status:', response.status, response.ok);
-
-    let result;
-    try {
-      const responseText = await response.text();
-      console.log('📥 Raw response:', responseText);
-      result = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('❌ Failed to parse response JSON:', parseError);
-      throw new Error('Phản hồi từ server không hợp lệ');
+    if (functionError) {
+      console.error('❌ Function error:', functionError);
+      throw new Error(functionError.message || 'Lỗi khi gọi function thanh toán');
     }
     
-    console.log('📥 Parsed response:', result);
+    console.log('📥 Function response:', response);
+    const result = response;
     
     // Handle error responses
     if (result.error && result.error !== 0) {

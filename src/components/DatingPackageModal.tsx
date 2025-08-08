@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Star, Heart, Loader2, CheckCircle } from "lucide-react";
 import { DATING_PACKAGES, DatingPackage } from "@/services/datingPackageService";
 import { useToast } from "@/hooks/use-toast";
-import { createPayOSPayment } from "@/services/payosService";
+import { createDatingPackagePayment } from "@/services/datingPackageService";
 
 interface DatingPackageModalProps {
   isOpen: boolean;
@@ -84,18 +84,18 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
     setIsProcessing(true);
 
     try {
-      const payosPackageType = packageData.id === 'dating_unlimited' ? 'dating_lifetime' : packageData.id;
-      console.log('🔥 DEBUG: Calling createPayOSPayment with:', {
-        packageType: payosPackageType,
+      const packageType = packageData.id === 'dating_unlimited' ? 'dating_lifetime' : packageData.id;
+      console.log('🔥 DEBUG: Calling createDatingPackagePayment with:', {
+        packageId: packageType,
         userId: currentUser.id,
         userEmail: currentUser.email || ''
       });
       
-      const result = await createPayOSPayment({
-        packageType: payosPackageType,
-        userId: currentUser.id,
-        userEmail: currentUser.email || ''
-      });
+      const result = await createDatingPackagePayment(
+        packageType,
+        currentUser.id,
+        currentUser.email || ''
+      );
 
       console.log('🔥 DEBUG: createPayOSPayment result:', result);
 

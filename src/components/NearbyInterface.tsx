@@ -13,6 +13,7 @@ import { useChatIntegration } from '@/hooks/useChatIntegration';
 import NearbyFeatureBanner from "./NearbyFeatureBanner";
 import NearbyPackageModal from "./NearbyPackageModal";
 import { createNearbyPackagePayment } from "@/services/payosService";
+import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 
 interface NearbyInterfaceProps {
   user: any;
@@ -39,6 +40,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { startChatWith } = useChatIntegration();
+  const fakeUserInteractions = useFakeUserInteractions(user?.id);
   
   // Get user location
   const { position: userLocation } = useGeolocation();
@@ -67,15 +69,23 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
   const handleLikeUser = (userId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
-    setLikedUsers(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(userId)) {
-        newSet.delete(userId);
-      } else {
-        newSet.add(userId);
-      }
-      return newSet;
-    });
+    // Check if this is a fake user
+    const targetUser = users.find(u => u.id === userId);
+    if (targetUser) {
+      // Try to like the user (works for both real and fake users)
+      fakeUserInteractions.likeFakeUser(userId).catch(() => {
+        // If it fails (probably real user), just update local state
+        setLikedUsers(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(userId)) {
+            newSet.delete(userId);
+          } else {
+            newSet.add(userId);
+          }
+          return newSet;
+        });
+      });
+    }
 
     const user = users.find(u => u.id === userId);
     toast({
@@ -89,12 +99,32 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     
     const targetUser = users.find(u => u.id === userId);
     if (targetUser) {
-      // Use unified chat system instead of just showing toast
-      startChatWith({
-        id: targetUser.id,
-        name: targetUser.name,
-        avatar: targetUser.avatar
-      });
+      // Check if this is a fake user and create conversation if needed
+      supabase
+        .from('fake_users')
+        .select('id')
+        .eq('id', userId)
+        .single()
+        .then(({ data: fakeUser }) => {
+          if (fakeUser) {
+            // Create conversation with fake user first
+            fakeUserInteractions.createConversationWithFakeUser(userId)
+              .then(() => {
+                startChatWith({
+                  id: targetUser.id,
+                  name: targetUser.name,
+                  avatar: targetUser.avatar
+                });
+              });
+          } else {
+            // Regular chat with real user
+            startChatWith({
+              id: targetUser.id,
+              name: targetUser.name,
+              avatar: targetUser.avatar
+            });
+          }
+        });
     }
   };
 

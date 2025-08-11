@@ -7,6 +7,8 @@ import { Heart, MapPin, Briefcase, GraduationCap, Ruler, Clock, UserPlus, Messag
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
+import ProfileChatWindow from "@/components/ProfileChatWindow";
 
 const FakeUserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -15,7 +17,9 @@ const FakeUserProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAlbumModal, setShowAlbumModal] = useState(false);
+  const [showChatWindow, setShowChatWindow] = useState(false);
   const { toast } = useToast();
+  const fakeUserInteractions = useFakeUserInteractions(currentUser?.id);
 
   useEffect(() => {
     // Get current user
@@ -45,6 +49,46 @@ const FakeUserProfilePage: React.FC = () => {
       navigate(-1);
     } else {
       navigate('/');
+    }
+  };
+
+  const handleSendFriendRequest = async () => {
+    if (!currentUser || !userId) return;
+    
+    try {
+      await fakeUserInteractions.sendFriendRequestToFakeUser(userId);
+      toast({
+        title: "Đã gửi lời mời kết bạn",
+        description: `Lời mời kết bạn đã được gửi đến ${profile?.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể gửi lời mời kết bạn. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!currentUser || !userId) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng đăng nhập để nhắn tin",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await fakeUserInteractions.createConversationWithFakeUser(userId);
+      setShowChatWindow(true);
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể tạo cuộc trò chuyện. Vui lòng thử lại.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -156,23 +200,25 @@ const FakeUserProfilePage: React.FC = () => {
                 {/* Action Buttons for fake users - Limited functionality */}
                 <div className="flex gap-3 mt-4 w-full">
                   <Button
-                    disabled
+                    onClick={handleSendFriendRequest}
+                    disabled={!currentUser || fakeUserInteractions.isProcessing}
                     variant="outline"
                     className="flex-1"
                     size="sm"
                   >
                     <UserPlus className="w-4 h-4 mr-2" />
-                    Không thể kết bạn
+                    {currentUser ? "Kết bạn" : "Đăng nhập để kết bạn"}
                   </Button>
                   
                   <Button
-                    disabled
+                    onClick={handleSendMessage}
+                    disabled={!currentUser || fakeUserInteractions.isProcessing}
                     variant="outline" 
                     className="flex-1"
                     size="sm"
                   >
                     <MessageCircle className="w-4 h-4 mr-2" />
-                    Không thể nhắn tin
+                    {currentUser ? "Nhắn tin" : "Đăng nhập để nhắn tin"}
                   </Button>
                   
                   {profile.album && Array.isArray(profile.album) && profile.album.length > 0 && (
@@ -320,6 +366,17 @@ const FakeUserProfilePage: React.FC = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Chat Window */}
+      {showChatWindow && currentUser && profile && (
+        <ProfileChatWindow
+          targetUserId={userId!}
+          targetUserName={profile.name}
+          targetUserAvatar={profile.avatar || '/placeholder.svg'}
+          currentUserId={currentUser.id}
+          onClose={() => setShowChatWindow(false)}
+        />
+      )}
     </>
   );
 };

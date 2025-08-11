@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -45,21 +44,32 @@ export function useNearbyProfiles(currentUserId: string | undefined, userLocatio
     }
 
     async function fetchNearby() {
-      // Lấy tất cả profile từ bảng profiles duy nhất
-      let { data, error } = await supabase
+      // Lấy cả real users và fake users
+      const { data: realUsers, error: realError } = await supabase
         .from("profiles")
         .select("id, name, age, avatar, lat, lng, gender, bio, interests, height, job, education, location_name, is_dating_active, last_active")
-        .eq('tai_khoan_hoat_dong', true); // Chỉ lấy tài khoản đang hoạt động
+        .eq('tai_khoan_hoat_dong', true);
 
-      if (error) {
-        console.error('Error fetching nearby profiles:', error);
+      const { data: fakeUsers, error: fakeError } = await supabase
+        .from("fake_users")
+        .select("id, name, age, avatar, lat, lng, gender, bio, interests, height, job, education, location_name, is_dating_active, last_active")
+        .eq('is_active', true);
+
+      if (realError || fakeError) {
+        console.error('Error fetching nearby profiles:', realError || fakeError);
         setProfiles([]);
         setLoading(false);
         return;
       }
 
+      // Combine real and fake users
+      const allUsers = [
+        ...(realUsers || []).map(u => ({ ...u, user_type: 'real' })),
+        ...(fakeUsers || []).map(u => ({ ...u, user_type: 'fake' }))
+      ];
+
       // Loại trừ user hiện tại, chỉ các profile có vị trí
-      let filtered = (data as Profile[]).filter(
+      let filtered = (allUsers as (Profile & { user_type: string })[]).filter(
         (u) =>
           u.id !== currentUserId &&
           u.lat !== null &&

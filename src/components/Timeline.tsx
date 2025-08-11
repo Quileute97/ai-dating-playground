@@ -114,6 +114,7 @@ import { useTimelinePosts } from "@/hooks/useTimelinePosts";
 import { useTimelineComments } from "@/hooks/useTimelineComments";
 import { usePostLikes } from "@/hooks/usePostLikes";
 import { useDatingProfile } from "@/hooks/useDatingProfile";
+import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 
 type TimelineProps = {
   user: any;
@@ -124,6 +125,7 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
   const { posts, isLoading, createPost, creating, refetch, deletePost, deleting } = useTimelinePosts(userId);
   const { profile } = useDatingProfile(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
+  const fakeUserInteractions = useFakeUserInteractions(userId);
   const { toast } = useToast();
 
   const handlePostSubmit = async (
@@ -340,23 +342,40 @@ const PostItem: React.FC<{
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
   const { likeCount, liked, like, unlike, isToggling } = usePostLikes(post.id, user?.id);
+  const fakeUserInteractions = useFakeUserInteractions(user?.id);
 
   const navigate = useNavigate();
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentInput.trim()) return;
-    await createComment({
-      post_id: post.id,
-      user_id: user?.id,
-      content: commentInput,
-    });
+    
+    if (post.is_fake_user) {
+      // Comment on fake user post
+      await fakeUserInteractions.commentOnFakePost({
+        postId: post.id,
+        content: commentInput
+      });
+    } else {
+      // Comment on real user post
+      await createComment({
+        post_id: post.id,
+        user_id: user?.id,
+        content: commentInput,
+      });
+    }
     setCommentInput("");
   };
 
   const handleLike = async () => {
-    if (liked) await unlike();
-    else await like();
+    if (post.is_fake_user) {
+      // Like fake user post
+      await fakeUserInteractions.likeFakePost(post.id);
+    } else {
+      // Like real user post
+      if (liked) await unlike();
+      else await like();
+    }
   };
 
   const handleDeletePost = () => {
@@ -497,18 +516,32 @@ const PostItem: React.FC<{
       )}
       
       {/* Comment Input */}
-      <form className="flex items-center gap-2 mt-2" onSubmit={handleCommentSubmit}>
-        <Input
-          className="h-8 text-sm bg-gray-50 border border-gray-200 flex-1"
-          value={commentInput}
-          placeholder="Viết bình luận..."
-          onChange={e => setCommentInput(e.target.value)}
-          disabled={creating}
-        />
-        <Button type="submit" size="sm" variant="secondary" className="aspect-square h-8 w-8 p-0 flex-shrink-0" disabled={creating}>
-          <SendHorizonal size={14} />
-        </Button>
-      </form>
+      {user?.id && (
+        <form className="flex items-center gap-2 mt-2" onSubmit={handleCommentSubmit}>
+          <Input
+            className="h-8 text-sm bg-gray-50 border border-gray-200 flex-1"
+            value={commentInput}
+            placeholder="Viết bình luận..."
+            onChange={e => setCommentInput(e.target.value)}
+            disabled={creating || fakeUserInteractions.isProcessing}
+          />
+          <Button 
+            type="submit" 
+            size="sm" 
+            variant="secondary" 
+            className="aspect-square h-8 w-8 p-0 flex-shrink-0" 
+            disabled={creating || fakeUserInteractions.isProcessing}
+          >
+            <SendHorizonal size={14} />
+          </Button>
+        </form>
+      )}
+
+      {!user?.id && (
+        <div className="text-center text-gray-500 text-sm py-2 border-t mt-2">
+          Đăng nhập để tương tác với bài viết
+        </div>
+      )}
 
       {/* Delete Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

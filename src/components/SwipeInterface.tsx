@@ -17,6 +17,7 @@ import { useDailyMatches } from "@/hooks/useDailyMatches";
 import { useChatIntegration } from '@/hooks/useChatIntegration';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useFakeUserInteractions } from '@/hooks/useFakeUserInteractions';
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -53,6 +54,9 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   
   // Import the chat integration hook
   const { startChatWith } = useChatIntegration();
+  
+  // Import fake user interactions hook
+  const fakeUserInteractions = useFakeUserInteractions(user?.id);
   
   // Fetch liked and matched profiles
   useEffect(() => {
@@ -104,7 +108,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       const isValid = p.id !== user?.id && 
         p.name && 
         p.avatar && 
-        p.is_dating_active &&
+        (p.is_dating_active || p.is_active) && // Support both real and fake users
         !likedProfiles.has(p.id) &&  // Filter out already liked profiles
         !matchedProfiles.has(p.id);   // Filter out already matched profiles
       
@@ -113,7 +117,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           sameUser: p.id === user?.id,
           hasName: !!p.name,
           hasAvatar: !!p.avatar,
-          isDatingActive: p.is_dating_active,
+          isDatingActive: p.is_dating_active || p.is_active,
           isLiked: likedProfiles.has(p.id),
           isMatched: matchedProfiles.has(p.id)
         });
@@ -159,7 +163,19 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
 
     if (direction === 'right' || direction === 'super') {
       try {
-        const res = await likeUser(currentProfile.id);
+        let res;
+        
+        // Check if this is a fake user by looking at the user_type or checking if it exists in fake_users
+        const isFakeUser = currentProfile.user_type === 'fake' || 
+                          profiles.some(p => p.id === currentProfile.id && p.user_type === 'fake');
+        
+        if (isFakeUser) {
+          // Like fake user
+          res = await fakeUserInteractions.likeFakeUser(currentProfile.id);
+        } else {
+          // Like real user
+          res = await likeUser(currentProfile.id);
+        }
         
         // Add to liked profiles to prevent showing again
         setLikedProfiles(prev => new Set([...prev, currentProfile.id]));

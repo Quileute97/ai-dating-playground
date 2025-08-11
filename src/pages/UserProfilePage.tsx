@@ -10,6 +10,7 @@ import { useSendFriendRequest, useFriendList, useSentFriendRequests } from "@/ho
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ProfileChatWindow from "@/components/ProfileChatWindow";
+import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -25,6 +26,7 @@ const UserProfilePage: React.FC = () => {
   const sendFriendRequest = useSendFriendRequest();
   const { data: friends } = useFriendList(currentUser?.id);
   const { data: sentRequests } = useSentFriendRequests(currentUser?.id);
+  const fakeUserInteractions = useFakeUserInteractions(currentUser?.id);
 
   useEffect(() => {
     // Get current user
@@ -53,10 +55,24 @@ const UserProfilePage: React.FC = () => {
     if (!currentUser || !userId) return;
     
     try {
-      await sendFriendRequest.mutateAsync({
-        user_id: currentUser.id,
-        friend_id: userId,
-      });
+      // Check if this is a fake user by trying to fetch from fake_users table
+      const { data: fakeUser } = await supabase
+        .from('fake_users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+      
+      if (fakeUser) {
+        // Send friend request to fake user
+        await fakeUserInteractions.sendFriendRequestToFakeUser(userId);
+      } else {
+        // Send friend request to real user
+        await sendFriendRequest.mutateAsync({
+          user_id: currentUser.id,
+          friend_id: userId,
+        });
+      }
+      
       toast({
         title: "Đã gửi lời mời kết bạn",
         description: `Lời mời kết bạn đã được gửi đến ${profile?.name}`,
@@ -79,7 +95,25 @@ const UserProfilePage: React.FC = () => {
       });
       return;
     }
-    setShowChatWindow(true);
+    
+    // Check if this is a fake user and create conversation accordingly
+    supabase
+      .from('fake_users')
+      .select('id')
+      .eq('id', userId)
+      .single()
+      .then(({ data: fakeUser }) => {
+        if (fakeUser) {
+          // Create conversation with fake user
+          fakeUserInteractions.createConversationWithFakeUser(userId)
+            .then(() => {
+              setShowChatWindow(true);
+            });
+        } else {
+          // Regular chat with real user
+          setShowChatWindow(true);
+        }
+      });
   };
 
   const handleBackClick = () => {

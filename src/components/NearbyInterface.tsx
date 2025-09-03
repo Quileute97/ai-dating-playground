@@ -100,7 +100,8 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     const targetUser = users.find(u => u.id === userId);
     if (targetUser) {
       // Check if this is a fake user and create conversation if needed
-      supabase
+      import('@/integrations/supabase/client').then(({ supabase }) => {
+        supabase
         .from('fake_users')
         .select('id')
         .eq('id', userId)

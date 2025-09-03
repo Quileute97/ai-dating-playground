@@ -108,7 +108,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       const isValid = p.id !== user?.id && 
         p.name && 
         p.avatar && 
-        (p.is_dating_active || p.is_active) && // Support both real and fake users
+        p.is_dating_active && // Only check is_dating_active which exists
         !likedProfiles.has(p.id) &&  // Filter out already liked profiles
         !matchedProfiles.has(p.id);   // Filter out already matched profiles
       
@@ -117,7 +117,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
           sameUser: p.id === user?.id,
           hasName: !!p.name,
           hasAvatar: !!p.avatar,
-          isDatingActive: p.is_dating_active || p.is_active,
+          isDatingActive: p.is_dating_active,
           isLiked: likedProfiles.has(p.id),
           isMatched: matchedProfiles.has(p.id)
         });
@@ -165,9 +165,14 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
       try {
         let res;
         
-        // Check if this is a fake user by looking at the user_type or checking if it exists in fake_users
-        const isFakeUser = currentProfile.user_type === 'fake' || 
-                          profiles.some(p => p.id === currentProfile.id && p.user_type === 'fake');
+        // Check if this is a fake user by checking the fake_users table
+        const { data: fakeUser } = await supabase
+          .from('fake_users')
+          .select('id')
+          .eq('id', currentProfile.id)
+          .single();
+        
+        const isFakeUser = !!fakeUser;
         
         if (isFakeUser) {
           // Like fake user

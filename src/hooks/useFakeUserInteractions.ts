@@ -16,7 +16,7 @@ export function useFakeUserInteractions(currentUserId?: string) {
         liked_id_param: fakeUserId,
         liker_type_param: 'real',
         liked_type_param: 'fake'
-      });
+      }) as { data: boolean, error: any };
       
       if (error) throw error;
       return { matched: data };
@@ -47,7 +47,7 @@ export function useFakeUserInteractions(currentUserId?: string) {
       const { data, error } = await supabase.rpc('like_fake_post', {
         post_id_param: postId,
         user_id_param: currentUserId
-      });
+      }) as { data: void, error: any };
       
       if (error) throw error;
       return data;
@@ -67,7 +67,7 @@ export function useFakeUserInteractions(currentUserId?: string) {
         post_id_param: postId,
         user_id_param: currentUserId,
         content_param: content
-      });
+      }) as { data: string, error: any };
       
       if (error) throw error;
       return data;
@@ -86,7 +86,7 @@ export function useFakeUserInteractions(currentUserId?: string) {
       const { data, error } = await supabase.rpc('send_friend_request_to_fake_user', {
         real_user_id: currentUserId,
         fake_user_id: fakeUserId
-      });
+      }) as { data: string, error: any };
       
       if (error) throw error;
       return data;
@@ -109,7 +109,7 @@ export function useFakeUserInteractions(currentUserId?: string) {
       const { data, error } = await supabase.rpc('create_conversation_with_fake_user', {
         real_user_id: currentUserId,
         fake_user_id: fakeUserId
-      });
+      }) as { data: string, error: any };
       
       if (error) throw error;
       return data;

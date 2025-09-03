@@ -14,6 +14,7 @@ import NearbyFeatureBanner from "./NearbyFeatureBanner";
 import NearbyPackageModal from "./NearbyPackageModal";
 import { createNearbyPackagePayment } from "@/services/payosService";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NearbyInterfaceProps {
   user: any;

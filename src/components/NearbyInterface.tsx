@@ -126,6 +126,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
             });
           }
         });
+      });
     }
   };
 

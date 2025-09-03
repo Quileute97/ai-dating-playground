@@ -11,15 +11,47 @@ export function useFakeUserInteractions(currentUserId?: string) {
     mutationFn: async (fakeUserId: string) => {
       if (!currentUserId) throw new Error("User not logged in");
       
-      const { data, error } = await supabase.rpc('like_fake_user', {
-        liker_id_param: currentUserId,
-        liked_id_param: fakeUserId,
-        liker_type_param: 'real',
-        liked_type_param: 'fake'
-      });
-      
-      if (error) throw error;
-      return { matched: data };
+      // Check if already liked
+      const { data: existingLike } = await supabase
+        .from('user_likes')
+        .select('id')
+        .eq('liker_id', currentUserId)
+        .eq('liked_id', fakeUserId)
+        .single();
+
+      if (existingLike) {
+        // Unlike
+        const { error } = await supabase
+          .from('user_likes')
+          .delete()
+          .eq('liker_id', currentUserId)
+          .eq('liked_id', fakeUserId);
+        
+        if (error) throw error;
+        return { matched: false };
+      } else {
+        // Like
+        const { error } = await supabase
+          .from('user_likes')
+          .insert({
+            liker_id: currentUserId,
+            liked_id: fakeUserId,
+            liker_type: 'real',
+            liked_type: 'fake'
+          });
+        
+        if (error) throw error;
+        
+        // Check for mutual like
+        const { data: mutualLike } = await supabase
+          .from('user_likes')
+          .select('id')
+          .eq('liker_id', fakeUserId)
+          .eq('liked_id', currentUserId)
+          .single();
+        
+        return { matched: !!mutualLike };
+      }
     },
     onSuccess: (result, fakeUserId) => {
       queryClient.invalidateQueries({ queryKey: ["user-likes"] });
@@ -44,13 +76,36 @@ export function useFakeUserInteractions(currentUserId?: string) {
     mutationFn: async (postId: string) => {
       if (!currentUserId) throw new Error("User not logged in");
       
-      const { data, error } = await supabase.rpc('like_fake_post', {
-        post_id_param: postId,
-        user_id_param: currentUserId
-      });
+      // Check if already liked
+      const { data: existingLike } = await supabase
+        .from('post_likes')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('user_id', currentUserId)
+        .single();
+
+      if (existingLike) {
+        // Unlike
+        const { error } = await supabase
+          .from('post_likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', currentUserId);
+        
+        if (error) throw error;
+      } else {
+        // Like
+        const { error } = await supabase
+          .from('post_likes')
+          .insert({
+            post_id: postId,
+            user_id: currentUserId
+          });
+        
+        if (error) throw error;
+      }
       
-      if (error) throw error;
-      return data;
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["post-likes"] });
@@ -63,11 +118,15 @@ export function useFakeUserInteractions(currentUserId?: string) {
     mutationFn: async ({ postId, content }: { postId: string; content: string }) => {
       if (!currentUserId) throw new Error("User not logged in");
       
-      const { data, error } = await supabase.rpc('comment_on_fake_post', {
-        post_id_param: postId,
-        user_id_param: currentUserId,
-        content_param: content
-      });
+      const { data, error } = await supabase
+        .from('comments')
+        .insert({
+          post_id: postId,
+          user_id: currentUserId,
+          content: content
+        })
+        .select()
+        .single();
       
       if (error) throw error;
       return data;
@@ -83,10 +142,25 @@ export function useFakeUserInteractions(currentUserId?: string) {
     mutationFn: async (fakeUserId: string) => {
       if (!currentUserId) throw new Error("User not logged in");
       
-      const { data, error } = await supabase.rpc('send_friend_request_to_fake_user', {
-        real_user_id: currentUserId,
-        fake_user_id: fakeUserId
-      });
+      // Check if already friends
+      const { data: existingFriend } = await supabase
+        .from('friends')
+        .select('id')
+        .or(`and(user_id.eq.${currentUserId},friend_id.eq.${fakeUserId}),and(user_id.eq.${fakeUserId},friend_id.eq.${currentUserId})`)
+        .single();
+
+      if (existingFriend) {
+        throw new Error("Already friends");
+      }
+
+      const { data, error } = await supabase
+        .from('friends')
+        .insert({
+          user_id: currentUserId,
+          friend_id: fakeUserId
+        })
+        .select()
+        .single();
       
       if (error) throw error;
       return data;
@@ -95,8 +169,8 @@ export function useFakeUserInteractions(currentUserId?: string) {
       queryClient.invalidateQueries({ queryKey: ["friends"] });
       queryClient.invalidateQueries({ queryKey: ["sent-friend-requests"] });
       toast({
-        title: "Đã gửi lời mời kết bạn",
-        description: "Lời mời kết bạn đã được gửi thành công",
+        title: "Đã kết bạn",
+        description: "Đã kết bạn thành công",
       });
     }
   });
@@ -106,10 +180,25 @@ export function useFakeUserInteractions(currentUserId?: string) {
     mutationFn: async (fakeUserId: string) => {
       if (!currentUserId) throw new Error("User not logged in");
       
-      const { data, error } = await supabase.rpc('create_conversation_with_fake_user', {
-        real_user_id: currentUserId,
-        fake_user_id: fakeUserId
-      });
+      // Check if conversation already exists
+      const { data: existingConversation } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`and(user_real_id.eq.${currentUserId},user_fake_id.eq.${fakeUserId}),and(user_fake_id.eq.${fakeUserId},user_real_id.eq.${currentUserId})`)
+        .single();
+
+      if (existingConversation) {
+        return existingConversation;
+      }
+
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_real_id: currentUserId,
+          user_fake_id: fakeUserId
+        })
+        .select()
+        .single();
       
       if (error) throw error;
       return data;

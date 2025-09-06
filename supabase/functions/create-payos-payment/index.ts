@@ -26,12 +26,12 @@ function getPackageInfo(packageType: string): PackageInfo | null {
     // Dating packages
     "dating_week": {
       name: "Premium 1 tuần",
-      price: 50000,
+      price: 20000,
       description: "Premium 1 tuan" // 14 chars
     },
     "dating_month": {
       name: "Premium 1 tháng", 
-      price: 150000,
+      price: 50000,
       description: "Premium 1 thang" // 15 chars
     },
     "dating_lifetime": {

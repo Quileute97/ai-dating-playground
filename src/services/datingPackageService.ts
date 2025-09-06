@@ -13,7 +13,7 @@ export const DATING_PACKAGES: DatingPackage[] = [
     id: 'dating_week',
     name: 'Premium 1 Tuần',
     description: 'Trải nghiệm premium trong 7 ngày',
-    price: 49000,
+    price: 20000,
     duration: 7,
     features: [
       'Không giới hạn lượt swipe',
@@ -27,7 +27,7 @@ export const DATING_PACKAGES: DatingPackage[] = [
     id: 'dating_month',
     name: 'Premium 1 Tháng',
     description: 'Gói phổ biến nhất cho trải nghiệm tối ưu',
-    price: 149000,
+    price: 50000,
     duration: 30,
     features: [
       'Tất cả tính năng gói tuần',
@@ -39,10 +39,10 @@ export const DATING_PACKAGES: DatingPackage[] = [
     ]
   },
   {
-    id: 'dating_unlimited',
+    id: 'dating_lifetime',
     name: 'Premium Vĩnh Viễn',
     description: 'Sở hữu tất cả tính năng premium mãi mãi',
-    price: 399000,
+    price: 500000,
     duration: -1,
     features: [
       'Tất cả tính năng premium',

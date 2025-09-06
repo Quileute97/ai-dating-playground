@@ -11,9 +11,11 @@ interface PremiumUpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  userId?: string;
+  userEmail?: string;
 }
 
-const PremiumUpgradeModal = ({ isOpen, onClose, onSuccess }: PremiumUpgradeModalProps) => {
+const PremiumUpgradeModal = ({ isOpen, onClose, onSuccess, userId, userEmail }: PremiumUpgradeModalProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
@@ -46,6 +48,15 @@ const PremiumUpgradeModal = ({ isOpen, onClose, onSuccess }: PremiumUpgradeModal
   ];
 
   const handleUpgrade = async () => {
+    if (!userId) {
+      toast({
+        title: "Lỗi xác thực",
+        description: "Vui lòng đăng nhập để tiếp tục",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsProcessing(true);
     
     try {
@@ -54,8 +65,8 @@ const PremiumUpgradeModal = ({ isOpen, onClose, onSuccess }: PremiumUpgradeModal
       const { data, error } = await supabase.functions.invoke('create-payos-payment', {
         body: {
           packageType: "dating_week", // Default to 1 week premium
-          userId: "user-id-here", // TODO: Get actual user ID
-          userEmail: "user@email.com" // TODO: Get actual user email
+          userId: userId,
+          userEmail: userEmail || ""
         }
       });
 

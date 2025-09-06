@@ -138,6 +138,14 @@ const DatingApp = () => {
     setIsAdminAuthenticated(true);
   };
 
+  const handlePremiumUpgradeClick = () => {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+    setShowPremiumModal(true);
+  };
+
   const renderTabContent = () => {
     if (isAdminMode) {
       return <AdminDashboard />;
@@ -152,7 +160,12 @@ const DatingApp = () => {
           />
         );
       case "dating":
-        return user ? <SwipeInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
+        return user ? (
+          <SwipeInterface 
+            user={{ ...user, ...unifiedProfile }} 
+            onPremiumUpgradeClick={handlePremiumUpgradeClick}
+          />
+        ) : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "nearby":
         return user ? <NearbyInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "timeline":
@@ -274,6 +287,8 @@ const DatingApp = () => {
         <PremiumUpgradeModal
           isOpen={showPremiumModal}
           onClose={() => setShowPremiumModal(false)}
+          userId={user?.id}
+          userEmail={user?.email}
           onSuccess={() => {
             setShowPremiumModal(false);
             toast({

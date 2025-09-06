@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBankInfo } from "@/hooks/useBankInfo";
 import DatingProfileView from "./DatingProfileView";
 import DatingFeatureBanner from "./DatingFeatureBanner";
-import DatingPackageModal from "./DatingPackageModal";
+import PremiumUpgradeModal from "./PremiumUpgradeModal";
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
@@ -21,15 +21,16 @@ import { useFakeUserInteractions } from '@/hooks/useFakeUserInteractions';
 
 interface SwipeInterfaceProps {
   user?: any;
+  onPremiumUpgradeClick?: () => void;
 }
 
-const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
+const SwipeInterface = ({ user, onPremiumUpgradeClick }: SwipeInterfaceProps) => {
   const navigate = useNavigate();
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [matches, setMatches] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
-  const [showDatingPackageModal, setShowDatingPackageModal] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [matchedProfiles, setMatchedProfiles] = useState<Set<string>>(new Set());
@@ -155,7 +156,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         description: "Nâng cấp Premium để có không giới hạn lượt match",
         variant: "destructive"
       });
-      setShowDatingPackageModal(true);
+      if (onPremiumUpgradeClick) {
+        onPremiumUpgradeClick();
+      } else {
+        setShowPremiumModal(true);
+      }
       return;
     }
 
@@ -285,8 +290,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
               <Button
                 onClick={() => {
                   console.log('🔥 DEBUG: Nâng cấp Premium button clicked in SwipeInterface (hết lượt)');
-                  console.log('🔥 DEBUG: setShowDatingPackageModal called');
-                  setShowDatingPackageModal(true);
+                  if (onPremiumUpgradeClick) {
+                    onPremiumUpgradeClick();
+                  } else {
+                    setShowPremiumModal(true);
+                  }
                 }}
                 className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2 mb-4"
               >
@@ -319,7 +327,13 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             }>
               <MatchedUsersView 
                 userId={user?.id}
-                onUpgradeClick={() => setShowDatingPackageModal(true)}
+                onUpgradeClick={() => {
+                  if (onPremiumUpgradeClick) {
+                    onPremiumUpgradeClick();
+                  } else {
+                    setShowPremiumModal(true);
+                  }
+                }}
               />
             </React.Suspense>
           </div>
@@ -356,8 +370,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
               <Button
                 onClick={() => {
                   console.log('🔥 DEBUG: Nâng cấp Premium button clicked in SwipeInterface (hết người)');
-                  console.log('🔥 DEBUG: setShowDatingPackageModal called');
-                  setShowDatingPackageModal(true);
+                  if (onPremiumUpgradeClick) {
+                    onPremiumUpgradeClick();
+                  } else {
+                    setShowPremiumModal(true);
+                  }
                 }}
                 className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2"
               >
@@ -568,8 +585,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
               className="h-6 px-3 text-xs text-orange-600 hover:text-orange-700"
               onClick={() => {
                 console.log('🔥 DEBUG: Nâng cấp Premium button clicked in SwipeInterface (compact banner)');
-                console.log('🔥 DEBUG: setShowDatingPackageModal called');
-                setShowDatingPackageModal(true);
+                if (onPremiumUpgradeClick) {
+                  onPremiumUpgradeClick();
+                } else {
+                  setShowPremiumModal(true);
+                }
               }}
             >
               Nâng cấp Premium
@@ -583,13 +603,22 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         </div>
       </div>
 
-      {/* Dating Package Modal */}
-      <DatingPackageModal
-        isOpen={showDatingPackageModal}
-        onClose={() => setShowDatingPackageModal(false)}
-        currentUser={user}
-        bankInfo={bankInfoHook.bankInfo}
-      />
+      {/* Premium Upgrade Modal - only show if no parent handler */}
+      {!onPremiumUpgradeClick && (
+        <PremiumUpgradeModal
+          isOpen={showPremiumModal}
+          onClose={() => setShowPremiumModal(false)}
+          userId={user?.id}
+          userEmail={user?.email}
+          onSuccess={() => {
+            setShowPremiumModal(false);
+            toast({
+              title: "🎉 Chuyển hướng thành công!",
+              description: "Hoàn tất thanh toán để kích hoạt Premium.",
+            });
+          }}
+        />
+      )}
     </div>
   );
 };

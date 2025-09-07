@@ -127,36 +127,34 @@ const PremiumUpgradeModal = ({ isOpen, onClose, onSuccess, userId, userEmail }: 
           {/* Package Selection */}
           <div className="space-y-3">
             <h4 className="font-semibold text-gray-900">Chọn gói Premium:</h4>
-            <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-3">
               {DATING_PACKAGES.map((pkg) => (
                 <Card 
                   key={pkg.id}
-                  className={`p-4 cursor-pointer transition-all duration-200 ${
+                  className={`p-3 cursor-pointer transition-all duration-200 ${
                     selectedPackage === pkg.id 
                       ? 'border-purple-500 bg-purple-50' 
                       : 'border-gray-200 hover:border-purple-300 hover:bg-purple-25'
                   }`}
                   onClick={() => setSelectedPackage(pkg.id)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h5 className="font-semibold text-sm">{pkg.name}</h5>
-                        {pkg.id === 'dating_month' && (
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
-                            PHỔ BIẾN
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-600 mb-2">{pkg.description}</p>
-                      <div className="text-lg font-bold text-purple-600">
-                        {formatPrice(pkg.price)}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {pkg.duration === -1 ? 'Vĩnh viễn' : `${pkg.duration} ngày`}
-                      </div>
+                  <div className="text-center space-y-2">
+                    <div className="relative">
+                      <h5 className="font-semibold text-sm">{pkg.name}</h5>
+                      {pkg.id === 'dating_month' && (
+                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs absolute -top-2 -right-2">
+                          PHỔ BIẾN
+                        </Badge>
+                      )}
                     </div>
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    <p className="text-xs text-gray-600">{pkg.description}</p>
+                    <div className="text-lg font-bold text-purple-600">
+                      {formatPrice(pkg.price)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {pkg.duration === -1 ? 'Vĩnh viễn' : `${pkg.duration} ngày`}
+                    </div>
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mx-auto ${
                       selectedPackage === pkg.id 
                         ? 'border-purple-500 bg-purple-500' 
                         : 'border-gray-300'

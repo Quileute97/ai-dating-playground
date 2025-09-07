@@ -35,7 +35,7 @@ export default function ActiveFriendsWithChatPanel({
 
   if (isLoading) {
     return (
-      <div className="w-72 bg-white border-l border-gray-200 flex flex-col">
+      <div className="w-full lg:w-72 bg-white lg:border-l border-gray-200 flex flex-col">
         <div className="p-4">
           <h2 className="text-sm font-semibold text-gray-600">Bạn bè đang online</h2>
         </div>
@@ -50,7 +50,7 @@ export default function ActiveFriendsWithChatPanel({
   }
 
   return (
-    <div className="w-72 bg-white border-l border-gray-200 flex flex-col">
+    <div className="w-full lg:w-72 bg-white lg:border-l border-gray-200 flex flex-col">
       <div className="p-4">
         <h2 className="text-sm font-semibold text-gray-600">Bạn bè đang online</h2>
       </div>

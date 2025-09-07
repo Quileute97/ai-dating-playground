@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star } from "lucide-react";
+import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star, Bell, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatInterface from "./ChatInterface";
 import SwipeInterface from "./SwipeInterface";
@@ -19,6 +19,8 @@ import { ChatProvider } from "@/hooks/useChatContext";
 import UnifiedChatWidget from "./UnifiedChatWidget";
 import PremiumUpgradeModal from "./PremiumUpgradeModal";
 import { useToast } from "@/hooks/use-toast";
+import MessagesTab from "./MessagesTab";
+import NotificationsTab from "./NotificationsTab";
 
 const DatingApp = () => {
   const { toast } = useToast();
@@ -82,6 +84,8 @@ const DatingApp = () => {
     { id: "dating", label: "Hẹn hò", icon: Heart, color: "from-pink-500 to-red-500" },
     { id: "nearby", label: "Quanh đây", icon: MapPin, color: "from-blue-500 to-purple-500" },
     { id: "timeline", label: "Timeline", icon: Star, color: "from-yellow-400 to-pink-500" },
+    { id: "messages", label: "Tin nhắn", icon: Users, color: "from-blue-500 to-green-500" },
+    { id: "notifications", label: "Thông báo", icon: Bell, color: "from-orange-500 to-yellow-500" },
   ];
 
   const handleLogin = (userData: any) => {
@@ -170,6 +174,14 @@ const DatingApp = () => {
         return user ? <NearbyInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "timeline":
         return <Timeline user={{ ...user, ...unifiedProfile }} />;
+      case "messages":
+        return user ? (
+          <MessagesTab userId={user.id} />
+        ) : <RequireLogin onLogin={() => setShowAuth(true)} />;
+      case "notifications":
+        return user ? (
+          <NotificationsTab userId={user.id} />
+        ) : <RequireLogin onLogin={() => setShowAuth(true)} />;
       default:
         return null;
     }

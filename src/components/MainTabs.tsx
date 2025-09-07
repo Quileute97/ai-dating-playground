@@ -1,5 +1,5 @@
 import React from "react";
-import { MessageCircle, Heart, MapPin, Star } from 'lucide-react';
+import { MessageCircle, Heart, MapPin, Star, Bell, Users } from 'lucide-react';
 
 interface Tab {
   id: string;
@@ -25,7 +25,9 @@ const tabs: Tab[] = [
   { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500' },
   { id: 'dating', label: 'Hẹn hò', icon: Heart, color: 'from-pink-500 to-red-500' },
   { id: 'nearby', label: 'Quanh đây', icon: MapPin, color: 'from-blue-500 to-purple-500' },
-  { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500' }
+  { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500' },
+  { id: 'messages', label: 'Tin nhắn', icon: Users, color: 'from-blue-500 to-green-500' },
+  { id: 'notifications', label: 'Thông báo', icon: Bell, color: 'from-orange-500 to-yellow-500' }
 ];
 
 export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: customTabs }: MainTabsProps) {
@@ -34,14 +36,22 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
     { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500', locked: false },
     { id: 'dating', label: 'Hẹn hò', icon: Heart, color: 'from-pink-500 to-red-500', locked: true },
     { id: 'nearby', label: 'Quanh đây', icon: MapPin, color: 'from-blue-500 to-purple-500', locked: true },
-    { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500', locked: false }
+    { id: 'timeline', label: 'Timeline', icon: Star, color: 'from-yellow-400 to-pink-500', locked: false },
+    { id: 'messages', label: 'Tin nhắn', icon: Users, color: 'from-blue-500 to-green-500', locked: true },
+    { id: 'notifications', label: 'Thông báo', icon: Bell, color: 'from-orange-500 to-yellow-500', locked: true }
   ];
+  
   if (isAdminMode) return null;
+  
+  // Check if we're on mobile/tablet - Show all 6 tabs on mobile, only 4 on desktop
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024; // lg breakpoint
+  const tabsToShow = isMobile ? displayTabs : displayTabs.slice(0, 4); // Only show first 4 tabs on desktop
+  
   return (
     <div className="bg-white/90 backdrop-blur-sm border-b border-purple-100 px-2 py-2 shadow-sm">
       <div className="flex justify-center items-center max-w-full mx-auto">
-        <div className="flex bg-gray-100 rounded-xl p-1 gap-1 w-full max-w-md">
-          {displayTabs.map((tab) => {
+        <div className={`flex bg-gray-100 rounded-xl p-1 gap-1 w-full ${isMobile ? 'max-w-full' : 'max-w-md'}`}>
+          {tabsToShow.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             const isLocked = Boolean(tab.locked);
@@ -61,7 +71,7 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
                 title={isLocked ? 'Đăng nhập để dùng tính năng này' : undefined}
               >
                 <Icon className={`w-5 h-5 md:w-4 md:h-4 transition-all duration-200 ${isActive ? 'scale-105' : ''}`} />
-                <span className="text-[10px] md:text-[9px] font-medium leading-tight text-center px-0.5">
+                <span className={`${isMobile ? 'text-[8px]' : 'text-[10px] md:text-[9px]'} font-medium leading-tight text-center px-0.5`}>
                   {tab.label}
                 </span>
                 {isLocked && (

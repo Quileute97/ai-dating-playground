@@ -45,8 +45,9 @@ export function useUnifiedProfile(userId: string | undefined) {
     fetchProfile();
 
     // Enhanced realtime subscription cho profile changes
+    const channelName = `profile-${userId}-${Date.now()}`;
     const channel = supabase
-      .channel(`profile-${userId}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

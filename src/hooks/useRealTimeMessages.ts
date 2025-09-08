@@ -59,8 +59,9 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
   useEffect(() => {
     if (!conversation?.id) return;
 
+    const channelName = `messages-real-${conversation.id}-${Date.now()}`;
     const channel = supabase
-      .channel(`messages-${conversation.id}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',

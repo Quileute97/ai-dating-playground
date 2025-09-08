@@ -173,20 +173,21 @@ export function useRecentActivities(userId: string | undefined) {
   useEffect(() => {
     if (!userId) return;
 
+    const timestamp = Date.now();
     const channels = [
-      supabase.channel('activities-friends').on('postgres_changes', {
+      supabase.channel(`activities-friends-${timestamp}`).on('postgres_changes', {
         event: '*', schema: 'public', table: 'friends'
       }, () => queryClient.invalidateQueries({ queryKey: ["recent-activities", userId] })),
 
-      supabase.channel('activities-user-likes').on('postgres_changes', {
+      supabase.channel(`activities-user-likes-${timestamp}`).on('postgres_changes', {
         event: '*', schema: 'public', table: 'user_likes'
       }, () => queryClient.invalidateQueries({ queryKey: ["recent-activities", userId] })),
 
-      supabase.channel('activities-post-likes').on('postgres_changes', {
+      supabase.channel(`activities-post-likes-${timestamp}`).on('postgres_changes', {
         event: '*', schema: 'public', table: 'post_likes'
       }, () => queryClient.invalidateQueries({ queryKey: ["recent-activities", userId] })),
 
-      supabase.channel('activities-comments').on('postgres_changes', {
+      supabase.channel(`activities-comments-${timestamp}`).on('postgres_changes', {
         event: '*', schema: 'public', table: 'comments'
       }, () => queryClient.invalidateQueries({ queryKey: ["recent-activities", userId] }))
     ];

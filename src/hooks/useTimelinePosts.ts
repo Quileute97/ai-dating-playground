@@ -29,8 +29,9 @@ export function useTimelinePosts(userId?: string) {
 
   // Realtime subscription cho posts và fake_user_posts
   useEffect(() => {
+    const timestamp = Date.now();
     const postsChannel = supabase
-      .channel('posts-changes')
+      .channel(`posts-changes-${timestamp}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -42,7 +43,7 @@ export function useTimelinePosts(userId?: string) {
       .subscribe();
 
     const fakePostsChannel = supabase
-      .channel('fake-posts-changes')
+      .channel(`fake-posts-changes-${timestamp}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

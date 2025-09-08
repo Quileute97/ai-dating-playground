@@ -6,7 +6,7 @@ import SwipeInterface from "./SwipeInterface";
 import NearbyInterface from "./NearbyInterface";
 import AdminDashboard from "./AdminDashboard";
 import Timeline from "./Timeline";
-import MainTabs from "./MainTabs";
+import BottomNavigation from "./BottomNavigation";
 import { useStrangerMatchmaking } from "@/hooks/useStrangerMatchmaking";
 import DatingAppModals from "./DatingAppModals";
 import UnifiedProfileButton from "./UnifiedProfileButton";
@@ -189,16 +189,8 @@ const DatingApp = () => {
 
   return (
     <ChatProvider>
-      <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden">
-        {/* Tab Navigation */}
-        <MainTabs
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          isAdminMode={isAdminMode}
-          tabs={tabs}
-          showLoginButton={!user}
-          onLoginClick={() => setShowAuth(true)}
-        />
+      <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden pb-20">
+        {/* Bottom padding to account for bottom navigation */}
 
         {/* Top Action Bar - Optimized for mobile */}
         <div className="absolute top-2 md:top-4 left-2 md:left-4 right-2 md:right-4 z-20 flex justify-between items-center">
@@ -309,6 +301,14 @@ const DatingApp = () => {
               description: "Hoàn tất thanh toán để kích hoạt Premium.",
             });
           }}
+        />
+
+        {/* Bottom Navigation */}
+        <BottomNavigation
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          isAdminMode={isAdminMode}
+          tabs={tabs}
         />
       </div>
     </ChatProvider>

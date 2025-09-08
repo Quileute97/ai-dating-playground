@@ -48,9 +48,9 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
   const tabsToShow = isMobile ? displayTabs : displayTabs.slice(0, 4); // Only show first 4 tabs on desktop
   
   return (
-    <div className="bg-white/90 backdrop-blur-sm border-b border-purple-100 px-2 py-2 shadow-sm">
+    <div className="bg-white/90 backdrop-blur-sm border-b border-purple-100 px-1 sm:px-2 py-2 shadow-sm">
       <div className="flex justify-center items-center max-w-full mx-auto">
-        <div className={`flex bg-gray-100 rounded-xl p-1 gap-1 w-full ${isMobile ? 'max-w-full' : 'max-w-md'}`}>
+        <div className={`flex bg-gray-100 rounded-xl p-0.5 sm:p-1 gap-0.5 sm:gap-1 w-full ${isMobile ? 'max-w-full' : 'max-w-md'}`}>
           {tabsToShow.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -61,7 +61,7 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 disabled={isLocked}
-                className={`flex flex-col items-center justify-center gap-1 flex-1 min-h-[56px] py-2 px-1 rounded-lg transition-all duration-300 relative touch-manipulation ${
+                className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 flex-1 min-h-[48px] sm:min-h-[56px] py-1 sm:py-2 px-0.5 sm:px-1 rounded-lg transition-all duration-300 relative touch-manipulation ${
                   isActive 
                     ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-md scale-[1.02]'
                     : isLocked
@@ -70,12 +70,12 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
                 }`}
                 title={isLocked ? 'Đăng nhập để dùng tính năng này' : undefined}
               >
-                <Icon className={`w-5 h-5 md:w-4 md:h-4 transition-all duration-200 ${isActive ? 'scale-105' : ''}`} />
-                <span className={`${isMobile ? 'text-[8px]' : 'text-[10px] md:text-[9px]'} font-medium leading-tight text-center px-0.5`}>
+                <Icon className={`w-4 h-4 sm:w-5 sm:h-5 md:w-4 md:h-4 transition-all duration-200 ${isActive ? 'scale-105' : ''}`} />
+                <span className={`${isMobile ? 'text-[7px] sm:text-[8px]' : 'text-[9px] sm:text-[10px] md:text-[9px]'} font-medium leading-tight text-center px-0.5 max-w-full break-words`}>
                   {tab.label}
                 </span>
                 {isLocked && (
-                  <span className="absolute top-1 right-1 text-[10px] text-gray-500">🔒</span>
+                  <span className="absolute top-0.5 right-0.5 text-[8px] sm:text-[10px] text-gray-500">🔒</span>
                 )}
               </button>
             );

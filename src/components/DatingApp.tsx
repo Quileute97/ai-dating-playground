@@ -21,6 +21,7 @@ import PremiumUpgradeModal from "./PremiumUpgradeModal";
 import { useToast } from "@/hooks/use-toast";
 import MessagesTab from "./MessagesTab";
 import NotificationsTab from "./NotificationsTab";
+import PremiumBadge from "./PremiumBadge";
 
 const DatingApp = () => {
   const { toast } = useToast();
@@ -197,10 +198,13 @@ const DatingApp = () => {
           {/* User Info */}
           <div className="flex items-center gap-1 md:gap-2">
             {user ? (
-              <UnifiedProfileButton
-                user={{ ...user, ...unifiedProfile }}
-                onUpdateProfile={handleUpdateProfile}
-              />
+              <div className="flex items-center gap-2">
+                <UnifiedProfileButton
+                  user={{ ...user, ...unifiedProfile }}
+                  onUpdateProfile={handleUpdateProfile}
+                />
+                <PremiumBadge userId={user.id} />
+              </div>
             ) : (
               <Button
                 variant="outline"

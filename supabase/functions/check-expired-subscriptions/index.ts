@@ -1,7 +1,6 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,77 +12,120 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Create Supabase client with service role key for admin operations
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+
   try {
-    console.log('Starting expired subscriptions check...');
+    console.log('🔄 Checking for expired premium subscriptions...');
 
-    // Create Supabase client with service role key
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
+    // Get current time
     const now = new Date().toISOString();
-    
-    // Find all approved subscriptions that have expired
-    const { data: expiredSubscriptions, error: fetchError } = await supabase
+
+    // Find all users with expired premium subscriptions
+    const { data: expiredUsers, error: selectError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, premium_expires, is_premium')
+      .eq('is_premium', true)
+      .not('premium_expires', 'is', null)
+      .lt('premium_expires', now);
+
+    if (selectError) {
+      console.error('❌ Error finding expired users:', selectError);
+      throw selectError;
+    }
+
+    console.log(`📊 Found ${expiredUsers?.length || 0} expired premium users`);
+
+    let updatedCount = 0;
+
+    if (expiredUsers && expiredUsers.length > 0) {
+      // Update expired users to remove premium status
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          is_premium: false,
+          premium_expires: null
+        })
+        .in('id', expiredUsers.map(user => user.id));
+
+      if (updateError) {
+        console.error('❌ Error updating expired users:', updateError);
+        throw updateError;
+      }
+
+      updatedCount = expiredUsers.length;
+
+      // Also update subscription records to expired status
+      const { error: subscriptionUpdateError } = await supabaseAdmin
+        .from('user_subscriptions')
+        .update({
+          status: 'expired'
+        })
+        .in('user_id', expiredUsers.map(user => user.id))
+        .eq('status', 'active')
+        .not('expires_at', 'is', null)
+        .lt('expires_at', now);
+
+      if (subscriptionUpdateError) {
+        console.error('❌ Error updating subscription status:', subscriptionUpdateError);
+        // Don't throw, as main profile update succeeded
+      }
+
+      console.log(`✅ Successfully updated ${updatedCount} expired premium users`);
+    }
+
+    // Also check legacy upgrade_requests table for backwards compatibility
+    const { data: expiredRequests, error: legacyError } = await supabaseAdmin
       .from('upgrade_requests')
       .select('*')
       .eq('status', 'approved')
       .not('expires_at', 'is', null)
       .lt('expires_at', now);
 
-    if (fetchError) {
-      console.error('Error fetching expired subscriptions:', fetchError);
-      throw new Error('Failed to fetch expired subscriptions');
-    }
-
-    console.log(`Found ${expiredSubscriptions?.length || 0} expired subscriptions`);
-
-    let updatedCount = 0;
-
-    if (expiredSubscriptions && expiredSubscriptions.length > 0) {
-      // Update expired subscriptions to 'expired' status
-      const { data: updateResult, error: updateError } = await supabase
+    let legacyUpdatedCount = 0;
+    if (expiredRequests && expiredRequests.length > 0) {
+      const { error: legacyUpdateError } = await supabaseAdmin
         .from('upgrade_requests')
         .update({
           status: 'expired',
           note: 'Subscription expired automatically'
         })
-        .in('id', expiredSubscriptions.map(sub => sub.id))
-        .select();
+        .in('id', expiredRequests.map(req => req.id));
 
-      if (updateError) {
-        console.error('Error updating expired subscriptions:', updateError);
-        throw new Error('Failed to update expired subscriptions');
-      }
-
-      updatedCount = updateResult?.length || 0;
-      console.log(`Updated ${updatedCount} expired subscriptions`);
-
-      // Log the expired subscriptions for monitoring
-      for (const subscription of expiredSubscriptions) {
-        console.log(`Expired subscription: User ${subscription.user_id}, Type: ${subscription.type}, Expired at: ${subscription.expires_at}`);
+      if (!legacyUpdateError) {
+        legacyUpdatedCount = expiredRequests.length;
+        console.log(`✅ Also updated ${legacyUpdatedCount} legacy upgrade requests`);
       }
     }
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Processed ${updatedCount} expired subscriptions`,
-      expiredCount: expiredSubscriptions?.length || 0,
-      updatedCount
+      message: `Checked and updated ${updatedCount} expired premium subscriptions`,
+      updatedCount,
+      legacyUpdatedCount,
+      checkedAt: now
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Check expired subscriptions error:', error);
+    console.error('💥 Error checking expired subscriptions:', error);
     return new Response(JSON.stringify({
-      success: false,
-      error: error.message || 'Failed to check expired subscriptions'
+      error: 'Internal server error',
+      message: error.message
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });

@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -675,69 +675,137 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          order_code: string | null
+          package_type: string
+          payment_amount: number | null
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          order_code?: string | null
+          package_type: string
+          payment_amount?: number | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          order_code?: string | null
+          package_type?: string
+          payment_amount?: number | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      comment_on_fake_post: {
+        Args: {
+          content_param: string
+          post_id_param: string
+          user_id_param: string
+        }
+        Returns: string
+      }
+      create_conversation_with_fake_user: {
+        Args: { fake_user_id: string; real_user_id: string }
+        Returns: string
+      }
       get_fake_users_for_dating: {
         Args: {
-          user_lat: number
-          user_lng: number
+          gender_pref?: string
+          max_age?: number
           max_distance?: number
           min_age?: number
-          max_age?: number
-          gender_pref?: string
+          user_lat: number
+          user_lng: number
         }
         Returns: {
-          id: string
-          name: string
-          avatar: string
           age: number
-          gender: string
+          album: Json
+          avatar: string
           bio: string
+          distance_km: number
+          education: string
+          gender: string
+          height: number
+          id: string
+          interests: Json
+          job: string
           lat: number
           lng: number
           location_name: string
-          album: Json
-          height: number
-          job: string
-          education: string
-          interests: Json
-          distance_km: number
+          name: string
         }[]
       }
       get_timeline_with_fake_posts: {
         Args: {
-          user_id_param?: string
           limit_param?: number
           offset_param?: number
+          user_id_param?: string
         }
         Returns: {
-          id: string
+          comment_count: number
           content: string
-          media_url: string
-          media_type: string
-          location: Json
-          sticker: Json
           created_at: string
-          user_id: string
-          user_name: string
-          user_avatar: string
-          user_age: number
-          user_gender: string
+          id: string
           is_fake_user: boolean
           like_count: number
-          comment_count: number
+          location: Json
+          media_type: string
+          media_url: string
+          sticker: Json
+          user_age: number
+          user_avatar: string
+          user_gender: string
           user_has_liked: boolean
+          user_id: string
+          user_name: string
         }[]
       }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
+      }
+      like_fake_post: {
+        Args: { post_id_param: string; user_id_param: string }
+        Returns: undefined
+      }
+      like_fake_user: {
+        Args: {
+          liked_id_param: string
+          liked_type_param: string
+          liker_id_param: string
+          liker_type_param: string
+        }
+        Returns: boolean
+      }
+      send_friend_request_to_fake_user: {
+        Args: { fake_user_id: string; real_user_id: string }
+        Returns: string
       }
     }
     Enums: {

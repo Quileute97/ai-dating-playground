@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { MessageSquare, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useActiveFriendsWithPresence } from '@/hooks/useActiveFriendsWithPresence';
-import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { useConversationsList } from '@/hooks/useConversationsList';
+import FullScreenChat from './FullScreenChat';
+import { format, isToday, isYesterday } from 'date-fns';
 
 interface MessagesTabProps {
   userId: string;
@@ -14,29 +13,64 @@ interface MessagesTabProps {
 
 export default function MessagesTab({ userId }: MessagesTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const { friends, isLoading } = useActiveFriendsWithPresence(userId);
-  const { startChatWith } = useChatIntegration();
+  const [selectedChat, setSelectedChat] = useState<{
+    userId: string;
+    userName: string;
+    userAvatar: string;
+  } | null>(null);
+  
+  const { data: conversations, isLoading } = useConversationsList(userId);
 
-  const handleStartChat = (friend: any) => {
-    startChatWith({
-      id: friend.id,
-      name: friend.name,
-      avatar: friend.avatar
+  const handleOpenChat = (conversation: any) => {
+    setSelectedChat({
+      userId: conversation.other_user.id,
+      userName: conversation.other_user.name,
+      userAvatar: conversation.other_user.avatar
     });
   };
 
-  const filteredFriends = friends.filter(friend => 
-    friend.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleBackToList = () => {
+    setSelectedChat(null);
+  };
+
+  const filteredConversations = conversations?.filter(conv => 
+    conv.other_user?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
+  const formatLastMessageTime = (dateString: string | null) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isToday(date)) {
+      return format(date, 'HH:mm');
+    } else if (isYesterday(date)) {
+      return 'Hôm qua';
+    } else {
+      return format(date, 'dd/MM');
+    }
+  };
+
+  // Show fullscreen chat if a conversation is selected
+  if (selectedChat) {
+    return (
+      <FullScreenChat
+        currentUserId={userId}
+        targetUserId={selectedChat.userId}
+        targetUserName={selectedChat.userName}
+        targetUserAvatar={selectedChat.userAvatar}
+        onBack={handleBackToList}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex flex-col bg-white">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800">Tin nhắn</h2>
+      <div className="flex-1 flex flex-col bg-background">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">Tin nhắn</h2>
         </div>
         <div className="flex-1 p-4">
-          <div className="text-center text-gray-500 text-sm">
+          <div className="text-center text-muted-foreground text-sm">
             Đang tải...
           </div>
         </div>
@@ -45,17 +79,17 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
+    <div className="flex-1 flex flex-col bg-background">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-800 mb-3">Tin nhắn</h2>
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold mb-3">Tin nhắn</h2>
         
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             type="text"
-            placeholder="Tìm kiếm bạn bè..."
+            placeholder="Tìm kiếm cuộc trò chuyện..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -63,51 +97,40 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
         </div>
       </div>
 
-      {/* Friends List */}
+      {/* Conversations List */}
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-3">
-          {filteredFriends.length === 0 ? (
-            <div className="text-center text-gray-500 text-sm py-8">
-              {searchQuery ? 'Không tìm thấy bạn bè nào' : 'Chưa có bạn bè nào online'}
+        <div className="divide-y">
+          {filteredConversations.length === 0 ? (
+            <div className="text-center text-muted-foreground text-sm py-8">
+              {searchQuery ? 'Không tìm thấy cuộc trò chuyện nào' : 'Chưa có tin nhắn nào'}
             </div>
           ) : (
-            filteredFriends.map((friend) => (
+            filteredConversations.map((conversation) => (
               <div 
-                key={friend.id} 
-                className="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-                onClick={() => handleStartChat(friend)}
+                key={conversation.id} 
+                className="flex items-center p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                onClick={() => handleOpenChat(conversation)}
               >
-                <div className="relative mr-3">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={friend.avatar || '/placeholder.svg'} />
-                    <AvatarFallback>{friend.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  {friend.online && (
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                  )}
-                </div>
+                <Avatar className="w-12 h-12 mr-3">
+                  <AvatarImage src={conversation.other_user?.avatar || '/placeholder.svg'} />
+                  <AvatarFallback>
+                    {conversation.other_user?.name?.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm font-medium text-gray-900 truncate">
-                      {friend.name}
+                    <h3 className="text-sm font-medium truncate">
+                      {conversation.other_user?.name}
                     </h3>
-                    <Badge variant={friend.online ? "default" : "secondary"} className="text-xs ml-2">
-                      {friend.online ? "Online" : "Offline"}
-                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {formatLastMessageTime(conversation.last_message_at)}
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">
-                    {friend.online ? "Đang hoạt động" : "Không hoạt động"}
+                  <p className="text-sm text-muted-foreground truncate">
+                    {conversation.last_message || 'Chưa có tin nhắn'}
                   </p>
                 </div>
-                
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                </Button>
               </div>
             ))
           )}

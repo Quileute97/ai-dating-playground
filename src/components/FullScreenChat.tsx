@@ -3,9 +3,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, ImageIcon, Video } from "lucide-react";
 import { useRealTimeMessages } from '@/hooks/useRealTimeMessages';
+import { uploadTimelineMedia } from '@/utils/uploadTimelineMedia';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface FullScreenChatProps {
   currentUserId: string;
@@ -23,8 +25,12 @@ export default function FullScreenChat({
   onBack 
 }: FullScreenChatProps) {
   const [inputValue, setInputValue] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { messages, isLoading, sendMessage, sending } = useRealTimeMessages(currentUserId, targetUserId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -35,13 +41,32 @@ export default function FullScreenChat({
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || sending) return;
+    if ((!inputValue.trim() && !selectedFile) || sending || uploading) return;
 
     try {
-      await sendMessage(inputValue);
+      let mediaUrl = '';
+      let mediaType = '';
+
+      // Upload file if selected
+      if (selectedFile) {
+        setUploading(true);
+        mediaUrl = await uploadTimelineMedia(selectedFile);
+        mediaType = selectedFile.type.startsWith('image/') ? 'image' : 'video';
+      }
+
+      // Send message with content and/or media
+      await sendMessage(inputValue.trim() || 'Đã gửi file', mediaUrl, mediaType);
       setInputValue('');
+      setSelectedFile(null);
     } catch (error) {
       console.error('Error sending message:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể gửi tin nhắn. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -49,6 +74,34 @@ export default function FullScreenChat({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File quá lớn",
+          description: "Vui lòng chọn file nhỏ hơn 10MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check file type
+      const isValidType = file.type.startsWith('image/') || file.type.startsWith('video/');
+      if (!isValidType) {
+        toast({
+          title: "Định dạng không hỗ trợ",
+          description: "Chỉ hỗ trợ ảnh và video.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedFile(file);
     }
   };
 
@@ -150,22 +203,46 @@ export default function FullScreenChat({
                         </Avatar>
                       )}
                       
-                      <div
-                        className={`max-w-[70%] p-3 rounded-2xl ${
-                          isMyMessage
-                            ? 'bg-primary text-primary-foreground rounded-br-md'
-                            : 'bg-muted text-foreground rounded-bl-md'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap break-words">
-                          {message.content}
-                        </p>
-                        <p className={`text-xs mt-1 ${
-                          isMyMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                        }`}>
-                          {formatTime(message.created_at)}
-                        </p>
-                      </div>
+                       <div
+                         className={`max-w-[70%] p-3 rounded-2xl ${
+                           isMyMessage
+                             ? 'bg-primary text-primary-foreground rounded-br-md'
+                             : 'bg-muted text-foreground rounded-bl-md'
+                         }`}
+                       >
+                         {/* Media content */}
+                         {message.media_url && (
+                           <div className="mb-2">
+                             {message.media_type === 'image' ? (
+                               <img
+                                 src={message.media_url}
+                                 alt="Shared image"
+                                 className="max-w-full h-auto rounded-lg cursor-pointer"
+                                 onClick={() => window.open(message.media_url, '_blank')}
+                               />
+                             ) : message.media_type === 'video' ? (
+                               <video
+                                 src={message.media_url}
+                                 controls
+                                 className="max-w-full h-auto rounded-lg"
+                               />
+                             ) : null}
+                           </div>
+                         )}
+                         
+                         {/* Text content */}
+                         {message.content && (
+                           <p className="text-sm whitespace-pre-wrap break-words">
+                             {message.content}
+                           </p>
+                         )}
+                         
+                         <p className={`text-xs mt-1 ${
+                           isMyMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                         }`}>
+                           {formatTime(message.created_at)}
+                         </p>
+                       </div>
                     </div>
                   );
                 })}
@@ -178,21 +255,68 @@ export default function FullScreenChat({
 
       {/* Input */}
       <div className="p-4 border-t bg-card">
+        {/* File preview */}
+        {selectedFile && (
+          <div className="mb-2 p-2 bg-muted rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {selectedFile.type.startsWith('image/') ? (
+                <ImageIcon className="w-4 h-4" />
+              ) : (
+                <Video className="w-4 h-4" />
+              )}
+              <span className="text-sm truncate">{selectedFile.name}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedFile(null)}
+              className="h-6 w-6 p-0"
+            >
+              ×
+            </Button>
+          </div>
+        )}
+        
         <div className="flex gap-2">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          
+          {/* Media upload buttons */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || sending}
+            title="Gửi ảnh"
+          >
+            <ImageIcon className="w-4 h-4" />
+          </Button>
+          
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Nhập tin nhắn..."
             className="flex-1"
-            disabled={sending}
+            disabled={sending || uploading}
           />
+          
           <Button 
             onClick={handleSendMessage}
-            disabled={!inputValue.trim() || sending}
+            disabled={(!inputValue.trim() && !selectedFile) || sending || uploading}
             size="icon"
           >
-            <Send className="w-4 h-4" />
+            {uploading ? (
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
           </Button>
         </div>
       </div>

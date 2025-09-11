@@ -77,7 +77,7 @@ export default function FullScreenChat({
   const messageGroups = groupMessagesByDate(messages);
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="max-w-2xl mx-auto h-full flex flex-col bg-background animate-fade-in">
       {/* Header */}
       <div className="flex items-center p-4 border-b bg-card">
         <Button 

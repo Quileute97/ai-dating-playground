@@ -21,7 +21,7 @@ export function useConversationsList(userId: string) {
     queryFn: async () => {
       if (!userId) return [];
 
-      // Lấy tất cả conversations mà user tham gia
+      // Lấy tất cả conversations mà user tham gia (chỉ Dating và Nearby, không có stranger chat)
       const { data: conversations, error } = await supabase
         .from("conversations")
         .select(`
@@ -39,30 +39,60 @@ export function useConversationsList(userId: string) {
 
       if (!conversations || conversations.length === 0) return [];
 
+      // Nhóm conversations theo cặp user để thống nhất
+      const userConversationMap = new Map<string, any>();
+
       // Lấy thông tin user khác trong mỗi conversation
       const conversationsWithUsers = await Promise.all(
         conversations.map(async (conv) => {
           const otherUserId = conv.user_real_id === userId ? conv.user_fake_id : conv.user_real_id;
           
-          // Lấy thông tin user khác
+          // Kiểm tra xem đây có phải là fake user không (stranger chat)
+          const { data: fakeUser } = await supabase
+            .from("fake_users")
+            .select("id")
+            .eq("id", otherUserId)
+            .single();
+
+          // Nếu là fake user thì bỏ qua (không hiển thị stranger chat)
+          if (fakeUser) {
+            return null;
+          }
+
+          // Lấy thông tin user khác từ profiles
           const { data: userProfile } = await supabase
             .from("profiles")
             .select("id, name, avatar")
             .eq("id", otherUserId)
             .single();
 
-          return {
+          if (!userProfile) return null;
+
+          const conversationData = {
             ...conv,
-            other_user: userProfile || {
-              id: otherUserId,
-              name: "Unknown User",
-              avatar: "/placeholder.svg"
-            }
+            other_user: userProfile
           };
+
+          // Kiểm tra xem đã có conversation với user này chưa
+          const existingConv = userConversationMap.get(otherUserId);
+          if (!existingConv || new Date(conv.last_message_at || 0) > new Date(existingConv.last_message_at || 0)) {
+            userConversationMap.set(otherUserId, conversationData);
+          }
+
+          return conversationData;
         })
       );
 
-      return conversationsWithUsers as ConversationItem[];
+      // Lọc bỏ null và lấy conversations duy nhất cho mỗi user
+      const uniqueConversations = Array.from(userConversationMap.values())
+        .filter(conv => conv !== null)
+        .sort((a, b) => {
+          const dateA = new Date(a.last_message_at || 0);
+          const dateB = new Date(b.last_message_at || 0);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+      return uniqueConversations as ConversationItem[];
     },
     enabled: !!userId
   });

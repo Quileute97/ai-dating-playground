@@ -83,8 +83,12 @@ export default function FullScreenChat({
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={onBack}
-          className="mr-3"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onBack();
+          }}
+          className="mr-3 hover:bg-accent"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>

@@ -65,7 +65,7 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex flex-col bg-background">
+      <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in bg-background">
         <div className="p-4 border-b">
           <h2 className="text-lg font-semibold">Tin nhắn</h2>
         </div>
@@ -79,7 +79,7 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background">
+    <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in bg-background">
       {/* Header */}
       <div className="p-4 border-b">
         <h2 className="text-lg font-semibold mb-3">Tin nhắn</h2>

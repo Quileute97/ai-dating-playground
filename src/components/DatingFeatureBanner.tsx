@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Crown, Clock, AlertTriangle } from "lucide-react";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
+import { useAdminSettings } from "@/hooks/useAdminSettings";
 import DatingPackageModal from "./DatingPackageModal";
 
 interface DatingFeatureBannerProps {
@@ -24,7 +25,14 @@ const DatingFeatureBanner: React.FC<DatingFeatureBannerProps> = ({
   maxFreeMatches,
 }) => {
   const { subscription, daysRemaining } = useIsDatingActive(userId);
+  const { getDatingRequiresPremium } = useAdminSettings();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  
+  // If premium is not required, don't show any banners
+  const premiumRequired = getDatingRequiresPremium();
+  if (!premiumRequired) {
+    return null;
+  }
 
   console.log('DatingFeatureBanner Debug:', {
     isDatingActive,

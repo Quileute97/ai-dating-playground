@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MessageCircle, Crown, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { useAdminSettings } from '@/hooks/useAdminSettings';
 
 interface MatchedUser {
   id: string;
@@ -21,6 +22,9 @@ const MatchedUsersView: React.FC<MatchedUsersViewProps> = ({ userId, onUpgradeCl
   const [matchedUsers, setMatchedUsers] = useState<MatchedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const { startChatWith } = useChatIntegration();
+  const { getDatingRequiresPremium } = useAdminSettings();
+  
+  const premiumRequired = getDatingRequiresPremium();
 
   useEffect(() => {
     const fetchMatchedUsers = async () => {
@@ -136,37 +140,44 @@ const MatchedUsersView: React.FC<MatchedUsersViewProps> = ({ userId, onUpgradeCl
             <MessageCircle className="w-8 h-8 text-gray-400" />
           </div>
           <p className="text-gray-600 mb-4">
-            Chưa có match nào. Nâng cấp Premium để có thêm cơ hội tìm kiếm!
+            {premiumRequired 
+              ? "Chưa có match nào. Nâng cấp Premium để có thêm cơ hội tìm kiếm!"
+              : "Chưa có match nào. Tiếp tục swipe để tìm người phù hợp!"
+            }
           </p>
-          <Button
-            onClick={onUpgradeClick}
-            className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
-          >
-            <Crown className="w-4 h-4 mr-2" />
-            Nâng cấp Premium
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+          {premiumRequired && (
+            <Button
+              onClick={onUpgradeClick}
+              className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+            >
+              <Crown className="w-4 h-4 mr-2" />
+              Nâng cấp Premium
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          )}
         </Card>
       )}
 
-      {/* Upgrade suggestion */}
-      <Card className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
-        <div className="text-center">
-          <Crown className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-          <h3 className="font-semibold text-gray-800 mb-1">Muốn thêm Match?</h3>
-          <p className="text-sm text-gray-600 mb-3">
-            Nâng cấp Premium để có không giới hạn lượt thả tim và nhiều tính năng khác!
-          </p>
-          <Button
-            size="sm"
-            onClick={onUpgradeClick}
-            className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
-          >
-            <Crown className="w-4 h-4 mr-1" />
-            Xem gói Premium
-          </Button>
-        </div>
-      </Card>
+      {/* Upgrade suggestion - only show if premium is required */}
+      {premiumRequired && (
+        <Card className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
+          <div className="text-center">
+            <Crown className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+            <h3 className="font-semibold text-gray-800 mb-1">Muốn thêm Match?</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Nâng cấp Premium để có không giới hạn lượt thả tim và nhiều tính năng khác!
+            </p>
+            <Button
+              size="sm"
+              onClick={onUpgradeClick}
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
+            >
+              <Crown className="w-4 h-4 mr-1" />
+              Xem gói Premium
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

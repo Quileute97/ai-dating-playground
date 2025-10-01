@@ -18,6 +18,7 @@ import { useChatIntegration } from '@/hooks/useChatIntegration';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useFakeUserInteractions } from '@/hooks/useFakeUserInteractions';
+import { useAdminSettings } from '@/hooks/useAdminSettings';
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -49,6 +50,10 @@ const SwipeInterface = ({ user, onPremiumUpgradeClick }: SwipeInterfaceProps) =>
 
   // Use daily matches hook to get real count from database
   const { dailyMatches, loading: dailyMatchesLoading } = useDailyMatches(user?.id);
+  
+  // Check if premium is required
+  const { getDatingRequiresPremium } = useAdminSettings();
+  const premiumRequired = getDatingRequiresPremium();
 
   // Use real data from database with expanded range (50km for dating vs 5km for nearby)
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, 50);
@@ -150,7 +155,8 @@ const SwipeInterface = ({ user, onPremiumUpgradeClick }: SwipeInterfaceProps) =>
   const handleSwipe = async (direction: 'left' | 'right' | 'super') => {
     if (!currentProfile) return;
     
-    if (!isDatingActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
+    // Only check limits if premium is required
+    if (premiumRequired && !isDatingActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
       toast({
         title: "Đã hết lượt match miễn phí!",
         description: "Nâng cấp Premium để có không giới hạn lượt match",
@@ -266,7 +272,8 @@ const SwipeInterface = ({ user, onPremiumUpgradeClick }: SwipeInterfaceProps) =>
   }
 
   if (!currentProfile) {
-    const outOfFreeMatches = !isDatingActive && dailyMatches >= maxFreeMatches;
+    // Only consider out of free matches if premium is required
+    const outOfFreeMatches = premiumRequired && !isDatingActive && dailyMatches >= maxFreeMatches;
     const noMoreProfiles = availableProfiles.length === 0;
     
     if (outOfFreeMatches) {
@@ -425,8 +432,8 @@ const SwipeInterface = ({ user, onPremiumUpgradeClick }: SwipeInterfaceProps) =>
         </div>
       )}
 
-      {/* Daily Matches Counter */}
-      {!isDatingActive && (
+      {/* Daily Matches Counter - only show if premium is required */}
+      {premiumRequired && !isDatingActive && (
         <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
           {remainingMatches <= 3 && (
             <span className="text-red-500">⚠️ </span>
@@ -555,7 +562,7 @@ const SwipeInterface = ({ user, onPremiumUpgradeClick }: SwipeInterfaceProps) =>
             size="icon"
             className="w-14 h-14 rounded-full border-blue-200 hover:bg-blue-50 hover:border-blue-300"
             onClick={() => handleSwipe('super')}
-            disabled={!isDatingActive && dailyMatches >= maxFreeMatches}
+            disabled={premiumRequired && !isDatingActive && dailyMatches >= maxFreeMatches}
           >
             <Zap className="w-6 h-6 text-blue-500" />
           </Button>
@@ -565,14 +572,14 @@ const SwipeInterface = ({ user, onPremiumUpgradeClick }: SwipeInterfaceProps) =>
             size="icon"
             className="w-14 h-14 rounded-full border-green-200 hover:bg-green-50 hover:border-green-300"
             onClick={() => handleSwipe('right')}
-            disabled={!isDatingActive && dailyMatches >= maxFreeMatches}
+            disabled={premiumRequired && !isDatingActive && dailyMatches >= maxFreeMatches}
           >
             <Heart className="w-6 h-6 text-green-500" />
           </Button>
         </div>
 
-        {/* Compact Premium Banner - only for remaining matches warning */}
-        {!isDatingActive && remainingMatches <= 3 && remainingMatches > 0 && (
+        {/* Compact Premium Banner - only for remaining matches warning and if premium is required */}
+        {premiumRequired && !isDatingActive && remainingMatches <= 3 && remainingMatches > 0 && (
           <div className="mt-4 p-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Crown className="w-4 h-4" />

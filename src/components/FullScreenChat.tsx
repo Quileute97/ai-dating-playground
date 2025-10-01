@@ -135,15 +135,15 @@ export default function FullScreenChat({
       <div className="flex items-center p-4 border-b bg-card">
         <Button 
           variant="ghost" 
-          size="icon" 
+          size="lg"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onBack();
           }}
-          className="mr-3 hover:bg-accent"
+          className="mr-2 -ml-2 min-h-[48px] min-w-[48px] p-3 hover:bg-accent active:scale-95 transition-all"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-6 h-6" />
         </Button>
         
         <Avatar className="w-10 h-10 mr-3">

@@ -1,9 +1,11 @@
 import { usePremiumStatus } from '@/hooks/usePremiumStatus';
 import { useToast } from '@/hooks/use-toast';
+import { useAdminSettings } from '@/hooks/useAdminSettings';
 
 export function usePremiumFeatures(userId?: string) {
   const { premiumStatus } = usePremiumStatus(userId);
   const { toast } = useToast();
+  const { getDatingRequiresPremium } = useAdminSettings();
 
   const showPremiumRequired = (featureName: string) => {
     toast({
@@ -13,7 +15,15 @@ export function usePremiumFeatures(userId?: string) {
     });
   };
 
-  const checkPremiumFeature = (featureName: string, onSuccess?: () => void): boolean => {
+  const checkPremiumFeature = (featureName: string, onSuccess?: () => void, bypassSetting?: boolean): boolean => {
+    // If dating premium requirement is disabled globally, allow all features
+    if (!bypassSetting && !getDatingRequiresPremium()) {
+      if (onSuccess) {
+        onSuccess();
+      }
+      return true;
+    }
+
     if (!premiumStatus?.isPremium) {
       showPremiumRequired(featureName);
       return false;
@@ -70,6 +80,10 @@ export function usePremiumFeatures(userId?: string) {
   };
 
   const getCurrentLimits = () => {
+    // If dating premium requirement is disabled globally, return premium limits for everyone
+    if (!getDatingRequiresPremium()) {
+      return premiumLimits;
+    }
     return premiumStatus?.isPremium ? premiumLimits : freeLimits;
   };
 

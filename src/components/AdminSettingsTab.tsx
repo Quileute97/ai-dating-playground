@@ -7,11 +7,15 @@ import { supabase } from "@/integrations/supabase/client";
 import BankInfoManager from "./BankInfoManager";
 import HeaderAdManager from "./HeaderAdManager";
 import { useBankInfo } from "@/hooks/useBankInfo";
+import { useAdminSettings } from "@/hooks/useAdminSettings";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function AdminSettingsTab() {
   const [qrImgUploading, setQrImgUploading] = useState(false);
   const { toast } = useToast();
   const { bankInfo, loading, refetch } = useBankInfo();
+  const { getDatingRequiresPremium, setDatingRequiresPremium } = useAdminSettings();
 
   // Local state for bank info draft
   const [bankInfoDraft, setBankInfoDraft] = useState(bankInfo);
@@ -129,6 +133,22 @@ export default function AdminSettingsTab() {
                 Hệ thống đã tích hợp PayOS để xử lý thanh toán tự động. 
                 Không cần duyệt thủ công nữa.
               </p>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+              <div className="flex-1">
+                <Label htmlFor="dating-premium-toggle" className="font-semibold text-purple-800">
+                  Yêu cầu Premium cho Hẹn hò
+                </Label>
+                <p className="text-sm text-purple-600 mt-1">
+                  Khi tắt, tất cả người dùng có thể sử dụng tính năng Hẹn hò không giới hạn
+                </p>
+              </div>
+              <Switch
+                id="dating-premium-toggle"
+                checked={getDatingRequiresPremium()}
+                onCheckedChange={(checked) => setDatingRequiresPremium(checked)}
+              />
             </div>
           </div>
         </CardContent>

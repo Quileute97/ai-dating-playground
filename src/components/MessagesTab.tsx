@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search } from "lucide-react";
+import { Search, Crown, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useConversationsList } from '@/hooks/useConversationsList';
 import FullScreenChat from './FullScreenChat';
 import { format, isToday, isYesterday } from 'date-fns';
+import { usePremiumStatus } from '@/hooks/usePremiumStatus';
 
 interface MessagesTabProps {
   userId: string;
@@ -20,6 +22,10 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
   } | null>(null);
   
   const { data: conversations, isLoading } = useConversationsList(userId);
+  const { premiumStatus } = usePremiumStatus(userId);
+  const isPremium = premiumStatus.isPremium;
+  
+  const FREE_CHAT_LIMIT = 5;
 
   const handleOpenChat = (conversation: any) => {
     setSelectedChat({
@@ -36,6 +42,14 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
   const filteredConversations = conversations?.filter(conv => 
     conv.other_user?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
+
+  const visibleConversations = isPremium 
+    ? filteredConversations 
+    : filteredConversations.slice(0, FREE_CHAT_LIMIT);
+  
+  const lockedConversations = isPremium 
+    ? [] 
+    : filteredConversations.slice(FREE_CHAT_LIMIT);
 
   const formatLastMessageTime = (dateString: string | null) => {
     if (!dateString) return '';
@@ -105,34 +119,98 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
               {searchQuery ? 'Không tìm thấy cuộc trò chuyện nào' : 'Chưa có tin nhắn nào'}
             </div>
           ) : (
-            filteredConversations.map((conversation) => (
-              <div 
-                key={conversation.id} 
-                className="flex items-center p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                onClick={() => handleOpenChat(conversation)}
-              >
-                <Avatar className="w-12 h-12 mr-3">
-                  <AvatarImage src={conversation.other_user?.avatar || '/placeholder.svg'} />
-                  <AvatarFallback>
-                    {conversation.other_user?.name?.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm font-medium truncate">
-                      {conversation.other_user?.name}
-                    </h3>
-                    <span className="text-xs text-muted-foreground">
-                      {formatLastMessageTime(conversation.last_message_at)}
-                    </span>
+            <>
+              {/* Visible Conversations */}
+              {visibleConversations.map((conversation) => (
+                <div 
+                  key={conversation.id} 
+                  className="flex items-center p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => handleOpenChat(conversation)}
+                >
+                  <Avatar className="w-12 h-12 mr-3">
+                    <AvatarImage src={conversation.other_user?.avatar || '/placeholder.svg'} />
+                    <AvatarFallback>
+                      {conversation.other_user?.name?.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-sm font-medium truncate">
+                        {conversation.other_user?.name}
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        {formatLastMessageTime(conversation.last_message_at)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {conversation.last_message || 'Chưa có tin nhắn'}
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {conversation.last_message || 'Chưa có tin nhắn'}
-                  </p>
                 </div>
-              </div>
-            ))
+              ))}
+
+              {/* Locked Conversations with Watermark */}
+              {lockedConversations.length > 0 && (
+                <div className="relative">
+                  {/* Blurred Conversations */}
+                  <div className="blur-sm pointer-events-none select-none">
+                    {lockedConversations.map((conversation) => (
+                      <div 
+                        key={conversation.id} 
+                        className="flex items-center p-4 opacity-60"
+                      >
+                        <Avatar className="w-12 h-12 mr-3">
+                          <AvatarImage src={conversation.other_user?.avatar || '/placeholder.svg'} />
+                          <AvatarFallback>
+                            {conversation.other_user?.name?.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <h3 className="text-sm font-medium truncate">
+                              {conversation.other_user?.name}
+                            </h3>
+                            <span className="text-xs text-muted-foreground">
+                              {formatLastMessageTime(conversation.last_message_at)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {conversation.last_message || 'Chưa có tin nhắn'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Premium Upgrade Overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+                    <div className="text-center p-6 max-w-sm">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 mb-4">
+                        <Lock className="w-8 h-8 text-white" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">
+                        Còn {lockedConversations.length} tin nhắn nữa
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Nâng cấp Premium để xem toàn bộ tin nhắn và trò chuyện không giới hạn
+                      </p>
+                      <Button 
+                        className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white"
+                        onClick={() => {
+                          // TODO: Open premium modal
+                          console.log('Open premium upgrade modal');
+                        }}
+                      >
+                        <Crown className="w-4 h-4 mr-2" />
+                        Nâng cấp Premium
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </ScrollArea>

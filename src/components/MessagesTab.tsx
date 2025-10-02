@@ -8,6 +8,7 @@ import { useConversationsList } from '@/hooks/useConversationsList';
 import FullScreenChat from './FullScreenChat';
 import { format, isToday, isYesterday } from 'date-fns';
 import { usePremiumStatus } from '@/hooks/usePremiumStatus';
+import PremiumUpgradeModal from './PremiumUpgradeModal';
 
 interface MessagesTabProps {
   userId: string;
@@ -20,9 +21,10 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
     userName: string;
     userAvatar: string;
   } | null>(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   
   const { data: conversations, isLoading } = useConversationsList(userId);
-  const { premiumStatus } = usePremiumStatus(userId);
+  const { premiumStatus, refetch: refetchPremiumStatus } = usePremiumStatus(userId);
   const isPremium = premiumStatus.isPremium;
   
   const FREE_CHAT_LIMIT = 5;
@@ -198,10 +200,7 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
                       </p>
                       <Button 
                         className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white"
-                        onClick={() => {
-                          // TODO: Open premium modal
-                          console.log('Open premium upgrade modal');
-                        }}
+                        onClick={() => setShowPremiumModal(true)}
                       >
                         <Crown className="w-4 h-4 mr-2" />
                         Nâng cấp Premium
@@ -214,6 +213,17 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
           )}
         </div>
       </ScrollArea>
+
+      {/* Premium Upgrade Modal */}
+      <PremiumUpgradeModal
+        isOpen={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        onSuccess={() => {
+          setShowPremiumModal(false);
+          refetchPremiumStatus();
+        }}
+        userId={userId}
+      />
     </div>
   );
 }

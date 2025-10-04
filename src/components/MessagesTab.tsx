@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Crown, Lock } from "lucide-react";
+import { Search, Crown, Lock, Image as ImageIcon, Video } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useConversationsList } from '@/hooks/useConversationsList';
@@ -145,8 +145,20 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
                         {formatLastMessageTime(conversation.last_message_at)}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {conversation.last_message || 'Chưa có tin nhắn'}
+                    <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                      {conversation.last_message?.includes('📷') ? (
+                        <>
+                          <ImageIcon className="w-4 h-4" />
+                          <span>Đã gửi ảnh</span>
+                        </>
+                      ) : conversation.last_message?.includes('🎥') ? (
+                        <>
+                          <Video className="w-4 h-4" />
+                          <span>Đã gửi video</span>
+                        </>
+                      ) : (
+                        conversation.last_message || 'Chưa có tin nhắn'
+                      )}
                     </p>
                   </div>
                 </div>
@@ -178,8 +190,20 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
                               {formatLastMessageTime(conversation.last_message_at)}
                             </span>
                           </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {conversation.last_message || 'Chưa có tin nhắn'}
+                          <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                            {conversation.last_message?.includes('📷') ? (
+                              <>
+                                <ImageIcon className="w-4 h-4" />
+                                <span>Đã gửi ảnh</span>
+                              </>
+                            ) : conversation.last_message?.includes('🎥') ? (
+                              <>
+                                <Video className="w-4 h-4" />
+                                <span>Đã gửi video</span>
+                              </>
+                            ) : (
+                              conversation.last_message || 'Chưa có tin nhắn'
+                            )}
                           </p>
                         </div>
                       </div>

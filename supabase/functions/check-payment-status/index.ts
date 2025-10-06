@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { OrderCodeSchema } from "./zod-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,14 +36,40 @@ serve(async (req) => {
     const user = data.user;
     if (!user) throw new Error("User not authenticated");
 
-    // Get order code from query params
+    // Get and validate order code from query params
     const url = new URL(req.url);
-    const orderCode = url.searchParams.get("orderCode");
+    const rawOrderCode = url.searchParams.get("orderCode");
     
-    if (!orderCode) {
-      throw new Error("Order code is required");
+    if (!rawOrderCode) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Order code is required"
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
     }
-
+    
+    // Validate order code format
+    const validationResult = OrderCodeSchema.safeParse(rawOrderCode);
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid order code format",
+          details: validationResult.error.errors
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
+    
+    const orderCode = validationResult.data;
     console.log("🔍 Checking order:", orderCode);
 
     // Check payment status with PayOS

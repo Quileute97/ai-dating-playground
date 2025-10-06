@@ -59,11 +59,57 @@ serve(async (req) => {
   try {
     console.log('🔄 PayOS Webhook received');
     
-    const webhookData: PayOSWebhookData = await req.json();
+    // Get raw body for signature verification
+    const rawBody = await req.text();
+    
+    // Verify webhook signature
+    const webhookSecret = Deno.env.get('PAYOS_WEBHOOK_SECRET');
+    if (webhookSecret) {
+      const providedSignature = req.headers.get('x-payos-signature');
+      
+      if (!providedSignature) {
+        console.error('❌ Missing webhook signature');
+        return new Response(JSON.stringify({ error: 'Missing signature' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Create HMAC signature
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(webhookSecret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      
+      const signature = await crypto.subtle.sign(
+        'HMAC',
+        key,
+        encoder.encode(rawBody)
+      );
+      
+      const computedSignature = Array.from(new Uint8Array(signature))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      
+      if (computedSignature !== providedSignature) {
+        console.error('❌ Invalid webhook signature');
+        return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log('✅ Webhook signature verified');
+    } else {
+      console.warn('⚠️ PAYOS_WEBHOOK_SECRET not configured - skipping signature verification');
+    }
+    
+    const webhookData: PayOSWebhookData = JSON.parse(rawBody);
     console.log('📦 Webhook data:', JSON.stringify(webhookData, null, 2));
-
-    // Verify webhook signature if needed
-    // TODO: Add signature verification with PayOS webhook secret
 
     const { data: webhookPayload } = webhookData;
     

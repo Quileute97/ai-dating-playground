@@ -59,19 +59,7 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
     scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversationData, localMessages]);
 
-  // LẤY API KEY từ localStorage, nếu có thì truyền vào aiService
-  useEffect(() => {
-    if (!isOpen) return;
-    try {
-      const settings = localStorage.getItem('datingAppSettings');
-      if (settings) {
-        const parsed = JSON.parse(settings);
-        if (parsed.openaiApiKey) {
-          aiService.setApiKey(parsed.openaiApiKey);
-        }
-      }
-    } catch {}
-  }, [isOpen]);
+  // API key is now securely stored in Supabase secrets - no localStorage needed
 
   // Auto AI trả lời nếu không có reply từ admin
   useEffect(() => {
@@ -87,18 +75,17 @@ const FakeUserChatModal = ({ isOpen, onClose, user, userRealId }: FakeUserChatMo
         let aiReplyText = "";
         let usedOpenAI = false;
         try {
-          // chỉ generate AI nếu có API Key đã set vào aiService
-          if ((aiService as any).apiKey) {
-            setIsAITyping(true);
-            const messagesForAI: AIMessage[] = mergedMsgs.map((m) => ({
-              role: m.sender === "admin" ? "user" : "assistant",
-              content: m.content,
-            }));
-            const aiResp = await aiService.generateResponse(messagesForAI, user.aiPrompt || "friendly");
-            aiReplyText = aiResp.message;
-            usedOpenAI = true;
-          }
+          // AI service now uses secure edge function
+          setIsAITyping(true);
+          const messagesForAI: AIMessage[] = mergedMsgs.map((m) => ({
+            role: m.sender === "admin" ? "user" : "assistant",
+            content: m.content,
+          }));
+          const aiResp = await aiService.generateResponse(messagesForAI, user.aiPrompt || "friendly");
+          aiReplyText = aiResp.message;
+          usedOpenAI = true;
         } catch (err) {
+          console.error("AI error:", err);
           aiReplyText = DummyAIReply(user.aiPrompt);
         }
         if (!aiReplyText) aiReplyText = DummyAIReply(user.aiPrompt);

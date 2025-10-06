@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 
 interface AIMessage {
   role: 'user' | 'assistant' | 'system';
@@ -10,55 +11,42 @@ interface AIResponse {
 }
 
 class AIService {
-  private apiKey: string | null = null;
-  private isConnected: boolean = false;
-
-  setApiKey(apiKey: string) {
-    this.apiKey = apiKey;
-    this.isConnected = true;
-  }
-
   async generateResponse(
     messages: AIMessage[],
     personality: string = 'friendly'
   ): Promise<AIResponse> {
-    // If no API key, use mock responses
-    if (!this.apiKey || !this.isConnected) {
-      return this.getMockResponse(messages, personality);
-    }
-
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: this.getSystemPrompt(personality)
-            },
-            ...messages
-          ],
-          max_tokens: 150,
-          temperature: 0.8,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('API request failed');
+      // Call the secure edge function proxy instead of OpenAI directly
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.warn('User not authenticated, using mock response');
+        return this.getMockResponse(messages, personality);
       }
 
-      const data = await response.json();
+      const { data, error } = await supabase.functions.invoke('ai-chat-proxy', {
+        body: {
+          messages,
+          systemPrompt: this.getSystemPrompt(personality)
+        }
+      });
+
+      if (error) {
+        console.error('AI proxy error:', error);
+        return this.getMockResponse(messages, personality);
+      }
+
+      if (!data || !data.success) {
+        console.error('AI proxy returned error:', data?.error);
+        return this.getMockResponse(messages, personality);
+      }
+
       return {
-        message: data.choices[0].message.content.trim(),
+        message: data.message || "Sorry, I couldn't generate a response.",
         isTyping: false
       };
     } catch (error) {
-      console.error('AI API Error:', error);
+      console.error('AI generation error:', error);
       return this.getMockResponse(messages, personality);
     }
   }

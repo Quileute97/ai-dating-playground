@@ -54,6 +54,9 @@ verify_jwt = true
 [functions.check-expired-subscriptions]
 verify_jwt = false
 
+[functions.ai-chat-proxy]
+verify_jwt = true
+
 [edge_runtime]
 enabled = true
 port = 54327

@@ -30,9 +30,8 @@ export default function AdminSettingsTab() {
     localStorage.getItem('headerAdCode') || ''
   );
 
-  // Settings state
+  // Settings state (removed OpenAI API key - now stored in Supabase secrets)
   const [settings, setSettings] = useState({
-    openaiApiKey: '',
     chatTimeout: 60,
     aiMatchRate: 30,
     searchRadius: 5
@@ -170,18 +169,15 @@ export default function AdminSettingsTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Cài đặt AI & Hệ thống</CardTitle>
+          <CardTitle>Cài đặt Hệ thống</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">OpenAI API Key</label>
-            <input
-              type="password"
-              value={settings.openaiApiKey}
-              onChange={e => setSettings(prev => ({ ...prev, openaiApiKey: e.target.value }))}
-              className="w-full p-2 rounded border"
-              placeholder="sk-..."
-            />
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <h3 className="font-semibold text-blue-800 mb-2">🔒 Bảo mật OpenAI API</h3>
+            <p className="text-sm text-blue-600">
+              OpenAI API key được lưu an toàn trong Supabase Secrets. 
+              Vui lòng liên hệ developer để cập nhật key.
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Thời gian chờ chat (giây)</label>

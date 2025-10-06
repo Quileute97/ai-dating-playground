@@ -1,19 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { PaymentRequestSchema } from "./zod-validation.ts";
+import type { PaymentRequest } from "./zod-validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface PaymentRequest {
-  packageType: string;
-  userId: string;
-  userEmail?: string;
-  orderCode?: number;
-  returnUrl?: string;
-  cancelUrl?: string;
-}
 
 interface PackageInfo {
   name: string;
@@ -92,11 +85,29 @@ serve(async (req) => {
 
     console.log("✅ User authenticated:", user.email);
 
-    // Parse request body
-    const body: PaymentRequest = await req.json();
+    // Parse and validate request body
+    const rawBody = await req.json();
+    const validationResult = PaymentRequestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      console.error("❌ Validation failed:", validationResult.error);
+      return new Response(
+        JSON.stringify({
+          error: 1,
+          message: "Invalid request data",
+          details: validationResult.error.errors
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
+    
+    const body = validationResult.data;
     const { packageType, userId, userEmail } = body;
 
-    console.log("📝 Received payment request:", { packageType, userId, userEmail });
+    console.log("📝 Validated payment request:", { packageType, userId, userEmail });
 
     // Get package info based on packageType
     const packageInfo = getPackageInfo(packageType);

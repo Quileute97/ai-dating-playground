@@ -15,7 +15,7 @@ export const PaymentRequestSchema = z.object({
     errorMap: () => ({ message: "Invalid package type" })
   }),
   userId: z.string().uuid({ message: "Invalid user ID format" }),
-  userEmail: z.string().email({ message: "Invalid email format" }).optional(),
+  userEmail: z.string().email({ message: "Invalid email format" }).or(z.literal("")).optional(),
   orderCode: z.number().int().positive().optional(),
   returnUrl: z.string().url({ message: "Invalid return URL" }).optional(),
   cancelUrl: z.string().url({ message: "Invalid cancel URL" }).optional()

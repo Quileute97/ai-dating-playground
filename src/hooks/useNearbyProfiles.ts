@@ -25,7 +25,6 @@ export function useNearbyProfiles(currentUserId: string | undefined, userLocatio
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!userLocation) return;
     setLoading(true);
 
     // Function to calculate distance (Haversine formula)
@@ -48,12 +47,14 @@ export function useNearbyProfiles(currentUserId: string | undefined, userLocatio
       const { data: realUsers, error: realError } = await supabase
         .from("profiles")
         .select("id, name, age, avatar, lat, lng, gender, bio, interests, height, job, education, location_name, is_dating_active, last_active")
-        .eq('tai_khoan_hoat_dong', true);
+        .eq('tai_khoan_hoat_dong', true)
+        .eq('is_dating_active', true);
 
       const { data: fakeUsers, error: fakeError } = await supabase
         .from("fake_users")
         .select("id, name, age, avatar, lat, lng, gender, bio, interests, height, job, education, location_name, is_dating_active, last_active")
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('is_dating_active', true);
 
       if (realError || fakeError) {
         console.error('Error fetching nearby profiles:', realError || fakeError);
@@ -68,23 +69,29 @@ export function useNearbyProfiles(currentUserId: string | undefined, userLocatio
         ...(fakeUsers || []).map(u => ({ ...u, user_type: 'fake' }))
       ];
 
-      // Loại trừ user hiện tại, chỉ các profile có vị trí
-      let filtered = (allUsers as (Profile & { user_type: string })[]).filter(
-        (u) =>
-          u.id !== currentUserId &&
-          u.lat !== null &&
-          u.lng !== null &&
-          userLocation
-      ).map((u) => ({
-        ...u,
-        distance: distance(userLocation.lat, userLocation.lng, u.lat!, u.lng!)
-      }));
+      // Loại trừ user hiện tại và tính khoảng cách nếu có vị trí
+      let filtered = (allUsers as (Profile & { user_type: string })[])
+        .filter((u) => u.id !== currentUserId)
+        .map((u) => {
+          // Tính khoảng cách nếu cả user và profile đều có vị trí
+          if (userLocation && u.lat !== null && u.lng !== null) {
+            return {
+              ...u,
+              distance: distance(userLocation.lat, userLocation.lng, u.lat, u.lng)
+            };
+          }
+          return { ...u, distance: undefined };
+        });
 
-      // Chỉ lấy trong bán kính maxDistanceKm
-      filtered = filtered.filter((u) => u.distance! <= maxDistanceKm);
-
-      // Sắp xếp theo khoảng cách
-      filtered.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+      // Sắp xếp: profiles có khoảng cách lên trước, sau đó theo khoảng cách
+      filtered.sort((a, b) => {
+        if (a.distance !== undefined && b.distance !== undefined) {
+          return a.distance - b.distance;
+        }
+        if (a.distance !== undefined) return -1;
+        if (b.distance !== undefined) return 1;
+        return 0;
+      });
 
       setProfiles(filtered);
       setLoading(false);

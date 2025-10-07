@@ -122,7 +122,7 @@ export function usePremiumFeatures(userId?: string) {
   };
 
   return {
-    isPremium: premiumStatus?.isPremium || false,
+    isPremium: !getDatingRequiresPremium() || premiumStatus?.isPremium || false,
     premiumStatus,
     features,
     getCurrentLimits,

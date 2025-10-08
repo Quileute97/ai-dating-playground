@@ -19,7 +19,7 @@ const StructuredData: React.FC<StructuredDataProps> = ({
           "@type": "WebApplication",
           "name": "Hyliya",
           "description": "Ứng dụng hẹn hò và kết nối thông minh với AI",
-          "url": "https://preview--ai-dating-playground.lovable.app/",
+          "url": "https://hyliya.com/",
           "applicationCategory": "SocialNetworkingApplication",
           "operatingSystem": "Web",
           "offers": {
@@ -45,8 +45,8 @@ const StructuredData: React.FC<StructuredDataProps> = ({
           "@type": "Organization",
           "name": "Hyliya",
           "description": "Nền tảng hẹn hò và kết nối thông minh",
-          "url": "https://preview--ai-dating-playground.lovable.app/",
-          "logo": "https://preview--ai-dating-playground.lovable.app/logo.png",
+          "url": "https://hyliya.com/",
+          "logo": "https://hyliya.com/logo.png",
           "sameAs": []
         };
       default:

@@ -15,8 +15,8 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   title = "Hyliya - Ứng dụng hẹn hò và kết nối thông minh với AI",
   description = "Khám phá tình yêu và kết nối ý nghĩa với Hyliya - ứng dụng hẹn hò hiện đại tích hợp AI thông minh, tính năng chat realtime và tìm kiếm người phù hợp quanh bạn.",
   keywords = "hẹn hò, kết nối, tình yêu, chat, AI, gặp gỡ, bạn bè, hẹn hò online, ứng dụng hẹn hò Việt Nam",
-  image = "https://preview--ai-dating-playground.lovable.app/og-image.jpg",
-  url = "https://preview--ai-dating-playground.lovable.app/",
+  image = "https://hyliya.com/og-image.jpg",
+  url = "https://hyliya.com/",
   type = "website"
 }) => {
   return (

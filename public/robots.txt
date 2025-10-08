@@ -12,7 +12,7 @@ Disallow: /reset-password
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: https://preview--ai-dating-playground.lovable.app/sitemap.xml
+Sitemap: https://hyliya.com/sitemap.xml
 
 # Specific rules for major search engines
 User-agent: Googlebot

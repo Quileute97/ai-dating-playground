@@ -35,9 +35,7 @@ export function useFakeUserInteractions(currentUserId?: string) {
           .from('user_likes')
           .insert({
             liker_id: currentUserId,
-            liked_id: fakeUserId,
-            liker_type: 'real',
-            liked_type: 'fake'
+            liked_id: fakeUserId
           });
         
         if (error) throw error;

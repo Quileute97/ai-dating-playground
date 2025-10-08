@@ -200,67 +200,69 @@ const DatingApp = () => {
       <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden pb-20">
         {/* Bottom padding to account for bottom navigation */}
 
-        {/* Top Action Bar - Optimized for mobile */}
-        <div className="absolute top-2 md:top-4 left-2 md:left-4 right-2 md:right-4 z-20 flex justify-between items-center">
-          {/* User Info */}
-          <div className="flex items-center gap-1 md:gap-2">
-            {user ? (
-              <div className="flex items-center gap-2">
-                <UnifiedProfileButton
-                  user={{ ...user, ...unifiedProfile }}
-                  onUpdateProfile={handleUpdateProfile}
-                />
-                <PremiumBadge userId={user.id} />
-              </div>
-            ) : (
+        {/* Top Action Bar - Optimized for mobile - Chỉ hiện ở tab chat và dating */}
+        {(activeTab === 'chat' || activeTab === 'dating') && (
+          <div className="absolute top-2 md:top-4 left-2 md:left-4 right-2 md:right-4 z-20 flex justify-between items-center">
+            {/* User Info */}
+            <div className="flex items-center gap-1 md:gap-2">
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <UnifiedProfileButton
+                    user={{ ...user, ...unifiedProfile }}
+                    onUpdateProfile={handleUpdateProfile}
+                  />
+                  <PremiumBadge userId={user.id} />
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAuth(true)}
+                  className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm text-xs md:text-sm px-2 md:px-3"
+                >
+                  <span className="hidden sm:inline">Đăng nhập</span>
+                  <User className="w-4 h-4 sm:hidden" />
+                </Button>
+              )}
+            </div>
+            {/* Action Buttons */}
+            <div className="flex gap-1 md:gap-2">
+              {/* Admin Mode Toggle */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowAuth(true)}
-                className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm text-xs md:text-sm px-2 md:px-3"
+                onClick={handleAdminToggle}
+                className={`backdrop-blur-sm border-purple-200 shadow-sm transition-all duration-200 p-1 md:p-2 ${
+                  isAdminMode
+                    ? "bg-purple-500 text-white hover:bg-purple-600 shadow-lg"
+                    : "bg-white/90 hover:bg-purple-50"
+                }`}
               >
-                <span className="hidden sm:inline">Đăng nhập</span>
-                <User className="w-4 h-4 sm:hidden" />
+                <Shield className="w-3 h-3 md:w-4 md:h-4" />
               </Button>
-            )}
+              {!isAdminMode && activeTab === "chat" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(true)}
+                  className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm p-1 md:p-2"
+                >
+                  <Settings className="w-3 h-3 md:w-4 md:h-4" />
+                </Button>
+              )}
+              {user && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 shadow-sm p-1 md:p-2"
+                >
+                  <LogOut className="w-3 h-3 md:w-4 md:h-4" />
+                </Button>
+              )}
+            </div>
           </div>
-          {/* Action Buttons */}
-          <div className="flex gap-1 md:gap-2">
-            {/* Admin Mode Toggle */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAdminToggle}
-              className={`backdrop-blur-sm border-purple-200 shadow-sm transition-all duration-200 p-1 md:p-2 ${
-                isAdminMode
-                  ? "bg-purple-500 text-white hover:bg-purple-600 shadow-lg"
-                  : "bg-white/90 hover:bg-purple-50"
-              }`}
-            >
-              <Shield className="w-3 h-3 md:w-4 md:h-4" />
-            </Button>
-            {!isAdminMode && activeTab === "chat" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(true)}
-                className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm p-1 md:p-2"
-              >
-                <Settings className="w-3 h-3 md:w-4 md:h-4" />
-              </Button>
-            )}
-            {user && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 shadow-sm p-1 md:p-2"
-              >
-                <LogOut className="w-3 h-3 md:w-4 md:h-4" />
-              </Button>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Main Layout (side panels + content) */}
         <DatingAppLayout

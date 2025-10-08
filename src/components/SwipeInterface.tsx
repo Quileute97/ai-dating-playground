@@ -23,9 +23,10 @@ import { useAdminSettings } from '@/hooks/useAdminSettings';
 interface SwipeInterfaceProps {
   user?: any;
   onPremiumUpgradeClick?: () => void;
+  onOpenChat?: (userId: string) => void;
 }
 
-const SwipeInterface = ({ user, onPremiumUpgradeClick }: SwipeInterfaceProps) => {
+const SwipeInterface = ({ user, onPremiumUpgradeClick, onOpenChat }: SwipeInterfaceProps) => {
   const navigate = useNavigate();
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
@@ -57,9 +58,6 @@ const SwipeInterface = ({ user, onPremiumUpgradeClick }: SwipeInterfaceProps) =>
 
   // Use real data from database with expanded range (50km for dating vs 5km for nearby)
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, 50);
-  
-  // Import the chat integration hook
-  const { startChatWith } = useChatIntegration();
   
   // Import fake user interactions hook
   const fakeUserInteractions = useFakeUserInteractions(user?.id);
@@ -241,12 +239,10 @@ const SwipeInterface = ({ user, onPremiumUpgradeClick }: SwipeInterfaceProps) =>
 
 
   const handleChatClick = (profile: any) => {
-    // Use unified chat system instead of separate modal
-    startChatWith({
-      id: profile.id,
-      name: profile.name,
-      avatar: profile.avatar
-    });
+    // Open chat in messages tab
+    if (onOpenChat) {
+      onOpenChat(profile.id);
+    }
   };
 
   if (locationLoading || profilesLoading || dailyMatchesLoading) {

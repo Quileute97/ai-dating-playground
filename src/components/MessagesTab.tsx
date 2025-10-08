@@ -12,9 +12,10 @@ import PremiumUpgradeModal from './PremiumUpgradeModal';
 
 interface MessagesTabProps {
   userId: string;
+  selectedUserId?: string | null;
 }
 
-export default function MessagesTab({ userId }: MessagesTabProps) {
+export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChat, setSelectedChat] = useState<{
     userId: string;
@@ -26,6 +27,39 @@ export default function MessagesTab({ userId }: MessagesTabProps) {
   const { data: conversations, isLoading } = useConversationsList(userId);
   const { premiumStatus, refetch: refetchPremiumStatus } = usePremiumStatus(userId);
   const isPremium = premiumStatus.isPremium;
+
+  // Auto-open chat if selectedUserId is provided
+  React.useEffect(() => {
+    if (selectedUserId && conversations) {
+      const conversation = conversations.find(
+        c => c.other_user?.id === selectedUserId
+      );
+      if (conversation) {
+        setSelectedChat({
+          userId: conversation.other_user.id,
+          userName: conversation.other_user.name,
+          userAvatar: conversation.other_user.avatar
+        });
+      } else {
+        // Create a new chat if no conversation exists
+        import('@/integrations/supabase/client').then(async ({ supabase }) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, name, avatar')
+            .eq('id', selectedUserId)
+            .single();
+
+          if (profileData) {
+            setSelectedChat({
+              userId: profileData.id,
+              userName: profileData.name || 'Unknown',
+              userAvatar: profileData.avatar || '/placeholder.svg'
+            });
+          }
+        });
+      }
+    }
+  }, [selectedUserId, conversations]);
   
   const FREE_CHAT_LIMIT = 5;
 

@@ -36,6 +36,7 @@ const DatingApp = () => {
   const { syncAll } = useGlobalSync(user?.id);
 
   const [activeTab, setActiveTab] = useState("chat");
+  const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -169,15 +170,16 @@ const DatingApp = () => {
           <SwipeInterface 
             user={{ ...user, ...unifiedProfile }} 
             onPremiumUpgradeClick={handlePremiumUpgradeClick}
+            onOpenChat={handleOpenChat}
           />
         ) : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "nearby":
-        return user ? <NearbyInterface user={{ ...user, ...unifiedProfile }} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
+        return user ? <NearbyInterface user={{ ...user, ...unifiedProfile }} onOpenChat={handleOpenChat} /> : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "timeline":
         return <Timeline user={{ ...user, ...unifiedProfile }} />;
       case "messages":
         return user ? (
-          <MessagesTab userId={user.id} />
+          <MessagesTab userId={user.id} selectedUserId={selectedChatUserId} />
         ) : <RequireLogin onLogin={() => setShowAuth(true)} />;
       case "notifications":
         return user ? (
@@ -186,6 +188,11 @@ const DatingApp = () => {
       default:
         return null;
     }
+  };
+
+  const handleOpenChat = (userId: string) => {
+    setSelectedChatUserId(userId);
+    setActiveTab("messages");
   };
 
   return (
@@ -289,8 +296,6 @@ const DatingApp = () => {
           onAuthLogin={handleLogin}
         />
 
-        {/* Unified Chat Widget - only show when user is logged in */}
-        {user && <UnifiedChatWidget myUserId={user.id} />}
 
         {/* Premium Upgrade Modal */}
         <PremiumUpgradeModal

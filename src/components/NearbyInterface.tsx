@@ -17,6 +17,7 @@ import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 
 interface NearbyInterfaceProps {
   user: any;
+  onOpenChat?: (userId: string) => void;
 }
 
 interface NearbyUser {
@@ -32,14 +33,13 @@ interface NearbyUser {
   isLiked?: boolean;
 }
 
-const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
+const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
   const [distance, setDistance] = useState(5);
   const [hasExpandedRange, setHasExpandedRange] = useState(false);
   const [showPackageModal, setShowPackageModal] = useState(false);
   const [likedUsers, setLikedUsers] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { startChatWith } = useChatIntegration();
   const fakeUserInteractions = useFakeUserInteractions(user?.id);
   
   // Get user location
@@ -98,7 +98,7 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
     if (e) e.stopPropagation();
     
     const targetUser = users.find(u => u.id === userId);
-    if (targetUser) {
+    if (targetUser && onOpenChat) {
       // Check if this is a fake user and create conversation if needed
       import('@/integrations/supabase/client').then(({ supabase }) => {
         supabase
@@ -111,19 +111,11 @@ const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
             // Create conversation with fake user first
             fakeUserInteractions.createConversationWithFakeUser(userId)
               .then(() => {
-                startChatWith({
-                  id: targetUser.id,
-                  name: targetUser.name,
-                  avatar: targetUser.avatar
-                });
+                onOpenChat(userId);
               });
           } else {
-            // Regular chat with real user
-            startChatWith({
-              id: targetUser.id,
-              name: targetUser.name,
-              avatar: targetUser.avatar
-            });
+            // Open chat in messages tab
+            onOpenChat(userId);
           }
         });
       });

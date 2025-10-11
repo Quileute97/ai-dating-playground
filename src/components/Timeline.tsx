@@ -76,7 +76,7 @@ interface Post {
 }
 const demoUser = {
   name: "Bạn",
-  avatar: "https://source.unsplash.com/random/56x56?face"
+  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=guest"
 };
 
 // === Helper để detect và render hashtag ===

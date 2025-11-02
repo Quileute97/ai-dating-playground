@@ -71,12 +71,26 @@ export function useAdminSettings() {
     });
   };
 
+  const getChatFilterEnabled = () => {
+    const setting = getSetting("chat_filter_enabled");
+    return setting?.setting_value?.enabled ?? true;
+  };
+
+  const setChatFilterEnabled = (enabled: boolean) => {
+    updateSettingMutation.mutate({
+      key: "chat_filter_enabled",
+      value: { enabled },
+    });
+  };
+
   return {
     settings,
     isLoading,
     getSetting,
     getDatingRequiresPremium,
     setDatingRequiresPremium,
+    getChatFilterEnabled,
+    setChatFilterEnabled,
     updateSetting: updateSettingMutation.mutate,
   };
 }

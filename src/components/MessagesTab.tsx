@@ -9,6 +9,7 @@ import FullScreenChat from './FullScreenChat';
 import { format, isToday, isYesterday } from 'date-fns';
 import { usePremiumStatus } from '@/hooks/usePremiumStatus';
 import PremiumUpgradeModal from './PremiumUpgradeModal';
+import { useAdminSettings } from '@/hooks/useAdminSettings';
 
 interface MessagesTabProps {
   userId: string;
@@ -27,6 +28,9 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
   const { data: conversations, isLoading } = useConversationsList(userId);
   const { premiumStatus, refetch: refetchPremiumStatus } = usePremiumStatus(userId);
   const isPremium = premiumStatus.isPremium;
+  const { getChatFilterEnabled } = useAdminSettings();
+  
+  const chatFilterEnabled = getChatFilterEnabled();
 
   // Auto-open chat if selectedUserId is provided
   React.useEffect(() => {
@@ -79,11 +83,13 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
     conv.other_user?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
-  const visibleConversations = isPremium 
+  // Nếu filter bị tắt hoặc là premium user, hiển thị tất cả
+  const visibleConversations = (!chatFilterEnabled || isPremium)
     ? filteredConversations 
     : filteredConversations.slice(0, FREE_CHAT_LIMIT);
   
-  const lockedConversations = isPremium 
+  // Nếu filter bị tắt hoặc là premium user, không có cuộc hội thoại bị khóa
+  const lockedConversations = (!chatFilterEnabled || isPremium)
     ? [] 
     : filteredConversations.slice(FREE_CHAT_LIMIT);
 

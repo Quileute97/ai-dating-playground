@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +15,13 @@ export default function AdminSettingsTab() {
   const [qrImgUploading, setQrImgUploading] = useState(false);
   const { toast } = useToast();
   const { bankInfo, loading, refetch } = useBankInfo();
-  const { getDatingRequiresPremium, setDatingRequiresPremium } = useAdminSettings();
+  const { 
+    getDatingRequiresPremium, 
+    setDatingRequiresPremium,
+    getChatFilterEnabled,
+    setChatFilterEnabled,
+    isLoading: settingsLoading
+  } = useAdminSettings();
 
   // Local state for bank info draft
   const [bankInfoDraft, setBankInfoDraft] = useState(bankInfo);
@@ -122,33 +128,58 @@ export default function AdminSettingsTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Cài đặt hệ thống</CardTitle>
+          <CardTitle>Cài đặt tính năng Dating</CardTitle>
+          <CardDescription>Quản lý quyền truy cập các tính năng Dating</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <h3 className="font-semibold text-blue-800 mb-2">Thanh toán tự động</h3>
-              <p className="text-sm text-blue-600">
-                Hệ thống đã tích hợp PayOS để xử lý thanh toán tự động. 
-                Không cần duyệt thủ công nữa.
-              </p>
-            </div>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <h3 className="font-semibold text-blue-800 mb-2">Thanh toán tự động</h3>
+            <p className="text-sm text-blue-600">
+              Hệ thống đã tích hợp PayOS để xử lý thanh toán tự động. 
+              Không cần duyệt thủ công nữa.
+            </p>
+          </div>
 
-            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-              <div className="flex-1">
-                <Label htmlFor="dating-premium-toggle" className="font-semibold text-purple-800">
-                  Yêu cầu Premium cho Hẹn hò
-                </Label>
-                <p className="text-sm text-purple-600 mt-1">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="dating-premium-toggle" className="flex-1">
+              <div className="space-y-1">
+                <div>Yêu cầu Premium cho Hẹn hò</div>
+                <div className="text-sm text-muted-foreground">
                   Khi tắt, tất cả người dùng có thể sử dụng tính năng Hẹn hò không giới hạn
-                </p>
+                </div>
               </div>
-              <Switch
-                id="dating-premium-toggle"
-                checked={getDatingRequiresPremium()}
-                onCheckedChange={(checked) => setDatingRequiresPremium(checked)}
-              />
-            </div>
+            </Label>
+            <Switch
+              id="dating-premium-toggle"
+              checked={getDatingRequiresPremium()}
+              onCheckedChange={(checked) => setDatingRequiresPremium(checked)}
+              disabled={settingsLoading}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Cài đặt tính năng Chat</CardTitle>
+          <CardDescription>Quản lý hiển thị danh sách tin nhắn</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="chat-filter-toggle" className="flex-1">
+              <div className="space-y-1">
+                <div>Bật giới hạn tin nhắn cho người dùng Free</div>
+                <div className="text-sm text-muted-foreground">
+                  Khi bật, người dùng Free chỉ xem được 5 cuộc hội thoại đầu tiên
+                </div>
+              </div>
+            </Label>
+            <Switch
+              id="chat-filter-toggle"
+              checked={getChatFilterEnabled()}
+              onCheckedChange={(checked) => setChatFilterEnabled(checked)}
+              disabled={settingsLoading}
+            />
           </div>
         </CardContent>
       </Card>

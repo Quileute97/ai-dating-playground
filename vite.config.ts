@@ -5,6 +5,10 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Base path for deployment - change this to match your deployment folder
+  // For root deployment: base: '/'
+  // For subfolder deployment: base: '/app/' (replace 'app' with your folder name)
+  base: process.env.VITE_BASE_PATH || '/',
   server: {
     host: "::",
     port: 8080,

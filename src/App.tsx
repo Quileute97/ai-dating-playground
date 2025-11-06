@@ -15,12 +15,15 @@ import PaymentPage from "./pages/PaymentPage";
 
 const queryClient = new QueryClient();
 
+// Get base path from environment variable for deployment flexibility
+const basename = import.meta.env.VITE_BASE_PATH || '/';
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename={basename}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/profile/:userId" element={<UserProfilePage />} />

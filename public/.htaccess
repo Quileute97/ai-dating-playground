@@ -8,6 +8,11 @@
 # ================================================
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  
+  # ⚠️ QUAN TRỌNG: Thay đổi RewriteBase theo nơi deploy
+  # - Deploy ở root domain: RewriteBase /
+  # - Deploy ở subfolder (ví dụ: /app/): RewriteBase /app/
+  # ⚠️ Phải khớp với VITE_BASE_PATH trong .env.production!
   RewriteBase /
 
   # Redirect www to non-www (hoặc ngược lại nếu muốn)

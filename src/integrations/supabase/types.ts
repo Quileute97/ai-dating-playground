@@ -837,6 +837,7 @@ export type Database = {
         Args: { fake_user_id: string; real_user_id: string }
         Returns: string
       }
+      trigger_sitemap_ping: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"

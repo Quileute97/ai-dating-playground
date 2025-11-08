@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star, Bell, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import SEOHead from "@/components/SEOHead";
+import StructuredData from "@/components/StructuredData";
 import ChatInterface from "./ChatInterface";
 import SwipeInterface from "./SwipeInterface";
 import NearbyInterface from "./NearbyInterface";
@@ -197,7 +199,17 @@ const DatingApp = () => {
 
   return (
     <ChatProvider>
-      <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden pb-20">
+      <>
+        <SEOHead 
+          title="Hyliya - Ứng dụng hẹn hò và kết nối thông minh với AI"
+          description="Khám phá tình yêu và kết nối ý nghĩa với Hyliya - ứng dụng hẹn hò hiện đại tích hợp AI thông minh, tính năng chat realtime và tìm kiếm người phù hợp quanh bạn."
+          keywords="hẹn hò, kết nối, tình yêu, chat, AI, gặp gỡ, bạn bè, hẹn hò online, ứng dụng hẹn hò Việt Nam"
+          image="https://hyliya.com/og-image.jpg"
+          url="https://hyliya.com/"
+          type="website"
+        />
+        <StructuredData type="WebApplication" />
+        <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden pb-20">
         {/* Bottom padding to account for bottom navigation */}
 
         {/* Top Action Bar - Optimized for mobile - Chỉ hiện ở tab chat và dating */}
@@ -321,7 +333,8 @@ const DatingApp = () => {
           isAdminMode={isAdminMode}
           tabs={tabs}
         />
-      </div>
+        </div>
+      </>
     </ChatProvider>
   );
 };

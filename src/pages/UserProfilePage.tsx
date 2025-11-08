@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import SEOHead from "@/components/SEOHead";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Heart, MapPin, Briefcase, GraduationCap, Ruler, Clock, UserPlus, MessageCircle, Album, X, ArrowLeft, Home } from "lucide-react";
@@ -186,6 +187,14 @@ const UserProfilePage: React.FC = () => {
 
   return (
     <>
+      <SEOHead 
+        title={profile ? `${profile.name} - Hồ sơ người dùng | Hyliya` : "Hồ sơ người dùng | Hyliya"}
+        description={profile?.bio || `Xem hồ sơ của ${profile?.name || 'người dùng'} trên Hyliya - Ứng dụng hẹn hò và kết nối thông minh.`}
+        keywords={`${profile?.name || 'người dùng'}, hồ sơ, hẹn hò, kết nối, Hyliya`}
+        image={profile?.avatar || "https://hyliya.com/og-image.jpg"}
+        url={`https://hyliya.com/profile/${userId}`}
+        type="profile"
+      />
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-100">
         {/* Header Navigation */}
         <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-purple-100 shadow-sm">

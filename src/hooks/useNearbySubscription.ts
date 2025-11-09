@@ -19,14 +19,14 @@ export function useNearbySubscription(userId: string | null | undefined) {
     queryFn: async () => {
       if (!userId) return null;
       
-      // Get the most recent approved nearby subscription
+      // Get the most recent active nearby subscription from user_subscriptions
       const { data, error } = await supabase
-        .from("upgrade_requests")
+        .from("user_subscriptions")
         .select("*")
         .eq("user_id", userId)
-        .like("type", "nearby%")
-        .eq("status", "approved")
-        .order("approved_at", { ascending: false })
+        .like("package_type", "nearby%")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       
@@ -34,14 +34,26 @@ export function useNearbySubscription(userId: string | null | undefined) {
       
       if (!data) return null;
       
+      // Map user_subscriptions fields to match expected interface
+      const mappedData = {
+        id: data.id,
+        type: data.package_type,
+        status: data.status as "pending" | "approved" | "rejected" | "expired",
+        price: data.payment_amount || 0,
+        duration_days: null,
+        expires_at: data.expires_at,
+        created_at: data.created_at,
+        approved_at: data.started_at
+      };
+      
       // Check if subscription is still active
       const now = new Date();
-      if (data.expires_at && new Date(data.expires_at) < now) {
+      if (mappedData.expires_at && new Date(mappedData.expires_at) < now) {
         // Auto-expire the subscription locally
-        return { ...data, status: 'expired', isExpired: true };
+        return { ...mappedData, status: 'expired' as const, isExpired: true };
       }
       
-      return { ...data, isExpired: false } as NearbySubscription & { isExpired: boolean };
+      return { ...mappedData, status: 'approved' as const, isExpired: false } as NearbySubscription & { isExpired: boolean };
     },
     staleTime: 30 * 1000,
     enabled: !!userId

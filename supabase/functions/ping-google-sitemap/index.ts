@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const sitemapUrl = `${supabaseUrl}/functions/v1/generate-sitemap`;
+    const sitemapUrl = `${supabaseUrl}/functions/v1/generate-sitemap-index`;
     
     console.log('Pinging Google with sitemap:', sitemapUrl);
 

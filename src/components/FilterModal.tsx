@@ -24,7 +24,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, onApply, use
   const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   const { premiumStatus, refetch } = usePremiumStatus(userId);
-  const isPremium = premiumStatus.isPremium;
+  const isPremium = premiumStatus?.isPremium || false;
 
   const handleApply = () => {
     if (!isPremium) {

@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export interface ConversationItem {
   id: string;
@@ -16,12 +17,44 @@ export interface ConversationItem {
 }
 
 export function useConversationsList(userId: string) {
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for conversations
+  useEffect(() => {
+    if (!userId) return;
+
+    const channelName = `conversations-list-${userId}-${Date.now()}`;
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'conversations',
+      }, (payload) => {
+        console.log('💬 Conversations realtime update:', payload);
+        queryClient.invalidateQueries({ queryKey: ["conversations-list", userId] });
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'messages',
+      }, (payload) => {
+        console.log('💬 Messages realtime update:', payload);
+        queryClient.invalidateQueries({ queryKey: ["conversations-list", userId] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
+
   return useQuery({
     queryKey: ["conversations-list", userId],
     queryFn: async () => {
       if (!userId) return [];
 
-      // Lấy tất cả conversations mà user tham gia (chỉ Dating và Nearby, không có stranger chat)
+      // Lấy TẤT CẢ conversations mà user tham gia (bao gồm cả real và fake users)
       const { data: conversations, error } = await supabase
         .from("conversations")
         .select(`
@@ -39,7 +72,7 @@ export function useConversationsList(userId: string) {
 
       if (!conversations || conversations.length === 0) return [];
 
-      // Nhóm conversations theo cặp user để thống nhất
+      // Nhóm conversations theo user để tránh trùng lặp
       const userConversationMap = new Map<string, any>();
 
       // Lấy thông tin user khác trong mỗi conversation
@@ -47,26 +80,33 @@ export function useConversationsList(userId: string) {
         conversations.map(async (conv) => {
           const otherUserId = conv.user_real_id === userId ? conv.user_fake_id : conv.user_real_id;
           
-          // Kiểm tra xem đây có phải là fake user không (stranger chat)
+          // Kiểm tra xem đây có phải là fake user không
           const { data: fakeUser } = await supabase
             .from("fake_users")
-            .select("id")
-            .eq("id", otherUserId)
-            .single();
-
-          // Nếu là fake user thì bỏ qua (không hiển thị stranger chat)
-          if (fakeUser) {
-            return null;
-          }
-
-          // Lấy thông tin user khác từ profiles
-          const { data: userProfile } = await supabase
-            .from("profiles")
             .select("id, name, avatar")
             .eq("id", otherUserId)
             .single();
 
-          if (!userProfile) return null;
+          let userProfile;
+          
+          if (fakeUser) {
+            // Nếu là fake user, dùng thông tin từ fake_users
+            userProfile = {
+              id: fakeUser.id,
+              name: fakeUser.name,
+              avatar: fakeUser.avatar
+            };
+          } else {
+            // Nếu là user thật, lấy thông tin từ profiles
+            const { data: realUser } = await supabase
+              .from("profiles")
+              .select("id, name, avatar")
+              .eq("id", otherUserId)
+              .single();
+
+            if (!realUser) return null;
+            userProfile = realUser;
+          }
 
           const conversationData = {
             ...conv,
@@ -87,13 +127,16 @@ export function useConversationsList(userId: string) {
       const uniqueConversations = Array.from(userConversationMap.values())
         .filter(conv => conv !== null)
         .sort((a, b) => {
-          const dateA = new Date(a.last_message_at || 0);
-          const dateB = new Date(b.last_message_at || 0);
+          // Sắp xếp theo last_message_at, tin nhắn mới nhất lên trên
+          const dateA = new Date(a.last_message_at || a.created_at || 0);
+          const dateB = new Date(b.last_message_at || b.created_at || 0);
           return dateB.getTime() - dateA.getTime();
         });
 
       return uniqueConversations as ConversationItem[];
     },
-    enabled: !!userId
+    enabled: !!userId,
+    staleTime: 10 * 1000, // Cache trong 10 giây
+    refetchInterval: 30 * 1000, // Tự động refetch mỗi 30 giây
   });
 }

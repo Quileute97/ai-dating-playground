@@ -28,6 +28,12 @@ const App = () => (
         <BrowserRouter basename={basename}>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/chat" element={<Index />} />
+          <Route path="/dating" element={<Index />} />
+          <Route path="/nearby" element={<Index />} />
+          <Route path="/timeline" element={<Index />} />
+          <Route path="/messages" element={<Index />} />
+          <Route path="/notifications" element={<Index />} />
           <Route path="/profile/:userId" element={<UserProfilePage />} />
           <Route path="/fake-profile/:userId" element={<FakeUserProfilePage />} />
           <Route path="/reset-password" element={<ResetPassword />} />

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { MessageCircle, Heart, MapPin, Settings, Shield, User, LogOut, Star, Bell, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SEOHead from "@/components/SEOHead";
 import StructuredData from "@/components/StructuredData";
+import TabSEO from "@/components/TabSEO";
 import ChatInterface from "./ChatInterface";
 import SwipeInterface from "./SwipeInterface";
 import NearbyInterface from "./NearbyInterface";
@@ -27,6 +29,8 @@ import PremiumBadge from "./PremiumBadge";
 
 const DatingApp = () => {
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   
   // User/session quản lý bằng custom hook
   const { user, setUser, session, setSession, anonId } = useDatingAppUser();
@@ -37,7 +41,14 @@ const DatingApp = () => {
   // Global sync hook để đồng bộ giữa các tab
   const { syncAll } = useGlobalSync(user?.id);
 
-  const [activeTab, setActiveTab] = useState("chat");
+  // Xác định tab từ URL
+  const getTabFromPath = (pathname: string): string => {
+    const path = pathname.split('/')[1];
+    const validTabs = ['chat', 'dating', 'nearby', 'timeline', 'messages', 'notifications'];
+    return validTabs.includes(path) ? path : 'chat';
+  };
+
+  const [activeTab, setActiveTab] = useState(getTabFromPath(location.pathname));
   const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
@@ -74,9 +85,17 @@ const DatingApp = () => {
     }
   }, [user]);
 
+  // Đồng bộ activeTab với URL
+  useEffect(() => {
+    const newTab = getTabFromPath(location.pathname);
+    setActiveTab(newTab);
+  }, [location.pathname]);
+
   // Sync tất cả dữ liệu khi chuyển tab để đảm bảo consistency
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
+    const newPath = tabId === 'chat' ? '/' : `/${tabId}`;
+    navigate(newPath);
     // Trigger sync khi chuyển tab để đảm bảo dữ liệu được cập nhật
     setTimeout(() => {
       syncAll();
@@ -195,20 +214,69 @@ const DatingApp = () => {
   const handleOpenChat = (userId: string) => {
     setSelectedChatUserId(userId);
     setActiveTab("messages");
+    navigate('/messages');
   };
+
+  // Tạo SEO meta data động cho từng tab
+  const getTabSEO = () => {
+    const baseUrl = "https://hyliya.com";
+    const seoData = {
+      chat: {
+        title: "Chat với người lạ - Kết nối ngẫu nhiên | Hyliya",
+        description: "Trò chuyện ẩn danh với người lạ trên Hyliya. Tìm kiếm những cuộc trò chuyện thú vị, kết bạn mới và khám phá những kết nối bất ngờ.",
+        keywords: "chat với người lạ, trò chuyện ẩn danh, kết nối ngẫu nhiên, chat online, Hyliya",
+        url: `${baseUrl}/`,
+      },
+      dating: {
+        title: "Hẹn hò - Tìm người phù hợp | Hyliya",
+        description: "Tìm kiếm người phù hợp với bạn trên Hyliya. Swipe, match và bắt đầu những cuộc trò chuyện ý nghĩa. Ứng dụng hẹn hò thông minh với AI.",
+        keywords: "hẹn hò online, tìm bạn đời, swipe dating, match, ứng dụng hẹn hò, Hyliya",
+        url: `${baseUrl}/dating`,
+      },
+      nearby: {
+        title: "Quanh đây - Kết nối người gần bạn | Hyliya",
+        description: "Khám phá và kết nối với những người thú vị quanh khu vực của bạn. Tìm bạn bè, hẹn hò và gặp gỡ người mới gần bạn.",
+        keywords: "tìm người quanh đây, kết nối gần bạn, gặp gỡ địa phương, nearby dating, Hyliya",
+        url: `${baseUrl}/nearby`,
+      },
+      timeline: {
+        title: "Timeline - Chia sẻ khoảnh khắc | Hyliya",
+        description: "Chia sẻ những khoảnh khắc đáng nhớ của bạn. Xem, like và comment các bài viết từ cộng đồng Hyliya.",
+        keywords: "mạng xã hội, chia sẻ ảnh, timeline, bài viết, cộng đồng, Hyliya",
+        url: `${baseUrl}/timeline`,
+      },
+      messages: {
+        title: "Tin nhắn - Trò chuyện với bạn bè | Hyliya",
+        description: "Quản lý tất cả tin nhắn của bạn ở một nơi. Trò chuyện với bạn bè, người match và những kết nối mới.",
+        keywords: "tin nhắn, chat, trò chuyện, nhắn tin, Hyliya",
+        url: `${baseUrl}/messages`,
+      },
+      notifications: {
+        title: "Thông báo - Cập nhật mới nhất | Hyliya",
+        description: "Xem tất cả thông báo và cập nhật mới nhất từ Hyliya. Không bỏ lỡ tin nhắn, match và hoạt động quan trọng.",
+        keywords: "thông báo, cập nhật, notifications, Hyliya",
+        url: `${baseUrl}/notifications`,
+      },
+    };
+    
+    return seoData[activeTab as keyof typeof seoData] || seoData.chat;
+  };
+
+  const currentSEO = getTabSEO();
 
   return (
     <ChatProvider>
       <>
         <SEOHead 
-          title="Hyliya - Ứng dụng hẹn hò và kết nối thông minh với AI"
-          description="Khám phá tình yêu và kết nối ý nghĩa với Hyliya - ứng dụng hẹn hò hiện đại tích hợp AI thông minh, tính năng chat realtime và tìm kiếm người phù hợp quanh bạn."
-          keywords="hẹn hò, kết nối, tình yêu, chat, AI, gặp gỡ, bạn bè, hẹn hò online, ứng dụng hẹn hò Việt Nam"
+          title={currentSEO.title}
+          description={currentSEO.description}
+          keywords={currentSEO.keywords}
           image="https://hyliya.com/og-image.jpg"
-          url="https://hyliya.com/"
+          url={currentSEO.url}
           type="website"
         />
         <StructuredData type="WebApplication" />
+        <TabSEO activeTab={activeTab} />
         <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden pb-20">
         {/* Bottom padding to account for bottom navigation */}
 

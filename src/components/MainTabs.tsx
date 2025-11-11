@@ -1,4 +1,5 @@
 import React from "react";
+import { Link, useLocation } from 'react-router-dom';
 import { MessageCircle, Heart, MapPin, Star, Bell, Users } from 'lucide-react';
 
 interface Tab {
@@ -31,6 +32,8 @@ const tabs: Tab[] = [
 ];
 
 export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: customTabs }: MainTabsProps) {
+  const location = useLocation();
+  
   // Mặc định dùng customTabs nếu truyền vào, fallback sang tabs cũ
   const displayTabs: CustomTab[] = customTabs || [
     { id: 'chat', label: 'Chat với người lạ', icon: MessageCircle, color: 'from-purple-500 to-pink-500', locked: false },
@@ -55,21 +58,18 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             const isLocked = Boolean(tab.locked);
+            const tabPath = tab.id === 'chat' ? '/' : `/${tab.id}`;
 
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id)}
-                disabled={isLocked}
-                className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 flex-1 min-h-[48px] sm:min-h-[56px] py-1 sm:py-2 px-0.5 sm:px-1 rounded-lg transition-all duration-300 relative touch-manipulation ${
-                  isActive 
-                    ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-md scale-[1.02]'
-                    : isLocked
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-white hover:text-gray-800 hover:scale-[1.01] hover:shadow-sm active:scale-[0.98]'
-                }`}
-                title={isLocked ? 'Đăng nhập để dùng tính năng này' : undefined}
-              >
+            const baseClassName = `flex flex-col items-center justify-center gap-0.5 sm:gap-1 flex-1 min-h-[48px] sm:min-h-[56px] py-1 sm:py-2 px-0.5 sm:px-1 rounded-lg transition-all duration-300 relative touch-manipulation ${
+              isActive 
+                ? 'bg-gradient-to-r ' + tab.color + ' text-white shadow-md scale-[1.02]'
+                : isLocked
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'text-gray-600 hover:bg-white hover:text-gray-800 hover:scale-[1.01] hover:shadow-sm active:scale-[0.98]'
+            }`;
+
+            const content = (
+              <>
                 <Icon className={`w-4 h-4 sm:w-5 sm:h-5 md:w-4 md:h-4 transition-all duration-200 ${isActive ? 'scale-105' : ''}`} />
                 <span className={`${isMobile ? 'text-[7px] sm:text-[8px]' : 'text-[9px] sm:text-[10px] md:text-[9px]'} font-medium leading-tight text-center px-0.5 max-w-full break-words`}>
                   {tab.label}
@@ -77,7 +77,32 @@ export default function MainTabs({ activeTab, onTabChange, isAdminMode, tabs: cu
                 {isLocked && (
                   <span className="absolute top-0.5 right-0.5 text-[8px] sm:text-[10px] text-gray-500">🔒</span>
                 )}
-              </button>
+              </>
+            );
+
+            if (isLocked) {
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => onTabChange(tab.id)}
+                  disabled={true}
+                  className={baseClassName}
+                  title="Đăng nhập để dùng tính năng này"
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            return (
+              <Link
+                key={tab.id}
+                to={tabPath}
+                onClick={() => onTabChange(tab.id)}
+                className={baseClassName}
+              >
+                {content}
+              </Link>
             );
           })}
         </div>

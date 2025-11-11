@@ -405,31 +405,41 @@ const UserProfilePage: React.FC = () => {
 
         {/* Album Modal */}
         <Dialog open={showAlbumModal} onOpenChange={setShowAlbumModal}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-between text-xl">
-                📸 Album ảnh của {profile.name}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAlbumModal(false)}
-                  className="h-8 w-8 p-0 hover:bg-gray-100"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 max-h-[70vh] overflow-y-auto">
-              {profile.album?.map((img: string, idx: number) => (
-                <div key={idx} className="aspect-square group relative">
-                  <img
-                    src={img}
-                    alt={`Ảnh ${idx + 1}`}
-                    className="w-full h-full object-cover rounded-xl border-2 border-gray-200 shadow-lg group-hover:scale-105 transition-transform duration-200"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-xl transition-colors duration-200" />
-                </div>
-              ))}
+          <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0 bg-black/95 border-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowAlbumModal(false)}
+              className="absolute top-4 right-4 z-50 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/20"
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            
+            <div className="p-8">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <Album className="w-6 h-6 text-pink-400" />
+                Album ảnh của {profile.name}
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
+                {profile.album?.map((img: string, idx: number) => (
+                  <div 
+                    key={idx} 
+                    className="relative group cursor-pointer overflow-hidden rounded-xl aspect-square"
+                  >
+                    <img
+                      src={img}
+                      alt={`Ảnh ${idx + 1}`}
+                      className="w-full h-full object-cover transform transition-all duration-300 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="absolute bottom-4 left-4 text-white font-medium">
+                        Ảnh {idx + 1} / {profile.album.length}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </DialogContent>
         </Dialog>

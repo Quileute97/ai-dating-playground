@@ -81,15 +81,19 @@ export function useNearbyProfiles(currentUserId: string | undefined, userLocatio
             };
           }
           return { ...u, distance: undefined };
+        })
+        .filter((u) => {
+          // Chỉ hiển thị người dùng trong phạm vi maxDistanceKm
+          // Nếu không có khoảng cách (không có vị trí), không hiển thị
+          if (u.distance === undefined) return false;
+          return u.distance <= maxDistanceKm;
         });
 
-      // Sắp xếp: profiles có khoảng cách lên trước, sau đó theo khoảng cách
+      // Sắp xếp theo khoảng cách
       filtered.sort((a, b) => {
         if (a.distance !== undefined && b.distance !== undefined) {
           return a.distance - b.distance;
         }
-        if (a.distance !== undefined) return -1;
-        if (b.distance !== undefined) return 1;
         return 0;
       });
 

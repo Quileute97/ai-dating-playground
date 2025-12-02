@@ -14,6 +14,7 @@ import NearbyFeatureBanner from "./NearbyFeatureBanner";
 import NearbyPackageModal from "./NearbyPackageModal";
 import { createNearbyPackagePayment } from "@/services/payosService";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 
 interface NearbyInterfaceProps {
   user: any;
@@ -34,8 +35,6 @@ interface NearbyUser {
 }
 
 const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
-  const [distance, setDistance] = useState(5);
-  const [hasExpandedRange, setHasExpandedRange] = useState(false);
   const [showPackageModal, setShowPackageModal] = useState(false);
   const [likedUsers, setLikedUsers] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
@@ -45,6 +44,13 @@ const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
   // Get user location
   const { position: userLocation } = useGeolocation();
   
+  // Check premium status
+  const { premiumStatus, isLoading: premiumLoading } = usePremiumStatus(user?.id);
+  
+  // Set distance based on premium status: 5km for free, 20km for premium
+  const distance = premiumStatus?.isPremium ? 20 : 5;
+  const hasExpandedRange = premiumStatus?.isPremium || false;
+  
   // Use the hook with correct parameters
   const { profiles, loading } = useNearbyProfiles(user?.id, userLocation, distance);
 
@@ -53,7 +59,7 @@ const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
     id: profile.id,
     name: profile.name || "Unknown",
     age: profile.age || 25,
-    distance: profile.distance || 0,
+    distance: profile.distance ? Math.round(profile.distance * 10) / 10 : 0, // Round to 1 decimal
     avatar: profile.avatar || "/placeholder.svg",
     isOnline: profile.last_active ? new Date(profile.last_active) > new Date(Date.now() - 5 * 60 * 1000) : false,
     lastSeen: profile.last_active ? "Vừa online" : "Offline",
@@ -123,11 +129,20 @@ const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
   };
 
   const handleExpandRange = () => {
-    setHasExpandedRange(true);
-    setDistance(20);
+    // Check if user has premium
+    if (!premiumStatus?.isPremium) {
+      toast({
+        title: "Yêu cầu Premium",
+        description: "Vui lòng nâng cấp Premium để mở rộng phạm vi tìm kiếm",
+        variant: "destructive"
+      });
+      setShowPackageModal(true);
+      return;
+    }
+    
     toast({
       title: "Đã mở rộng phạm vi",
-      description: "Tìm kiếm trong phạm vi 20km",
+      description: "Đang tìm kiếm trong phạm vi 20km với Premium",
     });
   };
 
@@ -169,7 +184,7 @@ const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
     }
   };
 
-  if (loading) {
+  if (loading || premiumLoading) {
     return (
       <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4">
         <div className="max-w-md mx-auto h-full flex flex-col">
@@ -198,7 +213,7 @@ const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
             {hasExpandedRange && (
               <div className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs flex items-center gap-1">
                 <Crown className="w-3 h-3" />
-                Mở rộng
+                Premium - 20km
               </div>
             )}
           </div>
@@ -290,19 +305,20 @@ const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
           </div>
         </ScrollArea>
 
-        {/* Feature Banner */}
-        <NearbyFeatureBanner
-          upgradeStatus={undefined}
-          nearbyLoading={loading}
-          hasExpandedRange={hasExpandedRange}
-          onClickUpgrade={() => {
-            // Navigate to payment page for nearby
-            window.location.href = '/payment?type=nearby&package=nearby_week';
-          }}
-          onClickExpand={handleExpandRange}
-          disableExpand={hasExpandedRange}
-          userId={user?.id}
-        />
+        {/* Feature Banner - Only show if not premium */}
+        {!premiumStatus?.isPremium && (
+          <NearbyFeatureBanner
+            upgradeStatus={undefined}
+            nearbyLoading={loading}
+            hasExpandedRange={false}
+            onClickUpgrade={() => {
+              setShowPackageModal(true);
+            }}
+            onClickExpand={handleExpandRange}
+            disableExpand={false}
+            userId={user?.id}
+          />
+        )}
       </div>
 
       {/* Package Modal */}

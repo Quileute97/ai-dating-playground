@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Heart, MessageCircle, MapPin, Briefcase, GraduationCap, Ruler } from 'lucide-react';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface NearbyUser {
   id: string;
@@ -11,6 +12,7 @@ interface NearbyUser {
   age: number;
   distance: number;
   avatar: string;
+  gender?: string;
   isOnline: boolean;
   lastSeen: string;
   interests: string[];
@@ -60,7 +62,7 @@ const NearbyProfileView = ({ user, onClose, onLike, onMessage }: NearbyProfileVi
           <CardHeader className="text-center">
             <div className="relative mx-auto">
               <img
-                src={user.avatar}
+                src={getDefaultAvatar(user.gender, user.avatar)}
                 alt={user.name}
                 className="w-32 h-32 rounded-full object-cover border-4 border-pink-200 mx-auto"
               />

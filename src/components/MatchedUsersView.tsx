@@ -5,11 +5,13 @@ import { MessageCircle, Crown, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useChatIntegration } from '@/hooks/useChatIntegration';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface MatchedUser {
   id: string;
   name: string;
   avatar: string;
+  gender?: string;
   distance?: number;
 }
 
@@ -48,7 +50,7 @@ const MatchedUsersView: React.FC<MatchedUsersViewProps> = ({ userId, onUpgradeCl
         if (mutualMatchIds.length > 0) {
           const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, name, avatar')
+            .select('id, name, avatar, gender')
             .in('id', mutualMatchIds);
           
           if (profilesError) throw profilesError;
@@ -56,7 +58,8 @@ const MatchedUsersView: React.FC<MatchedUsersViewProps> = ({ userId, onUpgradeCl
           const mutualMatches: MatchedUser[] = profilesData?.map(profile => ({
             id: profile.id,
             name: profile.name || 'Ẩn danh',
-            avatar: profile.avatar || 'https://source.unsplash.com/random/56x56?face',
+            avatar: profile.avatar || '',
+            gender: profile.gender,
             distance: Math.floor(Math.random() * 20) + 1 // Mock distance for now
           })) || [];
           
@@ -113,7 +116,7 @@ const MatchedUsersView: React.FC<MatchedUsersViewProps> = ({ userId, onUpgradeCl
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <img
-                    src={user.avatar}
+                    src={getDefaultAvatar(user.gender, user.avatar)}
                     alt={user.name}
                     className="w-12 h-12 rounded-full object-cover border-2 border-pink-200"
                   />

@@ -19,6 +19,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useFakeUserInteractions } from '@/hooks/useFakeUserInteractions';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface SwipeInterfaceProps {
   user?: any;
@@ -134,7 +135,7 @@ const SwipeInterface = ({ user, onPremiumUpgradeClick, onOpenChat }: SwipeInterf
     
     return filtered.map(p => ({
       ...p,
-      images: [p.avatar!],
+      images: [getDefaultAvatar(p.gender, p.avatar)],
       bio: p.bio || "Chào bạn! Tôi đang tìm kiếm những kết nối thú vị trên ứng dụng này.",
       distance: p.distance || Math.floor(Math.random() * 20) + 1,
       interests: Array.isArray(p.interests) ? p.interests : [],

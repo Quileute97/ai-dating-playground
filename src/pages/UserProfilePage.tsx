@@ -403,42 +403,46 @@ const UserProfilePage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Album Modal */}
+        {/* Album Modal - Improved for all devices */}
         <Dialog open={showAlbumModal} onOpenChange={setShowAlbumModal}>
-          <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0 bg-black/95 border-0">
+          <DialogContent className="w-full h-full max-w-full max-h-full md:max-w-[90vw] md:max-h-[90vh] md:h-auto overflow-hidden p-0 bg-black/95 border-0 md:rounded-2xl gap-0">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowAlbumModal(false)}
-              className="absolute top-4 right-4 z-50 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/20"
+              className="absolute top-2 right-2 md:top-4 md:right-4 z-50 h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg"
             >
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5 md:h-6 md:w-6" />
             </Button>
             
-            <div className="p-8">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <Album className="w-6 h-6 text-pink-400" />
+            <div className="h-full flex flex-col p-4 md:p-6 lg:p-8">
+              <h2 className="text-lg md:text-2xl font-bold text-white mb-4 md:mb-6 flex items-center gap-2 pt-8 md:pt-0">
+                <Album className="w-5 h-5 md:w-6 md:h-6 text-pink-400" />
                 Album ảnh của {profile.name}
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
-                {profile.album?.map((img: string, idx: number) => (
-                  <div 
-                    key={idx} 
-                    className="relative group cursor-pointer overflow-hidden rounded-xl aspect-square"
-                  >
-                    <img
-                      src={img}
-                      alt={`Ảnh ${idx + 1}`}
-                      className="w-full h-full object-cover transform transition-all duration-300 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="absolute bottom-4 left-4 text-white font-medium">
-                        Ảnh {idx + 1} / {profile.album.length}
+              <div className="flex-1 overflow-y-auto -mx-2 px-2 custom-scrollbar">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 pb-4">
+                  {profile.album?.map((img: string, idx: number) => (
+                    <div 
+                      key={idx} 
+                      className="relative group cursor-pointer overflow-hidden rounded-lg md:rounded-xl"
+                    >
+                      <div className="aspect-square w-full">
+                        <img
+                          src={img}
+                          alt={`Ảnh ${idx + 1}`}
+                          className="w-full h-full object-cover transform transition-all duration-300 group-hover:scale-110"
+                        />
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3 md:pb-4">
+                        <span className="text-white font-semibold text-sm md:text-base">
+                          {idx + 1} / {profile.album.length}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </DialogContent>

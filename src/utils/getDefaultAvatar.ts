@@ -13,6 +13,11 @@ export function getDefaultAvatar(gender?: string | null, avatarUrl?: string | nu
     return '/images/default-avatar-female.jpg';
   }
   
-  // Default fallback for male or unspecified
-  return '/placeholder.svg';
+  // Default avatar for male
+  if (gender === 'male' || gender === 'nam' || gender === 'Nam') {
+    return '/images/default-avatar-male.jpg';
+  }
+  
+  // Default fallback for unspecified gender
+  return '/images/default-avatar-male.jpg';
 }

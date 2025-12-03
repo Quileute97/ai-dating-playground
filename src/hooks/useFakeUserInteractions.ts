@@ -140,14 +140,22 @@ export function useFakeUserInteractions(currentUserId?: string) {
     mutationFn: async (fakeUserId: string) => {
       if (!currentUserId) throw new Error("User not logged in");
       
-      // Check if already friends
-      const { data: existingFriend } = await supabase
+      // Check if already friends - use two separate queries to avoid OR issues
+      const { data: existingFriend1 } = await supabase
         .from('friends')
         .select('id')
-        .or(`and(user_id.eq.${currentUserId},friend_id.eq.${fakeUserId}),and(user_id.eq.${fakeUserId},friend_id.eq.${currentUserId})`)
-        .single();
+        .eq('user_id', currentUserId)
+        .eq('friend_id', fakeUserId)
+        .maybeSingle();
 
-      if (existingFriend) {
+      const { data: existingFriend2 } = await supabase
+        .from('friends')
+        .select('id')
+        .eq('user_id', fakeUserId)
+        .eq('friend_id', currentUserId)
+        .maybeSingle();
+
+      if (existingFriend1 || existingFriend2) {
         throw new Error("Already friends");
       }
 
@@ -182,8 +190,9 @@ export function useFakeUserInteractions(currentUserId?: string) {
       const { data: existingConversation } = await supabase
         .from('conversations')
         .select('id')
-        .or(`and(user_real_id.eq.${currentUserId},user_fake_id.eq.${fakeUserId}),and(user_fake_id.eq.${fakeUserId},user_real_id.eq.${currentUserId})`)
-        .single();
+        .eq('user_real_id', currentUserId)
+        .eq('user_fake_id', fakeUserId)
+        .maybeSingle();
 
       if (existingConversation) {
         return existingConversation;

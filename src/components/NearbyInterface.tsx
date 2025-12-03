@@ -9,12 +9,12 @@ import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { useChatIntegration } from '@/hooks/useChatIntegration';
 import NearbyFeatureBanner from "./NearbyFeatureBanner";
 import NearbyPackageModal from "./NearbyPackageModal";
 import { createNearbyPackagePayment } from "@/services/payosService";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NearbyInterfaceProps {
   user: any;
@@ -72,58 +72,83 @@ const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
     navigate(`/profile/${profile.id}`);
   };
 
-  const handleLikeUser = (userId: string, e?: React.MouseEvent) => {
+  const handleLikeUser = async (userId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
-    // Check if this is a fake user
     const targetUser = users.find(u => u.id === userId);
-    if (targetUser) {
-      // Try to like the user (works for both real and fake users)
-      fakeUserInteractions.likeFakeUser(userId).catch(() => {
-        // If it fails (probably real user), just update local state
-        setLikedUsers(prev => {
-          const newSet = new Set(prev);
-          if (newSet.has(userId)) {
-            newSet.delete(userId);
-          } else {
-            newSet.add(userId);
-          }
-          return newSet;
-        });
+    if (!targetUser) return;
+
+    const wasLiked = likedUsers.has(userId);
+    
+    // Optimistically update UI
+    setLikedUsers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+
+    toast({
+      title: wasLiked ? "Đã bỏ thích" : "❤️ Đã thích",
+      description: targetUser.name,
+    });
+
+    try {
+      await fakeUserInteractions.likeFakeUser(userId);
+    } catch (error) {
+      console.error('Like error:', error);
+      // Revert on error
+      setLikedUsers(prev => {
+        const newSet = new Set(prev);
+        if (wasLiked) {
+          newSet.add(userId);
+        } else {
+          newSet.delete(userId);
+        }
+        return newSet;
       });
     }
-
-    const user = users.find(u => u.id === userId);
-    toast({
-      title: likedUsers.has(userId) ? "Đã bỏ thích" : "❤️ Đã thích",
-      description: user ? `${user.name}` : "Người dùng",
-    });
   };
 
-  const handleMessageUser = (userId: string, e?: React.MouseEvent) => {
+  const handleMessageUser = async (userId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
     const targetUser = users.find(u => u.id === userId);
-    if (targetUser && onOpenChat) {
-      // Check if this is a fake user and create conversation if needed
-      import('@/integrations/supabase/client').then(({ supabase }) => {
-        supabase
+    if (!targetUser) return;
+
+    try {
+      // Check if this is a fake user
+      const { data: fakeUser } = await supabase
         .from('fake_users')
         .select('id')
         .eq('id', userId)
-        .single()
-        .then(({ data: fakeUser }) => {
-          if (fakeUser) {
-            // Create conversation with fake user first
-            fakeUserInteractions.createConversationWithFakeUser(userId)
-              .then(() => {
-                onOpenChat(userId);
-              });
-          } else {
-            // Open chat in messages tab
-            onOpenChat(userId);
-          }
-        });
+        .maybeSingle();
+
+      if (fakeUser) {
+        // Create conversation with fake user first
+        await fakeUserInteractions.createConversationWithFakeUser(userId);
+      }
+      
+      // Navigate to messages with this user
+      if (onOpenChat) {
+        onOpenChat(userId);
+      } else {
+        navigate('/messages');
+      }
+      
+      toast({
+        title: "Mở tin nhắn",
+        description: `Đang mở hội thoại với ${targetUser.name}`,
+      });
+    } catch (error) {
+      console.error('Message error:', error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể mở tin nhắn. Vui lòng thử lại.",
+        variant: "destructive"
       });
     }
   };

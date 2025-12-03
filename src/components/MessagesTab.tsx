@@ -10,6 +10,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { usePremiumStatus } from '@/hooks/usePremiumStatus';
 import PremiumUpgradeModal from './PremiumUpgradeModal';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
+import { useNavigate } from 'react-router-dom';
 
 interface MessagesTabProps {
   userId: string;
@@ -29,8 +30,14 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
   const { premiumStatus, refetch: refetchPremiumStatus } = usePremiumStatus(userId);
   const isPremium = premiumStatus.isPremium;
   const { getChatFilterEnabled } = useAdminSettings();
+  const navigate = useNavigate();
   
   const chatFilterEnabled = getChatFilterEnabled();
+
+  const handleViewProfile = (profileId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/profile/${profileId}`);
+  };
 
   // Auto-open chat if selectedUserId is provided
   React.useEffect(() => {
@@ -169,7 +176,10 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
                   className="flex items-center p-4 hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() => handleOpenChat(conversation)}
                 >
-                  <Avatar className="w-12 h-12 mr-3">
+                  <Avatar 
+                    className="w-12 h-12 mr-3 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                    onClick={(e) => handleViewProfile(conversation.other_user?.id, e)}
+                  >
                     <AvatarImage src={conversation.other_user?.avatar || '/placeholder.svg'} />
                     <AvatarFallback>
                       {conversation.other_user?.name?.slice(0, 2).toUpperCase()}
@@ -178,7 +188,10 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-sm font-medium truncate">
+                      <h3 
+                        className="text-sm font-medium truncate hover:text-primary hover:underline cursor-pointer transition-colors"
+                        onClick={(e) => handleViewProfile(conversation.other_user?.id, e)}
+                      >
                         {conversation.other_user?.name}
                       </h3>
                       <span className="text-xs text-muted-foreground">

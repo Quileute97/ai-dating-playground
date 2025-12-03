@@ -8,6 +8,7 @@ import { useRealTimeMessages } from '@/hooks/useRealTimeMessages';
 import { uploadTimelineMedia } from '@/utils/uploadTimelineMedia';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface FullScreenChatProps {
   currentUserId: string;
@@ -31,6 +32,11 @@ export default function FullScreenChat({
   const { messages, isLoading, sendMessage, sending } = useRealTimeMessages(currentUserId, targetUserId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleViewProfile = () => {
+    navigate(`/profile/${targetUserId}`);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -146,14 +152,20 @@ export default function FullScreenChat({
           <ArrowLeft className="w-6 h-6" />
         </Button>
         
-        <Avatar className="w-10 h-10 mr-3">
+        <Avatar 
+          className="w-10 h-10 mr-3 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={handleViewProfile}
+        >
           <AvatarImage src={targetUserAvatar || '/placeholder.svg'} />
           <AvatarFallback>{targetUserName?.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
         
-        <div className="flex-1">
+        <div 
+          className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={handleViewProfile}
+        >
           <h3 className="font-semibold text-foreground">{targetUserName}</h3>
-          <p className="text-sm text-muted-foreground">Đang hoạt động</p>
+          <p className="text-sm text-muted-foreground">Nhấn để xem hồ sơ</p>
         </div>
       </div>
 

@@ -9,16 +9,33 @@ export function useFakePostComments(postId?: string) {
     queryKey: ["fake-post-comments", postId],
     queryFn: async () => {
       if (!postId) return [];
-      const { data, error } = await supabase
+      
+      // Get comments
+      const { data: commentsData, error: commentsError } = await supabase
         .from("fake_post_comments")
-        .select(`
-          *,
-          profiles: user_id (id, name, avatar)
-        `)
+        .select("*")
         .eq("post_id", postId)
         .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
+      
+      if (commentsError) throw commentsError;
+      if (!commentsData || commentsData.length === 0) return [];
+      
+      // Get unique user IDs
+      const userIds = [...new Set(commentsData.map(c => c.user_id))];
+      
+      // Fetch profiles for those users
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, name, avatar")
+        .in("id", userIds);
+      
+      // Map profiles to comments
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+      
+      return commentsData.map(cmt => ({
+        ...cmt,
+        profiles: profilesMap.get(cmt.user_id) || null
+      }));
     },
     enabled: !!postId,
   });

@@ -342,6 +342,28 @@ const PostItem: React.FC<{
 }> = ({ post, user, onHashtagClick, onDeletePost, isDeleting }) => {
   const [commentInput, setCommentInput] = React.useState("");
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+  const commentInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleReply = (username: string) => {
+    const mention = `@${username} `;
+    setCommentInput(mention);
+    commentInputRef.current?.focus();
+  };
+
+  // Parse @mentions in comment content
+  const renderCommentContent = (content: string) => {
+    const parts = content.split(/(@\S+)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('@')) {
+        return (
+          <span key={index} className="text-blue-500 font-medium">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
   
   // Use different hooks based on whether it's a fake user post
   const realPostComments = useTimelineComments(post.is_fake_user ? undefined : post.id);
@@ -521,7 +543,16 @@ const PostItem: React.FC<{
                   <span className="font-semibold text-sm">{cmt.profiles?.name ?? "Ẩn danh"}</span>
                   <span className="text-xs text-gray-400">{new Date(cmt.created_at).toLocaleTimeString("vi-VN")}</span>
                 </div>
-                <div className="text-sm text-gray-800">{cmt.content}</div>
+                <div className="text-sm text-gray-800">{renderCommentContent(cmt.content)}</div>
+                {user?.id && (
+                  <button
+                    type="button"
+                    className="text-xs text-gray-500 hover:text-blue-500 mt-1 transition-colors"
+                    onClick={() => handleReply(cmt.profiles?.name ?? "Ẩn danh")}
+                  >
+                    Trả lời
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -532,6 +563,7 @@ const PostItem: React.FC<{
       {user?.id && (
         <form className="flex items-center gap-2 mt-2" onSubmit={handleCommentSubmit}>
           <Input
+            ref={commentInputRef}
             className="h-8 text-sm bg-gray-50 border border-gray-200 flex-1"
             value={commentInput}
             placeholder="Viết bình luận..."

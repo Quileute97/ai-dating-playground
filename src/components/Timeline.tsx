@@ -115,6 +115,8 @@ import { useTimelineComments } from "@/hooks/useTimelineComments";
 import { usePostLikes } from "@/hooks/usePostLikes";
 import { useDatingProfile } from "@/hooks/useDatingProfile";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
+import { useFakePostComments } from "@/hooks/useFakePostComments";
+import { useFakePostLikes } from "@/hooks/useFakePostLikes";
 
 type TimelineProps = {
   user: any;
@@ -340,8 +342,19 @@ const PostItem: React.FC<{
 }> = ({ post, user, onHashtagClick, onDeletePost, isDeleting }) => {
   const [commentInput, setCommentInput] = React.useState("");
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
-  const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
-  const { likeCount, liked, like, unlike, isToggling } = usePostLikes(post.id, user?.id);
+  
+  // Use different hooks based on whether it's a fake user post
+  const realPostComments = useTimelineComments(post.is_fake_user ? undefined : post.id);
+  const fakePostComments = useFakePostComments(post.is_fake_user ? post.id : undefined);
+  const realPostLikes = usePostLikes(post.is_fake_user ? undefined : post.id, user?.id);
+  const fakePostLikes = useFakePostLikes(post.is_fake_user ? post.id : undefined, user?.id);
+  
+  const comments = post.is_fake_user ? fakePostComments.comments : realPostComments.comments;
+  const commentsLoading = post.is_fake_user ? fakePostComments.isLoading : realPostComments.isLoading;
+  const likeCount = post.is_fake_user ? fakePostLikes.likeCount : realPostLikes.likeCount;
+  const liked = post.is_fake_user ? fakePostLikes.liked : realPostLikes.liked;
+  const isToggling = post.is_fake_user ? false : realPostLikes.isToggling;
+  
   const fakeUserInteractions = useFakeUserInteractions(user?.id);
 
   const navigate = useNavigate();
@@ -358,7 +371,7 @@ const PostItem: React.FC<{
       });
     } else {
       // Comment on real user post
-      await createComment({
+      await realPostComments.createComment({
         post_id: post.id,
         user_id: user?.id,
         content: commentInput,
@@ -373,8 +386,8 @@ const PostItem: React.FC<{
       await fakeUserInteractions.likeFakePost(post.id);
     } else {
       // Like real user post
-      if (liked) await unlike();
-      else await like();
+      if (liked) await realPostLikes.unlike();
+      else await realPostLikes.like();
     }
   };
 
@@ -523,14 +536,14 @@ const PostItem: React.FC<{
             value={commentInput}
             placeholder="Viết bình luận..."
             onChange={e => setCommentInput(e.target.value)}
-            disabled={creating || fakeUserInteractions.isProcessing}
+            disabled={realPostComments.creating || fakeUserInteractions.isProcessing}
           />
           <Button 
             type="submit" 
             size="sm" 
             variant="secondary" 
             className="aspect-square h-8 w-8 p-0 flex-shrink-0" 
-            disabled={creating || fakeUserInteractions.isProcessing}
+            disabled={realPostComments.creating || fakeUserInteractions.isProcessing}
           >
             <SendHorizonal size={14} />
           </Button>

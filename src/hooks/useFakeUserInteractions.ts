@@ -69,55 +69,55 @@ export function useFakeUserInteractions(currentUserId?: string) {
     }
   });
 
-  // Like fake user post
+  // Like fake user post - uses fake_post_likes table
   const likeFakePost = useMutation({
     mutationFn: async (postId: string) => {
       if (!currentUserId) throw new Error("User not logged in");
       
-      // Check if already liked
+      // Check if already liked in fake_post_likes table
       const { data: existingLike } = await supabase
-        .from('post_likes')
+        .from('fake_post_likes')
         .select('id')
         .eq('post_id', postId)
         .eq('user_id', currentUserId)
-        .single();
+        .maybeSingle();
 
       if (existingLike) {
         // Unlike
         const { error } = await supabase
-          .from('post_likes')
+          .from('fake_post_likes')
           .delete()
           .eq('post_id', postId)
           .eq('user_id', currentUserId);
         
         if (error) throw error;
+        return { liked: false };
       } else {
         // Like
         const { error } = await supabase
-          .from('post_likes')
+          .from('fake_post_likes')
           .insert({
             post_id: postId,
             user_id: currentUserId
           });
         
         if (error) throw error;
+        return { liked: true };
       }
-      
-      return true;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["post-likes"] });
+      queryClient.invalidateQueries({ queryKey: ["fake-post-likes"] });
       queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
     }
   });
 
-  // Comment on fake user post
+  // Comment on fake user post - uses fake_post_comments table
   const commentOnFakePost = useMutation({
     mutationFn: async ({ postId, content }: { postId: string; content: string }) => {
       if (!currentUserId) throw new Error("User not logged in");
       
       const { data, error } = await supabase
-        .from('comments')
+        .from('fake_post_comments')
         .insert({
           post_id: postId,
           user_id: currentUserId,
@@ -130,7 +130,7 @@ export function useFakeUserInteractions(currentUserId?: string) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["timeline-comments"] });
+      queryClient.invalidateQueries({ queryKey: ["fake-post-comments"] });
       queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
     }
   });

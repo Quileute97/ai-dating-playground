@@ -56,7 +56,7 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
 
   return (
     <>
-      <aside className="flex flex-col gap-4 w-full lg:w-[300px] lg:max-w-xs lg:min-w-[240px] pt-6 lg:pl-4">
+      <aside className="hidden lg:flex flex-col gap-4 w-[300px] max-w-xs min-w-[240px] pt-6 pl-4">
         {/* Recent Activities */}
         <div className="flex-1 flex flex-col gap-2">
           <h3 className="font-bold text-gray-700 text-base pb-1">Hoạt động mới</h3>

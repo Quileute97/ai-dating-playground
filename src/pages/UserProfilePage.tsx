@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import SEOHead from "@/components/SEOHead";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Heart, MapPin, Briefcase, GraduationCap, Ruler, Clock, UserPlus, MessageCircle, Album, X, ArrowLeft, Home } from "lucide-react";
@@ -11,7 +10,6 @@ import { useSendFriendRequest, useFriendList, useSentFriendRequests } from "@/ho
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ProfileChatWindow from "@/components/ProfileChatWindow";
-import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -27,7 +25,6 @@ const UserProfilePage: React.FC = () => {
   const sendFriendRequest = useSendFriendRequest();
   const { data: friends } = useFriendList(currentUser?.id);
   const { data: sentRequests } = useSentFriendRequests(currentUser?.id);
-  const fakeUserInteractions = useFakeUserInteractions(currentUser?.id);
 
   useEffect(() => {
     // Get current user
@@ -56,24 +53,10 @@ const UserProfilePage: React.FC = () => {
     if (!currentUser || !userId) return;
     
     try {
-      // Check if this is a fake user by trying to fetch from fake_users table
-      const { data: fakeUser } = await supabase
-        .from('fake_users')
-        .select('id')
-        .eq('id', userId)
-        .single();
-      
-      if (fakeUser) {
-        // Send friend request to fake user
-        await fakeUserInteractions.sendFriendRequestToFakeUser(userId);
-      } else {
-        // Send friend request to real user
-        await sendFriendRequest.mutateAsync({
-          user_id: currentUser.id,
-          friend_id: userId,
-        });
-      }
-      
+      await sendFriendRequest.mutateAsync({
+        user_id: currentUser.id,
+        friend_id: userId,
+      });
       toast({
         title: "Đã gửi lời mời kết bạn",
         description: `Lời mời kết bạn đã được gửi đến ${profile?.name}`,
@@ -96,25 +79,7 @@ const UserProfilePage: React.FC = () => {
       });
       return;
     }
-    
-    // Check if this is a fake user and create conversation accordingly
-    supabase
-      .from('fake_users')
-      .select('id')
-      .eq('id', userId)
-      .single()
-      .then(({ data: fakeUser }) => {
-        if (fakeUser) {
-          // Create conversation with fake user
-          fakeUserInteractions.createConversationWithFakeUser(userId)
-            .then(() => {
-              setShowChatWindow(true);
-            });
-        } else {
-          // Regular chat with real user
-          setShowChatWindow(true);
-        }
-      });
+    setShowChatWindow(true);
   };
 
   const handleBackClick = () => {
@@ -187,14 +152,6 @@ const UserProfilePage: React.FC = () => {
 
   return (
     <>
-      <SEOHead 
-        title={profile ? `${profile.name} - Hồ sơ người dùng | Hyliya` : "Hồ sơ người dùng | Hyliya"}
-        description={profile?.bio || `Xem hồ sơ của ${profile?.name || 'người dùng'} trên Hyliya - Ứng dụng hẹn hò và kết nối thông minh.`}
-        keywords={`${profile?.name || 'người dùng'}, hồ sơ, hẹn hò, kết nối, Hyliya`}
-        image={profile?.avatar || "https://hyliya.com/og-image.jpg"}
-        url={`https://hyliya.com/profile/${userId}`}
-        type="profile"
-      />
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-100">
         {/* Header Navigation */}
         <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-purple-100 shadow-sm">
@@ -403,47 +360,33 @@ const UserProfilePage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Album Modal - Improved for all devices */}
+        {/* Album Modal */}
         <Dialog open={showAlbumModal} onOpenChange={setShowAlbumModal}>
-          <DialogContent className="w-full h-full max-w-full max-h-full md:max-w-[90vw] md:max-h-[90vh] md:h-auto overflow-hidden p-0 bg-black/95 border-0 md:rounded-2xl gap-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowAlbumModal(false)}
-              className="absolute top-2 right-2 md:top-4 md:right-4 z-50 h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg"
-            >
-              <X className="h-5 w-5 md:h-6 md:w-6" />
-            </Button>
-            
-            <div className="h-full flex flex-col p-4 md:p-6 lg:p-8">
-              <h2 className="text-lg md:text-2xl font-bold text-white mb-4 md:mb-6 flex items-center gap-2 pt-8 md:pt-0">
-                <Album className="w-5 h-5 md:w-6 md:h-6 text-pink-400" />
-                Album ảnh của {profile.name}
-              </h2>
-              
-              <div className="flex-1 overflow-y-auto -mx-2 px-2 custom-scrollbar">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 pb-4">
-                  {profile.album?.map((img: string, idx: number) => (
-                    <div 
-                      key={idx} 
-                      className="relative group cursor-pointer overflow-hidden rounded-lg md:rounded-xl"
-                    >
-                      <div className="aspect-square w-full">
-                        <img
-                          src={img}
-                          alt={`Ảnh ${idx + 1}`}
-                          className="w-full h-full object-cover transform transition-all duration-300 group-hover:scale-110"
-                        />
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3 md:pb-4">
-                        <span className="text-white font-semibold text-sm md:text-base">
-                          {idx + 1} / {profile.album.length}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between text-xl">
+                📸 Album ảnh của {profile.name}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAlbumModal(false)}
+                  className="h-8 w-8 p-0 hover:bg-gray-100"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 max-h-[70vh] overflow-y-auto">
+              {profile.album?.map((img: string, idx: number) => (
+                <div key={idx} className="aspect-square group relative">
+                  <img
+                    src={img}
+                    alt={`Ảnh ${idx + 1}`}
+                    className="w-full h-full object-cover rounded-xl border-2 border-gray-200 shadow-lg group-hover:scale-105 transition-transform duration-200"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-xl transition-colors duration-200" />
                 </div>
-              </div>
+              ))}
             </div>
           </DialogContent>
         </Dialog>

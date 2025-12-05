@@ -1,13 +1,11 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Star, Heart, Loader2, CheckCircle } from "lucide-react";
+import { Check, Crown, Star, Heart } from "lucide-react";
 import { DATING_PACKAGES, DatingPackage } from "@/services/datingPackageService";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 
 interface DatingPackageModalProps {
   isOpen: boolean;
@@ -29,11 +27,6 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
   currentUser,
   bankInfo
 }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -67,30 +60,11 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
     }
   };
 
-  const handleSelectPackage = async (packageData: DatingPackage) => {
-    console.log('🔥 DEBUG: DatingPackageModal - handleSelectPackage called', packageData);
-    console.log('🔥 DEBUG: Current user:', currentUser);
-    
-    if (!currentUser?.id) {
-      console.log('🔥 DEBUG: No currentUser.id, showing login toast');
-      toast({
-        title: "Vui lòng đăng nhập",
-        description: "Bạn cần đăng nhập để mua gói Premium",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Navigate to payment page instead of calling payment service directly
-    const packageType = packageData.id === 'dating_unlimited' ? 'dating_lifetime' : packageData.id;
-    console.log('🔥 DEBUG: Navigating to payment page with package:', packageType);
-    
-    onClose();
-    navigate(`/payment?type=dating&package=${packageType}`);
-    
+  const handleSelectPackage = (packageId: string) => {
     if (onSelectPackage) {
-      onSelectPackage(packageData.id);
+      onSelectPackage(packageId);
     }
+    onClose();
   };
 
   return (
@@ -152,17 +126,9 @@ const DatingPackageModal: React.FC<DatingPackageModalProps> = ({
 
                 <Button
                   className={`w-full bg-gradient-to-r ${getPackageColor(pkg.id)} hover:opacity-90 text-white`}
-                  onClick={() => handleSelectPackage(pkg)}
-                  disabled={isProcessing && selectedPackage === pkg.id}
+                  onClick={() => handleSelectPackage(pkg.id)}
                 >
-                  {isProcessing && selectedPackage === pkg.id ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    'Chọn gói này'
-                  )}
+                  Chọn gói này
                 </Button>
               </CardContent>
             </Card>

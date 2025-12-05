@@ -1,18 +1,16 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Star, Loader2 } from "lucide-react";
+import { Check, Crown, Star } from "lucide-react";
 import { NEARBY_PACKAGES, NearbyPackage } from "@/services/nearbyPackageService";
-import { useToast } from "@/hooks/use-toast";
-import { createPayOSPayment } from "@/services/payosService";
 
 interface NearbyPackageModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectPackage?: (packageId: string) => void;
+  onSelectPackage: (packageId: string) => void;
   currentUser?: any;
 }
 
@@ -22,9 +20,6 @@ const NearbyPackageModal: React.FC<NearbyPackageModalProps> = ({
   onSelectPackage,
   currentUser
 }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
-  const { toast } = useToast();
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -55,54 +50,6 @@ const NearbyPackageModal: React.FC<NearbyPackageModalProps> = ({
         return 'from-yellow-500 to-orange-500';
       default:
         return 'from-gray-500 to-gray-600';
-    }
-  };
-
-  const handleSelectPackage = async (packageData: NearbyPackage) => {
-    if (!currentUser?.id) {
-      toast({
-        title: "Vui lòng đăng nhập",
-        description: "Bạn cần đăng nhập để mua gói Premium",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setSelectedPackage(packageData.id);
-    setIsProcessing(true);
-
-    try {
-      const result = await createPayOSPayment({
-        packageType: packageData.id,
-        userId: currentUser.id,
-        userEmail: currentUser.email || ''
-      });
-
-      if (result.error === 0 && result.data?.checkoutUrl) {
-        window.open(result.data.checkoutUrl, '_blank');
-        toast({
-          title: "Chuyển hướng thanh toán",
-          description: "Vui lòng hoàn tất thanh toán để kích hoạt gói Premium",
-        });
-        
-        onClose();
-        
-        if (onSelectPackage) {
-          onSelectPackage(packageData.id);
-        }
-      } else {
-        throw new Error(result.message || 'Không thể tạo liên kết thanh toán');
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast({
-        title: "Lỗi tạo thanh toán",
-        description: "Không thể tạo liên kết thanh toán. Vui lòng thử lại.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessing(false);
-      setSelectedPackage(null);
     }
   };
 
@@ -165,17 +112,9 @@ const NearbyPackageModal: React.FC<NearbyPackageModalProps> = ({
 
                 <Button
                   className={`w-full bg-gradient-to-r ${getPackageColor(pkg.id)} hover:opacity-90 text-white`}
-                  onClick={() => handleSelectPackage(pkg)}
-                  disabled={isProcessing && selectedPackage === pkg.id}
+                  onClick={() => onSelectPackage(pkg.id)}
                 >
-                  {isProcessing && selectedPackage === pkg.id ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    'Chọn gói này'
-                  )}
+                  Chọn gói này
                 </Button>
               </CardContent>
             </Card>

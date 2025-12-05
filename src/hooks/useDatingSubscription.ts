@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface DatingSubscription {
   id: string;
   type: string;
-  status: "pending" | "approved" | "rejected" | "expired";
+  status: "pending" | "approved" | "rejected";
   price: number;
   duration_days: number | null;
   expires_at: string | null;
@@ -19,14 +19,14 @@ export function useDatingSubscription(userId: string | null | undefined) {
     queryFn: async () => {
       if (!userId) return null;
       
-      // Get the most recent active dating subscription from user_subscriptions
+      // Get the most recent approved dating subscription
       const { data, error } = await supabase
-        .from("user_subscriptions")
+        .from("upgrade_requests")
         .select("*")
         .eq("user_id", userId)
-        .like("package_type", "dating%")
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
+        .like("type", "dating%")
+        .eq("status", "approved")
+        .order("approved_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       
@@ -34,26 +34,13 @@ export function useDatingSubscription(userId: string | null | undefined) {
       
       if (!data) return null;
       
-      // Map user_subscriptions fields to match expected interface
-      const mappedData = {
-        id: data.id,
-        type: data.package_type,
-        status: data.status as "pending" | "approved" | "rejected" | "expired",
-        price: data.payment_amount || 0,
-        duration_days: null,
-        expires_at: data.expires_at,
-        created_at: data.created_at,
-        approved_at: data.started_at
-      };
-      
       // Check if subscription is still active
       const now = new Date();
-      if (mappedData.expires_at && new Date(mappedData.expires_at) < now) {
-        // Auto-expire the subscription locally
-        return { ...mappedData, status: 'expired' as const, isExpired: true };
+      if (data.expires_at && new Date(data.expires_at) < now) {
+        return { ...data, isExpired: true };
       }
       
-      return { ...mappedData, status: 'approved' as const, isExpired: false } as DatingSubscription & { isExpired: boolean };
+      return { ...data, isExpired: false } as DatingSubscription & { isExpired: boolean };
     },
     staleTime: 30 * 1000,
     enabled: !!userId
@@ -64,10 +51,10 @@ export function useIsDatingActive(userId: string | null | undefined) {
   const { data: subscription, isLoading } = useDatingSubscription(userId);
   
   return {
-    isActive: subscription && !subscription.isExpired && subscription.status === 'approved',
+    isActive: subscription && !subscription.isExpired,
     isLoading,
     subscription,
-    daysRemaining: subscription?.expires_at && subscription.status === 'approved'
+    daysRemaining: subscription?.expires_at 
       ? Math.max(0, Math.ceil((new Date(subscription.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
       : null
   };

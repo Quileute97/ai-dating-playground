@@ -1,25 +1,16 @@
 
-import React, { useState, useEffect } from "react";
-import { MapPin, Heart, MessageCircle, Star, Crown, Map } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import NearbyChatWindow from './NearbyChatWindow';
+import { useIsNearbyActive } from "@/hooks/useNearbySubscription";
+import NearbyProfileView from "./NearbyProfileView";
+import NearbyMain from "./NearbyMain";
 import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { MapPin } from "lucide-react";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
-import { useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
-import { useGeolocation } from "@/hooks/useGeolocation";
-import NearbyFeatureBanner from "./NearbyFeatureBanner";
-import NearbyPackageModal from "./NearbyPackageModal";
-import { createNearbyPackagePayment } from "@/services/payosService";
-import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
-import { usePremiumStatus } from "@/hooks/usePremiumStatus";
-import { supabase } from "@/integrations/supabase/client";
-
-interface NearbyInterfaceProps {
-  user: any;
-  onOpenChat?: (userId: string) => void;
-}
+import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
+import { useBankInfo } from "@/hooks/useBankInfo";
 
 interface NearbyUser {
   id: string;
@@ -32,328 +23,225 @@ interface NearbyUser {
   interests: string[];
   rating: number;
   isLiked?: boolean;
+  bio?: string;
+  height?: number;
+  job?: string;
+  education?: string;
+  location_name?: string;
 }
 
-const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
-  const [showPackageModal, setShowPackageModal] = useState(false);
-  const [likedUsers, setLikedUsers] = useState<Set<string>>(new Set());
-  const navigate = useNavigate();
+interface NearbyInterfaceProps {
+  user?: any;
+}
+
+const NearbyInterface = ({ user }: NearbyInterfaceProps) => {
+  const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
+  const [chatUser, setChatUser] = useState<NearbyUser | null>(null);
+  const [locationPermission, setLocationPermission] = useState<
+    "pending" | "granted" | "denied"
+  >("pending");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(
+    null
+  );
+  const [hasExpandedRange, setHasExpandedRange] = useState(false);
+  const [showPayOSModal, setShowPayOSModal] = useState(false);
   const { toast } = useToast();
-  const fakeUserInteractions = useFakeUserInteractions(user?.id);
   
-  // Get user location
-  const { position: userLocation } = useGeolocation();
+  // Use the new subscription hook instead of old upgrade status
+  const { isActive, isLoading: nearbyLoading, subscription } = useIsNearbyActive(user?.id);
   
-  // Check premium status
-  const { premiumStatus, isLoading: premiumLoading } = usePremiumStatus(user?.id);
-  
-  // Set distance based on premium status: 5km for free, 20km for premium
-  const distance = premiumStatus?.isPremium ? 20 : 5;
-  const hasExpandedRange = premiumStatus?.isPremium || false;
-  
-  // Use the hook with correct parameters
-  const { profiles, loading } = useNearbyProfiles(user?.id, userLocation, distance);
+  // Get bank info for payment modal
+  const { bankInfo } = useBankInfo();
 
-  // Transform profiles to match NearbyUser interface
-  const users: NearbyUser[] = profiles.map(profile => ({
-    id: profile.id,
-    name: profile.name || "Unknown",
-    age: profile.age || 25,
-    distance: profile.distance ? Math.round(profile.distance * 10) / 10 : 0, // Round to 1 decimal
-    avatar: profile.avatar || "/placeholder.svg",
-    isOnline: profile.last_active ? new Date(profile.last_active) > new Date(Date.now() - 5 * 60 * 1000) : false,
-    lastSeen: profile.last_active ? "Vừa online" : "Offline",
-    interests: Array.isArray(profile.interests) ? profile.interests : [],
-    rating: 4.5,
-    isLiked: likedUsers.has(profile.id)
-  }));
-
-  const handleViewProfile = (profile: NearbyUser) => {
-    navigate(`/profile/${profile.id}`);
-  };
-
-  const handleLikeUser = async (userId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    
-    const targetUser = users.find(u => u.id === userId);
-    if (!targetUser) return;
-
-    const wasLiked = likedUsers.has(userId);
-    
-    // Optimistically update UI
-    setLikedUsers(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(userId)) {
-        newSet.delete(userId);
-      } else {
-        newSet.add(userId);
-      }
-      return newSet;
-    });
-
-    toast({
-      title: wasLiked ? "Đã bỏ thích" : "❤️ Đã thích",
-      description: targetUser.name,
-    });
-
-    try {
-      await fakeUserInteractions.likeFakeUser(userId);
-    } catch (error) {
-      console.error('Like error:', error);
-      // Revert on error
-      setLikedUsers(prev => {
-        const newSet = new Set(prev);
-        if (wasLiked) {
-          newSet.add(userId);
-        } else {
-          newSet.delete(userId);
-        }
-        return newSet;
-      });
-    }
-  };
-
-  const handleMessageUser = async (userId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    
-    const targetUser = users.find(u => u.id === userId);
-    if (!targetUser) return;
-
-    try {
-      // Check if this is a fake user
-      const { data: fakeUser } = await supabase
-        .from('fake_users')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (fakeUser) {
-        // Create conversation with fake user first
-        await fakeUserInteractions.createConversationWithFakeUser(userId);
-      }
-      
-      // Navigate to messages with this user
-      if (onOpenChat) {
-        onOpenChat(userId);
-      } else {
-        navigate('/messages');
-      }
-      
+  // Function to request location access and update state
+  const requestLocationPermission = () => {
+    if (!navigator.geolocation) {
       toast({
-        title: "Mở tin nhắn",
-        description: `Đang mở hội thoại với ${targetUser.name}`,
+        variant: "destructive",
+        title: "Thiết bị không hỗ trợ GPS",
+        description: "Trình duyệt của bạn không hỗ trợ lấy vị trí.",
       });
-    } catch (error) {
-      console.error('Message error:', error);
-      toast({
-        title: "Lỗi",
-        description: "Không thể mở tin nhắn. Vui lòng thử lại.",
-        variant: "destructive"
-      });
+      setLocationPermission("denied");
+      return;
     }
+    setLocationPermission("pending");
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocationPermission("granted");
+        setUserLocation({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+      },
+      (err) => {
+        setLocationPermission("denied");
+        toast({
+          variant: "destructive",
+          title: "Không thể lấy vị trí",
+          description: "Bạn cần cho phép truy cập vị trí để sử dụng tính năng này.",
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+      }
+    );
   };
+
+  // Get location on mount
+  useEffect(() => {
+    requestLocationPermission();
+  }, []);
+
+  useUpdateProfileLocation(user?.id, userLocation);
+
+  // Determine search radius based on subscription status
+  const searchRadius = hasExpandedRange && isActive ? 20 : 5;
+  const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, searchRadius);
+
+  // Convert profile from database to NearbyUser
+  function profileToNearbyUser(profile: any): NearbyUser {
+    const interests = Array.isArray(profile.interests) ? profile.interests : [];
+    const isRecentlyActive = profile.last_active ? 
+      (new Date().getTime() - new Date(profile.last_active).getTime()) < 30 * 60 * 1000 : false;
+
+    return {
+      id: profile.id,
+      name: profile.name || "Chưa đặt tên",
+      age: profile.age || 18,
+      distance: Math.round((profile.distance || 0) * 10) / 10,
+      avatar: profile.avatar || "/placeholder.svg",
+      isOnline: isRecentlyActive,
+      lastSeen: profile.last_active ? 
+        (isRecentlyActive ? "Đang online" : `${Math.floor((new Date().getTime() - new Date(profile.last_active).getTime()) / (1000 * 60))} phút trước`) 
+        : "Chưa rõ",
+      interests: interests.length > 0 ? interests : ["Đang cập nhật"],
+      rating: 4.0 + Math.random() * 1.0,
+      isLiked: false,
+      bio: profile.bio,
+      height: profile.height,
+      job: profile.job,
+      education: profile.education,
+      location_name: profile.location_name
+    };
+  }
+
+  const nearbyUsers: NearbyUser[] = React.useMemo(() =>
+    profiles.map(profileToNearbyUser), [profiles]
+  );
 
   const handleExpandRange = () => {
-    // Check if user has premium
-    if (!premiumStatus?.isPremium) {
+    if (!isActive) {
       toast({
-        title: "Yêu cầu Premium",
-        description: "Vui lòng nâng cấp Premium để mở rộng phạm vi tìm kiếm",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Không thể mở rộng phạm vi",
+        description: "Bạn cần có gói Premium để sử dụng tính năng mở rộng phạm vi.",
       });
-      setShowPackageModal(true);
       return;
     }
-    
+    if (!hasExpandedRange) {
+      setHasExpandedRange(true);
+      toast({
+        title: "Đã mở rộng phạm vi! 🎉",
+        description: "Tìm thấy thêm nhiều người trong phạm vi 20km",
+      });
+    }
+  };
+
+  const handleViewProfile = (user: NearbyUser) => setSelectedUser(user);
+  const handleCloseProfile = () => setSelectedUser(null);
+
+  const handleLikeUser = (userId: string, event?: React.MouseEvent) => {
+    if (event) event.stopPropagation();
     toast({
-      title: "Đã mở rộng phạm vi",
-      description: "Đang tìm kiếm trong phạm vi 20km với Premium",
+      title: "Đã thích!",
+      description: `Bạn đã thích người dùng này`,
     });
   };
 
-  const handleSelectPackage = async (packageId: string) => {
-    if (!user?.id) {
-      toast({
-        title: "Vui lòng đăng nhập",
-        description: "Bạn cần đăng nhập để mua gói Premium",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setShowPackageModal(false);
-    
-    try {
-      const result = await createNearbyPackagePayment(
-        packageId,
-        user.id,
-        user.email
-      );
-
-      if (result.error === 0 && result.data?.checkoutUrl) {
-        window.open(result.data.checkoutUrl, '_blank');
-        toast({
-          title: "Chuyển hướng thanh toán",
-          description: "Vui lòng hoàn tất thanh toán để kích hoạt gói Premium",
-        });
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast({
-        title: "Lỗi tạo thanh toán",
-        description: "Không thể tạo liên kết thanh toán. Vui lòng thử lại.",
-        variant: "destructive"
-      });
+  const handleMessageUser = (userId: string, event?: React.MouseEvent) => {
+    if (event) event.stopPropagation();
+    const foundUser = nearbyUsers.find((u) => u.id === userId);
+    if (foundUser) {
+      setSelectedUser(null);
+      setChatUser(foundUser);
     }
   };
 
-  if (loading || premiumLoading) {
+  const handleCloseChat = () => setChatUser(null);
+
+  if (locationPermission === "pending") {
     return (
-      <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4">
-        <div className="max-w-md mx-auto h-full flex flex-col">
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Đang tải...</p>
+      <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4 flex items-center justify-center">
+        <Card className="max-w-md p-6 text-center">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MapPin className="w-8 h-8 text-white animate-pulse" />
           </div>
-        </div>
+          <h3 className="text-lg font-semibold mb-2">Đang yêu cầu truy cập GPS</h3>
+          <p className="text-gray-600 mb-4">
+            Chúng tôi cần truy cập vị trí của bạn để tìm những người xung quanh
+          </p>
+          <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+        </Card>
       </div>
     );
   }
 
-  return (
-    <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4">
-      <div className="max-w-md mx-auto h-full flex flex-col">
-        {/* Header */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <h1 className="text-xl font-bold text-gray-800">Quanh đây</h1>
-            {userLocation && (
-              <div className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                GPS
-              </div>
-            )}
-            {hasExpandedRange && (
-              <div className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs flex items-center gap-1">
-                <Crown className="w-3 h-3" />
-                Premium - 20km
-              </div>
-            )}
+  if (locationPermission === "denied") {
+    return (
+      <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4 flex items-center justify-center">
+        <Card className="max-w-md p-6 text-center">
+          <div className="bg-gradient-to-r from-red-500 to-orange-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MapPin className="w-8 h-8 text-white" />
           </div>
-          <p className="text-gray-600 text-sm">
-            {users.length} người trong phạm vi {hasExpandedRange ? "20km" : "5km"}
+          <h3 className="text-lg font-semibold mb-2">Cần quyền truy cập vị trí</h3>
+          <p className="text-gray-600 mb-4">
+            Để sử dụng tính năng "Quanh đây", vui lòng cho phép truy cập vị trí trong cài đặt trình duyệt
           </p>
-        </div>
-
-        {/* Users List */}
-        <ScrollArea className="flex-1">
-          <div className="space-y-3 pb-4">
-            {users.map((user) => (
-              <Card
-                key={user.id}
-                className="p-4 hover:shadow-md transition-all cursor-pointer hover:scale-[1.02]"
-                onClick={() => handleViewProfile(user)}
-              >
-                <div className="flex items-center gap-3">
-                  {/* Avatar */}
-                  <div className="relative">
-                    <img
-                      src={user.avatar}
-                      alt={user.name}
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
-                    {user.isOnline && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
-                    )}
-                  </div>
-                  {/* User Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-800">
-                        {user.name}, {user.age}
-                      </h3>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                        <span className="text-xs text-gray-600">{user.rating}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                      <MapPin className="w-4 h-4" />
-                      <span>{user.distance}km</span>
-                      <span>•</span>
-                      <span>{user.lastSeen}</span>
-                    </div>
-                    <div className="flex gap-1">
-                      {user.interests.slice(0, 2).map((interest, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs"
-                        >
-                          {interest}
-                        </span>
-                      ))}
-                      {user.interests.length > 2 && (
-                        <span className="px-2 py-1 bg-gray-50 text-gray-600 rounded text-xs">
-                          +{user.interests.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {/* Quick Actions */}
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className={`w-8 h-8 p-0 rounded-full transition-all duration-200 ${
-                        user.isLiked
-                          ? "border-pink-300 bg-pink-50 hover:bg-pink-100"
-                          : "hover:border-pink-300 hover:bg-pink-50"
-                      }`}
-                      onClick={(e) => handleLikeUser(user.id, e)}
-                    >
-                      <Heart className={`w-4 h-4 text-pink-500 ${user.isLiked ? "fill-current" : ""}`} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-8 h-8 p-0 rounded-full hover:border-blue-300 hover:bg-blue-50"
-                      onClick={(e) => handleMessageUser(user.id, e)}
-                    >
-                      <MessageCircle className="w-4 h-4 text-blue-500" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </ScrollArea>
-
-        {/* Feature Banner - Only show if not premium */}
-        {!premiumStatus?.isPremium && (
-          <NearbyFeatureBanner
-            upgradeStatus={undefined}
-            nearbyLoading={loading}
-            hasExpandedRange={false}
-            onClickUpgrade={() => {
-              setShowPackageModal(true);
-            }}
-            onClickExpand={handleExpandRange}
-            disableExpand={false}
-            userId={user?.id}
-          />
-        )}
+          <Button 
+            onClick={requestLocationPermission}
+            className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+          >
+            Thử lại
+          </Button>
+        </Card>
       </div>
+    );
+  }
 
-      {/* Package Modal */}
-      <NearbyPackageModal
-        isOpen={showPackageModal}
-        onClose={() => setShowPackageModal(false)}
-        onSelectPackage={handleSelectPackage}
-        currentUser={user}
+  if (selectedUser) {
+    return (
+      <NearbyProfileView
+        user={selectedUser}
+        onClose={handleCloseProfile}
+        onLike={handleLikeUser}
+        onMessage={handleMessageUser}
       />
-    </div>
+    );
+  }
+
+  if (chatUser) {
+    return <NearbyChatWindow user={chatUser} currentUserId={user?.id} onClose={handleCloseChat} />;
+  }
+
+  return (
+    <NearbyMain
+      users={nearbyUsers}
+      userLocation={userLocation}
+      hasExpandedRange={hasExpandedRange}
+      setShowPayOSModal={setShowPayOSModal}
+      showPayOSModal={showPayOSModal}
+      upgradeStatus={isActive ? "approved" : "none"}
+      nearbyLoading={nearbyLoading || profilesLoading}
+      onExpandRange={handleExpandRange}
+      disableExpand={hasExpandedRange}
+      bankInfo={bankInfo}
+      onViewProfile={handleViewProfile}
+      onLikeUser={handleLikeUser}
+      onMessageUser={handleMessageUser}
+      currentUser={user}
+    />
   );
 };
 

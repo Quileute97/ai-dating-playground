@@ -43,36 +43,9 @@ secret = ""
 redirect_uri = ""
 
 [functions.create-payos-payment]
-verify_jwt = true
+verify_jwt = false
 
 [functions.payos-webhook]
-verify_jwt = false
-
-[functions.check-payment-status]
-verify_jwt = true
-
-[functions.check-expired-subscriptions]
-verify_jwt = false
-
-[functions.ai-chat-proxy]
-verify_jwt = true
-
-[functions.generate-sitemap]
-verify_jwt = false
-
-[functions.ping-google-sitemap]
-verify_jwt = false
-
-[functions.generate-sitemap-index]
-verify_jwt = false
-
-[functions.generate-sitemap-static]
-verify_jwt = false
-
-[functions.generate-sitemap-profiles]
-verify_jwt = false
-
-[functions.generate-sitemap-fake-profiles]
 verify_jwt = false
 
 [edge_runtime]

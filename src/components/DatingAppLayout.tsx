@@ -29,10 +29,10 @@ export default function DatingAppLayout({
   return (
     <div className="flex-1 overflow-hidden relative">
       <div className="h-full flex flex-row">
-        {/* LEFT: RealTimeActivityPanel (only nếu đã đăng nhập) - Hidden on mobile */}
+        {/* LEFT: RealTimeActivityPanel (only nếu đã đăng nhập) */}
         {!isAdminMode && user && (
           isLeftPanelOpen ? (
-            <div className="relative flex-shrink-0 hidden lg:block">
+            <div className="relative flex-shrink-0">
               <RealTimeActivityPanel userId={user?.id} />
               <SidePanelToggle
                 isOpen={isLeftPanelOpen}
@@ -41,7 +41,7 @@ export default function DatingAppLayout({
               />
             </div>
           ) : (
-            <div className="flex-shrink-0 hidden lg:block">
+            <div className="flex-shrink-0">
               <SidePanelToggle
                 isOpen={isLeftPanelOpen}
                 side="left"
@@ -58,10 +58,10 @@ export default function DatingAppLayout({
           </div>
         </div>
         
-        {/* RIGHT: ActiveFriendsWithChatPanel (chỉ user login) - Hidden on mobile */}
+        {/* RIGHT: ActiveFriendsWithChatPanel (chỉ user login) */}
         {!isAdminMode && user && (
           isRightPanelOpen ? (
-            <div className="relative flex-shrink-0 hidden lg:block">
+            <div className="relative flex-shrink-0">
               <ActiveFriendsWithChatPanel 
                 myId={user.id}
                 selectedChatUserId={selectedChatUserId}
@@ -74,7 +74,7 @@ export default function DatingAppLayout({
               />
             </div>
           ) : (
-            <div className="flex-shrink-0 hidden lg:block">
+            <div className="flex-shrink-0">
               <SidePanelToggle
                 isOpen={isRightPanelOpen}
                 side="right"

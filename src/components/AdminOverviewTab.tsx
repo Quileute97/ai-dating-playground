@@ -59,27 +59,14 @@ const AdminOverviewTab: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-      {/* Hoạt động gần đây */}
+      {/* Hoạt động gần đây có thể nâng cấp về sau để lấy real data */}
       <Card>
         <CardHeader>
           <CardTitle>Hoạt động gần đây</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {data?.recentActivities?.length ? (
-              data.recentActivities.map((activity: any, index: number) => (
-                <div key={index} className="flex items-center space-x-3 text-sm">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <div>
-                    <span className="font-medium">{activity.type}</span>
-                    <span className="text-muted-foreground"> - {activity.description}</span>
-                    <div className="text-xs text-muted-foreground">{activity.time}</div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-muted-foreground">Chưa có hoạt động gần đây</div>
-            )}
+          <div className="space-y-4 text-muted-foreground">
+            (Đang cập nhật dữ liệu thật...)
           </div>
         </CardContent>
       </Card>

@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import NearbyUserList from "./NearbyUserList";
 import NearbyFeatureBanner from "./NearbyFeatureBanner";
 import NearbyPackageModal from "./NearbyPackageModal";
+import { createNearbyPackagePayment } from "@/services/payosService";
+import { useToast } from "@/hooks/use-toast";
 
 interface NearbyUser {
   id: string;
@@ -55,6 +57,45 @@ const NearbyMain: React.FC<NearbyMainProps> = ({
   currentUser
 }) => {
   const [showPackageModal, setShowPackageModal] = useState(false);
+  const { toast } = useToast();
+
+  const handleSelectPackage = async (packageId: string) => {
+    if (!currentUser?.id) {
+      toast({
+        title: "Vui lòng đăng nhập",
+        description: "Bạn cần đăng nhập để mua gói Premium",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setShowPackageModal(false);
+    
+    try {
+      const result = await createNearbyPackagePayment(
+        packageId,
+        currentUser.id,
+        currentUser.email
+      );
+
+      if (result.error === 0 && result.data?.checkoutUrl) {
+        window.open(result.data.checkoutUrl, '_blank');
+        toast({
+          title: "Chuyển hướng thanh toán",
+          description: "Vui lòng hoàn tất thanh toán để kích hoạt gói Premium",
+        });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Lỗi tạo thanh toán",
+        description: "Không thể tạo liên kết thanh toán. Vui lòng thử lại.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="h-full bg-gradient-to-br from-blue-50 to-purple-50 p-4">
@@ -72,10 +113,7 @@ const NearbyMain: React.FC<NearbyMainProps> = ({
           upgradeStatus={upgradeStatus}
           nearbyLoading={nearbyLoading}
           hasExpandedRange={hasExpandedRange}
-          onClickUpgrade={() => {
-            // Show package modal instead of navigating to payment page
-            setShowPackageModal(true);
-          }}
+          onClickUpgrade={() => setShowPackageModal(true)}
           onClickExpand={onExpandRange}
           disableExpand={disableExpand}
           userId={currentUser?.id}
@@ -85,6 +123,7 @@ const NearbyMain: React.FC<NearbyMainProps> = ({
       <NearbyPackageModal
         isOpen={showPackageModal}
         onClose={() => setShowPackageModal(false)}
+        onSelectPackage={handleSelectPackage}
         currentUser={currentUser}
       />
     </div>

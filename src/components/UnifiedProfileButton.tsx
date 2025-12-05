@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
 import DatingProfile from './DatingProfile';
-import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface UnifiedProfileButtonProps {
   user: any;
@@ -22,7 +21,7 @@ const UnifiedProfileButton = ({ user, onUpdateProfile, className }: UnifiedProfi
         onClick={() => setShowDatingProfile(true)}
         className={`bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm ${className}`}
       >
-        <img src={getDefaultAvatar(user.gender, user.avatar)} alt={user.name} className="w-6 h-6 rounded-full object-cover mr-2" />
+        <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full object-cover mr-2" />
         <span className="hidden sm:inline">{user.name}</span>
         <Heart className="w-4 h-4 sm:hidden text-pink-500" />
       </Button>

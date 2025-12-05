@@ -6,59 +6,42 @@ import { useEffect } from "react";
 export function useTimelinePosts(userId?: string) {
   const queryClient = useQueryClient();
 
-  // Lấy tất cả bài post (bao gồm cả fake users) 
+  // Lấy tất cả bài post (sắp xếp mới nhất trước)
   const { data: posts, isLoading, error } = useQuery({
-    queryKey: ["timeline-posts", userId],
+    queryKey: ["timeline-posts"],
     queryFn: async () => {
-      // Sử dụng function get_timeline_with_fake_posts để lấy cả real và fake user posts
-      const { data, error } = await supabase.rpc("get_timeline_with_fake_posts", {
-        user_id_param: userId || null,
-        limit_param: 50,
-        offset_param: 0
-      });
-      
-      if (error) {
-        console.error('Error fetching timeline posts:', error);
-        throw error;
-      }
-      
-      console.log('📊 Timeline posts fetched:', data?.length || 0, 'posts');
+      const { data, error } = await supabase
+        .from("posts")
+        .select(
+          `
+            *,
+            profiles: user_id (id, name, avatar)
+          `
+        )
+        .order("created_at", { ascending: false });
+      if (error) throw error;
       return data ?? [];
     }
   });
 
-  // Realtime subscription cho posts và fake_user_posts
+  // Realtime subscription cho posts
   useEffect(() => {
-    const timestamp = Date.now();
-    const postsChannel = supabase
-      .channel(`posts-changes-${timestamp}`)
+    const channel = supabase
+      .channel('posts-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'posts'
       }, (payload) => {
         console.log('📊 Posts realtime update:', payload);
-        queryClient.invalidateQueries({ queryKey: ["timeline-posts", userId] });
-      })
-      .subscribe();
-
-    const fakePostsChannel = supabase
-      .channel(`fake-posts-changes-${timestamp}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'fake_user_posts'
-      }, (payload) => {
-        console.log('📊 Fake posts realtime update:', payload);
-        queryClient.invalidateQueries({ queryKey: ["timeline-posts", userId] });
+        queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(postsChannel);
-      supabase.removeChannel(fakePostsChannel);
+      supabase.removeChannel(channel);
     };
-  }, [queryClient, userId]);
+  }, [queryClient]);
 
   // Thêm bài post mới
   const createPostMutation = useMutation({
@@ -79,7 +62,7 @@ export function useTimelinePosts(userId?: string) {
     },
     onSuccess: () => {
       console.log('Post created successfully');
-      queryClient.invalidateQueries({ queryKey: ["timeline-posts", userId] });
+      queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
     },
     onError: (error) => {
       console.error('Failed to create post:', error);
@@ -124,7 +107,7 @@ export function useTimelinePosts(userId?: string) {
       console.log('Post deleted successfully');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["timeline-posts", userId] });
+      queryClient.invalidateQueries({ queryKey: ["timeline-posts"] });
     },
     onError: (error) => {
       console.error('Failed to delete post:', error);
@@ -135,7 +118,7 @@ export function useTimelinePosts(userId?: string) {
     posts,
     isLoading,
     error,
-    refetch: () => queryClient.invalidateQueries({ queryKey: ["timeline-posts", userId] }),
+    refetch: () => queryClient.invalidateQueries({ queryKey: ["timeline-posts"] }),
     createPost: createPostMutation.mutateAsync,
     creating: createPostMutation.isPending,
     deletePost: deletePostMutation.mutateAsync,

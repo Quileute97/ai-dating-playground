@@ -1,3 +1,4 @@
+
 import React, { useState, ChangeEvent } from "react";
 import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -8,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 import { VN_PROVINCES } from "@/utils/vnProvinces";
 import HashtagPostsModal from "./HashtagPostsModal";
-import StoriesBar from "./StoriesBar";
 import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -27,9 +27,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useChatIntegration } from '@/hooks/useChatIntegration';
-import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
@@ -78,7 +75,7 @@ interface Post {
 }
 const demoUser = {
   name: "Bạn",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=guest"
+  avatar: "https://source.unsplash.com/random/56x56?face"
 };
 
 // === Helper để detect và render hashtag ===
@@ -116,71 +113,13 @@ import { useTimelinePosts } from "@/hooks/useTimelinePosts";
 import { useTimelineComments } from "@/hooks/useTimelineComments";
 import { usePostLikes } from "@/hooks/usePostLikes";
 import { useDatingProfile } from "@/hooks/useDatingProfile";
-import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
-import { useFakePostComments } from "@/hooks/useFakePostComments";
-import { useFakePostLikes } from "@/hooks/useFakePostLikes";
-import { useOnlinePresence } from "@/hooks/useOnlinePresence";
 
-type TimelineProps = {
-  user: any;
-};
-
-const Timeline: React.FC<TimelineProps> = ({ user }) => {
+const Timeline: React.FC<{ user: any }> = ({ user }) => {
   const userId = user?.id;
   const { posts, isLoading, createPost, creating, refetch, deletePost, deleting } = useTimelinePosts(userId);
   const { profile } = useDatingProfile(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
-  const fakeUserInteractions = useFakeUserInteractions(userId);
   const { toast } = useToast();
-  const { onlineCount } = useOnlinePresence(userId, profile?.name);
-
-  // Realtime subscription for reply notifications
-  React.useEffect(() => {
-    if (!userId || !profile?.name) return;
-
-    const channelName = `reply-notifications-${userId}-${Date.now()}`;
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'comments',
-      }, (payload: any) => {
-        const newComment = payload.new;
-        // Check if the comment mentions the current user
-        if (newComment.content && newComment.user_id !== userId) {
-          const mentionPattern = new RegExp(`@${profile.name}\\b`, 'i');
-          if (mentionPattern.test(newComment.content)) {
-            toast({
-              title: "💬 Có người trả lời bình luận của bạn!",
-              description: newComment.content.substring(0, 50) + (newComment.content.length > 50 ? "..." : ""),
-            });
-          }
-        }
-      })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'fake_post_comments',
-      }, (payload: any) => {
-        const newComment = payload.new;
-        // Check if the comment mentions the current user
-        if (newComment.content && newComment.user_id !== userId) {
-          const mentionPattern = new RegExp(`@${profile.name}\\b`, 'i');
-          if (mentionPattern.test(newComment.content)) {
-            toast({
-              title: "💬 Có người trả lời bình luận của bạn!",
-              description: newComment.content.substring(0, 50) + (newComment.content.length > 50 ? "..." : ""),
-            });
-          }
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, profile?.name, toast]);
 
   const handlePostSubmit = async (
     data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">
@@ -213,40 +152,11 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
     }
   };
 
-  const { startChatWith } = useChatIntegration();
-
-  const handleUserClick = (userId: string, userName: string, userAvatar: string) => {
-    // Use unified chat system
-    startChatWith({
-      id: userId,
-      name: userName,
-      avatar: userAvatar
-    });
-  };
-
   return (
     <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in">
-      {/* Stories Bar */}
-      <div className="mb-4 pb-3 border-b border-gray-200">
-        <StoriesBar user={user} userProfile={profile} />
-      </div>
-      
       {user && (
         <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
       )}
-      
-      {/* Online users indicator */}
-      <div className="flex items-center justify-center gap-2 py-2 mt-2">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-          </span>
-          <span className="text-sm text-green-700 font-medium">
-            {onlineCount > 0 ? onlineCount : 1} người đang online
-          </span>
-        </div>
-      </div>
       
       <div className="flex-1 overflow-y-auto space-y-2 mt-3">
         {isLoading && (
@@ -330,12 +240,12 @@ const PostForm: React.FC<{
   return (
     <Card className="mb-2 p-2 shadow-sm">
       <form onSubmit={handleSubmit} className="flex gap-2 items-start">
-        <img src={currentAvatar} alt={currentName} className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />
-        <div className="flex-1 w-full flex flex-col gap-1">
+        <img src={currentAvatar} alt={currentName} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1" />
+        <div className="flex-1 w-full flex flex-col gap-1.5">
           <div className="relative">
             <Textarea
               ref={textAreaRef}
-              className="flex-1 min-h-[50px] resize-none text-sm border-gray-200 py-2"
+              className="flex-1 min-h-[60px] resize-none text-sm border-gray-200"
               placeholder="Bạn đang nghĩ gì?"
               value={content}
               onChange={e => setContent(e.target.value)}
@@ -364,9 +274,9 @@ const PostForm: React.FC<{
           )}
           
           <div className="flex justify-between items-center">
-            <div className="flex gap-1 items-center">
-              <label className="cursor-pointer flex gap-0.5 items-center text-[10px] px-1.5 py-0.5 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors">
-                <ImageIcon size={10} />
+            <div className="flex gap-1.5 items-center">
+              <label className="cursor-pointer flex gap-1 items-center text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors">
+                <ImageIcon size={12} />
                 <input
                   type="file"
                   accept="image/*"
@@ -376,8 +286,8 @@ const PostForm: React.FC<{
                 />
                 <span>Ảnh</span>
               </label>
-              <label className="cursor-pointer flex gap-0.5 items-center text-[10px] px-1.5 py-0.5 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors">
-                <VideoIcon size={10} />
+              <label className="cursor-pointer flex gap-1 items-center text-xs px-2 py-1 rounded bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors">
+                <VideoIcon size={12} />
                 <input
                   type="file"
                   accept="video/*"
@@ -391,7 +301,7 @@ const PostForm: React.FC<{
             <Button
               type="submit"
               size="sm"
-              className="h-6 px-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 text-[10px]"
+              className="h-7 px-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 text-xs"
               disabled={posting || uploadingMedia}
             >
               {posting ? "Đang đăng..." : uploadingMedia ? "Đang tải..." : "Đăng"}
@@ -412,83 +322,25 @@ const PostItem: React.FC<{
 }> = ({ post, user, onHashtagClick, onDeletePost, isDeleting }) => {
   const [commentInput, setCommentInput] = React.useState("");
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
-  const commentInputRef = React.useRef<HTMLInputElement>(null);
-  const [showHeartAnimation, setShowHeartAnimation] = React.useState(false);
-  const { toast } = useToast();
-
-  const handleReply = (username: string) => {
-    const mention = `@${username} `;
-    setCommentInput(mention);
-    commentInputRef.current?.focus();
-  };
-
-  // Parse @mentions in comment content
-  const renderCommentContent = (content: string) => {
-    const parts = content.split(/(@\S+)/g);
-    return parts.map((part, index) => {
-      if (part.startsWith('@')) {
-        return (
-          <span key={index} className="text-blue-500 font-medium">
-            {part}
-          </span>
-        );
-      }
-      return part;
-    });
-  };
-  
-  // Use different hooks based on whether it's a fake user post
-  const realPostComments = useTimelineComments(post.is_fake_user ? undefined : post.id);
-  const fakePostComments = useFakePostComments(post.is_fake_user ? post.id : undefined);
-  const realPostLikes = usePostLikes(post.is_fake_user ? undefined : post.id, user?.id);
-  const fakePostLikes = useFakePostLikes(post.is_fake_user ? post.id : undefined, user?.id);
-  
-  const comments = post.is_fake_user ? fakePostComments.comments : realPostComments.comments;
-  const commentsLoading = post.is_fake_user ? fakePostComments.isLoading : realPostComments.isLoading;
-  const likeCount = post.is_fake_user ? fakePostLikes.likeCount : realPostLikes.likeCount;
-  const liked = post.is_fake_user ? fakePostLikes.liked : realPostLikes.liked;
-  const isToggling = post.is_fake_user ? false : realPostLikes.isToggling;
-  
-  const fakeUserInteractions = useFakeUserInteractions(user?.id);
+  const { comments, isLoading: commentsLoading, createComment, creating } = useTimelineComments(post.id);
+  const { likeCount, liked, like, unlike, isToggling } = usePostLikes(post.id, user?.id);
 
   const navigate = useNavigate();
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentInput.trim()) return;
-    
-    if (post.is_fake_user) {
-      // Comment on fake user post
-      await fakeUserInteractions.commentOnFakePost({
-        postId: post.id,
-        content: commentInput
-      });
-    } else {
-      // Comment on real user post
-      await realPostComments.createComment({
-        post_id: post.id,
-        user_id: user?.id,
-        content: commentInput,
-      });
-    }
+    await createComment({
+      post_id: post.id,
+      user_id: user?.id,
+      content: commentInput,
+    });
     setCommentInput("");
   };
 
   const handleLike = async () => {
-    // Trigger animation only when liking (not unliking)
-    if (!liked) {
-      setShowHeartAnimation(true);
-      setTimeout(() => setShowHeartAnimation(false), 800);
-    }
-    
-    if (post.is_fake_user) {
-      // Like fake user post
-      await fakeUserInteractions.likeFakePost(post.id);
-    } else {
-      // Like real user post
-      if (liked) await realPostLikes.unlike();
-      else await realPostLikes.like();
-    }
+    if (liked) await unlike();
+    else await like();
   };
 
   const handleDeletePost = () => {
@@ -496,40 +348,24 @@ const PostItem: React.FC<{
     setShowDeleteDialog(false);
   };
 
-  const isPostOwner = user?.id === post.user_id && !post.is_fake_user;
+  const isPostOwner = user?.id === post.user_id;
 
   return (
     <Card className="rounded-xl shadow-sm border border-gray-200 mb-3 p-4 bg-white transition hover:shadow-md">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <img
-            src={post.user_avatar || demoUser.avatar}
-            alt={post.user_name || "User"}
+            src={post.profiles?.avatar || demoUser.avatar}
+            alt={post.profiles?.name || "User"}
             className="w-10 h-10 rounded-full object-cover border shadow cursor-pointer"
-            onClick={() => {
-              if (post.user_id) {
-                if (post.is_fake_user) {
-                  navigate(`/fake-profile/${post.user_id}`);
-                } else {
-                  navigate(`/profile/${post.user_id}`);
-                }
-              }
-            }}
+            onClick={() => post.profiles?.id && navigate(`/profile/${post.profiles.id}`)}
           />
           <div className="flex flex-col">
             <span
               className="font-semibold text-gray-800 cursor-pointer hover:underline"
-              onClick={() => {
-                if (post.user_id) {
-                  if (post.is_fake_user) {
-                    navigate(`/fake-profile/${post.user_id}`);
-                  } else {
-                    navigate(`/profile/${post.user_id}`);
-                  }
-                }
-              }}
+              onClick={() => post.profiles?.id && navigate(`/profile/${post.profiles.id}`)}
             >
-              {post.user_name || "Ẩn danh"}
+              {post.profiles?.name || "Ẩn danh"}
             </span>
             <span className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</span>
           </div>
@@ -587,26 +423,16 @@ const PostItem: React.FC<{
       
       {/* Actions */}
       <div className="flex items-center gap-4 mb-2 pt-1">
-        <div className="relative">
-          <Button
-            size="sm"
-            variant={liked ? "secondary" : "outline"}
-            className={`transition-all rounded-full px-3 py-1.5 h-8 ${liked ? "text-pink-500 border-pink-400" : "border-gray-200"}`}
-            onClick={handleLike}
-            disabled={isToggling || !user?.id}
-          >
-            <Heart className={`${liked ? "fill-pink-500 text-pink-500" : ""} ${showHeartAnimation ? "animate-pulse-heart" : ""}`} size={16} />
-            <span className="ml-1 text-sm">{likeCount > 0 ? likeCount : ""}</span>
-          </Button>
-          {/* Floating hearts animation */}
-          {showHeartAnimation && (
-            <>
-              <Heart className="absolute -top-1 left-1/2 -translate-x-1/2 text-pink-500 fill-pink-500 animate-float-heart" size={14} />
-              <Heart className="absolute -top-1 left-1/3 text-red-400 fill-red-400 animate-float-heart" size={10} style={{ animationDelay: '0.1s' }} />
-              <Heart className="absolute -top-1 left-2/3 text-pink-400 fill-pink-400 animate-float-heart" size={12} style={{ animationDelay: '0.2s' }} />
-            </>
-          )}
-        </div>
+        <Button
+          size="sm"
+          variant={liked ? "secondary" : "outline"}
+          className={`transition-all rounded-full px-3 py-1.5 h-8 ${liked ? "text-pink-500 border-pink-400" : "border-gray-200"}`}
+          onClick={handleLike}
+          disabled={isToggling}
+        >
+          <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={16} />
+          <span className="ml-1 text-sm">{likeCount > 0 ? likeCount : ""}</span>
+        </Button>
         <Button
           size="sm"
           variant="outline"
@@ -629,18 +455,9 @@ const PostItem: React.FC<{
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 leading-none mb-1">
                   <span className="font-semibold text-sm">{cmt.profiles?.name ?? "Ẩn danh"}</span>
-                  {user?.id && (
-                    <button
-                      type="button"
-                      className="text-xs text-gray-500 hover:text-blue-500 transition-colors"
-                      onClick={() => handleReply(cmt.profiles?.name ?? "Ẩn danh")}
-                    >
-                      Trả lời
-                    </button>
-                  )}
                   <span className="text-xs text-gray-400">{new Date(cmt.created_at).toLocaleTimeString("vi-VN")}</span>
                 </div>
-                <div className="text-sm text-gray-800">{renderCommentContent(cmt.content)}</div>
+                <div className="text-sm text-gray-800">{cmt.content}</div>
               </div>
             </div>
           ))}
@@ -648,33 +465,18 @@ const PostItem: React.FC<{
       )}
       
       {/* Comment Input */}
-      {user?.id && (
-        <form className="flex items-center gap-2 mt-2" onSubmit={handleCommentSubmit}>
-          <Input
-            ref={commentInputRef}
-            className="h-8 text-sm bg-gray-50 border border-gray-200 flex-1"
-            value={commentInput}
-            placeholder="Viết bình luận..."
-            onChange={e => setCommentInput(e.target.value)}
-            disabled={realPostComments.creating || fakeUserInteractions.isProcessing}
-          />
-          <Button 
-            type="submit" 
-            size="sm" 
-            variant="secondary" 
-            className="aspect-square h-8 w-8 p-0 flex-shrink-0" 
-            disabled={realPostComments.creating || fakeUserInteractions.isProcessing}
-          >
-            <SendHorizonal size={14} />
-          </Button>
-        </form>
-      )}
-
-      {!user?.id && (
-        <div className="text-center text-gray-500 text-sm py-2 border-t mt-2">
-          Đăng nhập để tương tác với bài viết
-        </div>
-      )}
+      <form className="flex items-center gap-2 mt-2" onSubmit={handleCommentSubmit}>
+        <Input
+          className="h-8 text-sm bg-gray-50 border border-gray-200 flex-1"
+          value={commentInput}
+          placeholder="Viết bình luận..."
+          onChange={e => setCommentInput(e.target.value)}
+          disabled={creating}
+        />
+        <Button type="submit" size="sm" variant="secondary" className="aspect-square h-8 w-8 p-0 flex-shrink-0" disabled={creating}>
+          <SendHorizonal size={14} />
+        </Button>
+      </form>
 
       {/* Delete Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

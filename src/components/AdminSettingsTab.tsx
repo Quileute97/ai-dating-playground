@@ -1,27 +1,17 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import BankInfoManager from "./BankInfoManager";
 import HeaderAdManager from "./HeaderAdManager";
 import { useBankInfo } from "@/hooks/useBankInfo";
-import { useAdminSettings } from "@/hooks/useAdminSettings";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 
 export default function AdminSettingsTab() {
   const [qrImgUploading, setQrImgUploading] = useState(false);
   const { toast } = useToast();
   const { bankInfo, loading, refetch } = useBankInfo();
-  const { 
-    getDatingRequiresPremium, 
-    setDatingRequiresPremium,
-    getChatFilterEnabled,
-    setChatFilterEnabled,
-    isLoading: settingsLoading
-  } = useAdminSettings();
 
   // Local state for bank info draft
   const [bankInfoDraft, setBankInfoDraft] = useState(bankInfo);
@@ -36,8 +26,9 @@ export default function AdminSettingsTab() {
     localStorage.getItem('headerAdCode') || ''
   );
 
-  // Settings state (removed OpenAI API key - now stored in Supabase secrets)
+  // Settings state
   const [settings, setSettings] = useState({
+    openaiApiKey: '',
     chatTimeout: 60,
     aiMatchRate: 30,
     searchRadius: 5
@@ -128,58 +119,17 @@ export default function AdminSettingsTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Cài đặt tính năng Dating</CardTitle>
-          <CardDescription>Quản lý quyền truy cập các tính năng Dating</CardDescription>
+          <CardTitle>Cài đặt hệ thống</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <h3 className="font-semibold text-blue-800 mb-2">Thanh toán tự động</h3>
-            <p className="text-sm text-blue-600">
-              Hệ thống đã tích hợp PayOS để xử lý thanh toán tự động. 
-              Không cần duyệt thủ công nữa.
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Label htmlFor="dating-premium-toggle" className="flex-1">
-              <div className="space-y-1">
-                <div>Yêu cầu Premium cho Hẹn hò</div>
-                <div className="text-sm text-muted-foreground">
-                  Khi tắt, tất cả người dùng có thể sử dụng tính năng Hẹn hò không giới hạn
-                </div>
-              </div>
-            </Label>
-            <Switch
-              id="dating-premium-toggle"
-              checked={getDatingRequiresPremium()}
-              onCheckedChange={(checked) => setDatingRequiresPremium(checked)}
-              disabled={settingsLoading}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Cài đặt tính năng Chat</CardTitle>
-          <CardDescription>Quản lý hiển thị danh sách tin nhắn</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="chat-filter-toggle" className="flex-1">
-              <div className="space-y-1">
-                <div>Bật giới hạn tin nhắn cho người dùng Free</div>
-                <div className="text-sm text-muted-foreground">
-                  Khi bật, người dùng Free chỉ xem được 5 cuộc hội thoại đầu tiên
-                </div>
-              </div>
-            </Label>
-            <Switch
-              id="chat-filter-toggle"
-              checked={getChatFilterEnabled()}
-              onCheckedChange={(checked) => setChatFilterEnabled(checked)}
-              disabled={settingsLoading}
-            />
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h3 className="font-semibold text-blue-800 mb-2">Thanh toán tự động</h3>
+              <p className="text-sm text-blue-600">
+                Hệ thống đã tích hợp PayOS để xử lý thanh toán tự động. 
+                Không cần duyệt thủ công nữa.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -200,15 +150,18 @@ export default function AdminSettingsTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Cài đặt Hệ thống</CardTitle>
+          <CardTitle>Cài đặt AI & Hệ thống</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <h3 className="font-semibold text-blue-800 mb-2">🔒 Bảo mật OpenAI API</h3>
-            <p className="text-sm text-blue-600">
-              OpenAI API key được lưu an toàn trong Supabase Secrets. 
-              Vui lòng liên hệ developer để cập nhật key.
-            </p>
+          <div>
+            <label className="block text-sm font-medium mb-2">OpenAI API Key</label>
+            <input
+              type="password"
+              value={settings.openaiApiKey}
+              onChange={e => setSettings(prev => ({ ...prev, openaiApiKey: e.target.value }))}
+              className="w-full p-2 rounded border"
+              placeholder="sk-..."
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Thời gian chờ chat (giây)</label>

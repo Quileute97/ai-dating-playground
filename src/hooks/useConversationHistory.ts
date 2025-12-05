@@ -7,8 +7,6 @@ export interface Message {
   sender: "real" | "fake" | "admin";
   content: string;
   created_at: string;
-  media_url?: string;
-  media_type?: string;
 }
 
 export interface Conversation {

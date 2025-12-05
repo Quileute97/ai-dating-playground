@@ -29,18 +29,18 @@ const AIConfigModal = ({ isOpen, onClose }: AIConfigModalProps) => {
   ];
 
   const handleConnect = async () => {
-    // Note: API key is now stored in Supabase secrets by admin
-    // This modal is for selecting personality only
+    if (!apiKey.trim()) return;
+    
     setIsConnecting(true);
     try {
-      // Save personality preference to localStorage
-      localStorage.setItem('aiPersonality', selectedPersonality);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      aiService.setApiKey(apiKey);
+      // Test the connection with a simple request
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setIsConnecting(false);
       onClose();
     } catch (error) {
       setIsConnecting(false);
-      console.error('Failed to save AI config:', error);
+      console.error('Failed to connect to AI service:', error);
     }
   };
 
@@ -60,18 +60,40 @@ const AIConfigModal = ({ isOpen, onClose }: AIConfigModalProps) => {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Security Notice */}
-          <Card className="border-blue-200 bg-blue-50">
+          {/* API Key Section */}
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg text-blue-800">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Key className="w-5 h-5" />
-                🔒 Bảo mật AI
+                OpenAI API Key (Tùy chọn)
               </CardTitle>
-              <CardDescription className="text-blue-600">
-                OpenAI API key được quản lý an toàn bởi admin trong Supabase Secrets. 
-                Bạn chỉ cần chọn tính cách AI bên dưới.
+              <CardDescription>
+                Nhập API key để sử dụng AI thật. Nếu không có, hệ thống sẽ dùng AI mô phỏng.
               </CardDescription>
             </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="apikey">API Key</Label>
+                <Input
+                  id="apikey"
+                  type="password"
+                  placeholder="sk-..."
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Lấy API key tại{' '}
+                <a 
+                  href="https://platform.openai.com/api-keys" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-purple-500 hover:underline"
+                >
+                  OpenAI Platform
+                </a>
+              </p>
+            </CardContent>
           </Card>
 
           {/* Personality Selection */}
@@ -120,20 +142,20 @@ const AIConfigModal = ({ isOpen, onClose }: AIConfigModalProps) => {
               onClick={handleSkip}
               className="flex-1"
             >
-              Bỏ qua
+              Dùng AI mô phỏng
             </Button>
             <Button
               onClick={handleConnect}
-              disabled={isConnecting}
+              disabled={!apiKey.trim() || isConnecting}
               className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
             >
               {isConnecting ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Đang lưu...
+                  Đang kết nối...
                 </div>
               ) : (
-                'Lưu cài đặt'
+                'Kết nối AI'
               )}
             </Button>
           </div>

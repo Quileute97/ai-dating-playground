@@ -14,11 +14,9 @@ import PostAsFakeUserModal from './PostAsFakeUserModal';
 import { supabase } from "@/integrations/supabase/client";
 
 import AdminOverviewTab from "./AdminOverviewTab";
-import AdminUserManagement from "./AdminUserManagement";
 import AdminFakeUsersTab from "./AdminFakeUsersTab";
 import AdminAIPromptsTab from "./AdminAIPromptsTab";
 import AdminSettingsTab from "./AdminSettingsTab";
-import AdminTimelinePostsTab from "./AdminTimelinePostsTab";
 
 import { toast } from "@/hooks/use-toast";
 import type { FakeUser, AIPrompt } from "@/types/admin";
@@ -219,35 +217,10 @@ const AdminDashboard = () => {
     setEditingAIPrompt(null);
   };
 
-  const handlePostAsFakeUser = async (content: string, mediaUrl?: string, mediaType?: string) => {
-    if (!postFakeUser) return;
-    
-    try {
-      const { error } = await supabase.from("fake_user_posts").insert({
-        fake_user_id: postFakeUser.id,
-        content: content,
-        media_url: mediaUrl || null,
-        media_type: mediaType || null,
-        created_at: new Date().toISOString(),
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Thành công",
-        description: `Đã đăng bài với tư cách ${postFakeUser.name}`,
-      });
-      
-      setPostFakeUser(null);
-    } catch (error: any) {
-      toast({
-        title: "Lỗi đăng bài",
-        description: error.message || "Có lỗi xảy ra",
-        variant: "destructive",
-      });
-    }
+  const handlePostAsFakeUser = (content: string, user: FakeUser) => {
+    // Chỉ hiển thị thông báo, chưa update trực tiếp vào Timeline
+    alert(`Đã đăng bài với tư cách ${user.name}:\n\n${content}`);
+    // Để tích hợp thực tế: cần truyền tới component Timeline thông qua global state hoặc props callback
   };
 
   // Tab content
@@ -268,21 +241,15 @@ const AdminDashboard = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-            <TabsTrigger value="admin-users">Admin Users</TabsTrigger>
             <TabsTrigger value="fake-users">Người dùng ảo</TabsTrigger>
             <TabsTrigger value="ai-prompts">AI Prompts</TabsTrigger>
-            <TabsTrigger value="timeline-posts">Bài đăng</TabsTrigger>
             <TabsTrigger value="settings">Cài đặt</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             <AdminOverviewTab />
-          </TabsContent>
-
-          <TabsContent value="admin-users" className="space-y-6">
-            <AdminUserManagement />
           </TabsContent>
 
           <TabsContent value="fake-users" className="space-y-6">
@@ -312,7 +279,6 @@ const AdminDashboard = () => {
                 user={user}
                 aiPrompts={aiPrompts}
                 handlePostAsFakeUser={handlePostAsFakeUser}
-                refetchFakeUsers={refetchFakeUsers}
               />
             )}
           </TabsContent>
@@ -328,10 +294,6 @@ const AdminDashboard = () => {
                 handleDeletePrompt={handleDeletePrompt}
               />
             )}
-          </TabsContent>
-
-          <TabsContent value="timeline-posts" className="space-y-6">
-            <AdminTimelinePostsTab />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">

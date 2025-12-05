@@ -28,9 +28,8 @@ export function usePostLikes(postId?: string, userId?: string) {
   useEffect(() => {
     if (!postId) return;
 
-    const channelName = `post-likes-${postId}-${Date.now()}`;
     const channel = supabase
-      .channel(channelName)
+      .channel(`post-likes-${postId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

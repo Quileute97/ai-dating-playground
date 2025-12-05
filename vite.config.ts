@@ -5,10 +5,6 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // Base path for deployment - change this to match your deployment folder
-  // For root deployment: base: '/'
-  // For subfolder deployment: base: '/app/' (replace 'app' with your folder name)
-  base: process.env.VITE_BASE_PATH || '/',
   server: {
     host: "::",
     port: 8080,
@@ -22,20 +18,5 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: mode === 'development',
-    minify: mode === 'production' ? 'esbuild' : false,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
-          'supabase': ['@supabase/supabase-js'],
-        },
-      },
-    },
-    chunkSizeWarningLimit: 1000,
   },
 }));

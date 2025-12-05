@@ -118,6 +118,7 @@ import { useDatingProfile } from "@/hooks/useDatingProfile";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 import { useFakePostComments } from "@/hooks/useFakePostComments";
 import { useFakePostLikes } from "@/hooks/useFakePostLikes";
+import { useOnlinePresence } from "@/hooks/useOnlinePresence";
 
 type TimelineProps = {
   user: any;
@@ -130,6 +131,7 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
   const [hashtag, setHashtag] = React.useState<string | null>(null);
   const fakeUserInteractions = useFakeUserInteractions(userId);
   const { toast } = useToast();
+  const { onlineCount } = useOnlinePresence(userId, profile?.name);
 
   // Realtime subscription for reply notifications
   React.useEffect(() => {
@@ -226,6 +228,19 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
       {user && (
         <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
       )}
+      
+      {/* Online users indicator */}
+      <div className="flex items-center justify-center gap-2 py-2 mt-2">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          </span>
+          <span className="text-sm text-green-700 font-medium">
+            {onlineCount > 0 ? onlineCount : 1} người đang online
+          </span>
+        </div>
+      </div>
       
       <div className="flex-1 overflow-y-auto space-y-2 mt-3">
         {isLoading && (

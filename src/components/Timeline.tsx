@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 import { VN_PROVINCES } from "@/utils/vnProvinces";
 import HashtagPostsModal from "./HashtagPostsModal";
+import StoriesBar from "./StoriesBar";
 import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -225,6 +226,11 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
 
   return (
     <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in">
+      {/* Stories Bar */}
+      <div className="mb-4 pb-3 border-b border-gray-200">
+        <StoriesBar user={user} userProfile={profile} />
+      </div>
+      
       {user && (
         <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
       )}

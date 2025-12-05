@@ -28,6 +28,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useChatIntegration } from '@/hooks/useChatIntegration';
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 
 // -- Sticker data (Gen Z)
 const STICKERS = [
@@ -129,6 +130,54 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
   const [hashtag, setHashtag] = React.useState<string | null>(null);
   const fakeUserInteractions = useFakeUserInteractions(userId);
   const { toast } = useToast();
+
+  // Realtime subscription for reply notifications
+  React.useEffect(() => {
+    if (!userId || !profile?.name) return;
+
+    const channelName = `reply-notifications-${userId}-${Date.now()}`;
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'comments',
+      }, (payload: any) => {
+        const newComment = payload.new;
+        // Check if the comment mentions the current user
+        if (newComment.content && newComment.user_id !== userId) {
+          const mentionPattern = new RegExp(`@${profile.name}\\b`, 'i');
+          if (mentionPattern.test(newComment.content)) {
+            toast({
+              title: "💬 Có người trả lời bình luận của bạn!",
+              description: newComment.content.substring(0, 50) + (newComment.content.length > 50 ? "..." : ""),
+            });
+          }
+        }
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'fake_post_comments',
+      }, (payload: any) => {
+        const newComment = payload.new;
+        // Check if the comment mentions the current user
+        if (newComment.content && newComment.user_id !== userId) {
+          const mentionPattern = new RegExp(`@${profile.name}\\b`, 'i');
+          if (mentionPattern.test(newComment.content)) {
+            toast({
+              title: "💬 Có người trả lời bình luận của bạn!",
+              description: newComment.content.substring(0, 50) + (newComment.content.length > 50 ? "..." : ""),
+            });
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, profile?.name, toast]);
 
   const handlePostSubmit = async (
     data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">
@@ -343,6 +392,8 @@ const PostItem: React.FC<{
   const [commentInput, setCommentInput] = React.useState("");
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const commentInputRef = React.useRef<HTMLInputElement>(null);
+  const [showHeartAnimation, setShowHeartAnimation] = React.useState(false);
+  const { toast } = useToast();
 
   const handleReply = (username: string) => {
     const mention = `@${username} `;
@@ -403,6 +454,12 @@ const PostItem: React.FC<{
   };
 
   const handleLike = async () => {
+    // Trigger animation only when liking (not unliking)
+    if (!liked) {
+      setShowHeartAnimation(true);
+      setTimeout(() => setShowHeartAnimation(false), 800);
+    }
+    
     if (post.is_fake_user) {
       // Like fake user post
       await fakeUserInteractions.likeFakePost(post.id);
@@ -509,16 +566,26 @@ const PostItem: React.FC<{
       
       {/* Actions */}
       <div className="flex items-center gap-4 mb-2 pt-1">
-        <Button
-          size="sm"
-          variant={liked ? "secondary" : "outline"}
-          className={`transition-all rounded-full px-3 py-1.5 h-8 ${liked ? "text-pink-500 border-pink-400" : "border-gray-200"}`}
-          onClick={handleLike}
-          disabled={isToggling || !user?.id}
-        >
-          <Heart className={liked ? "fill-pink-500 text-pink-500" : ""} size={16} />
-          <span className="ml-1 text-sm">{likeCount > 0 ? likeCount : ""}</span>
-        </Button>
+        <div className="relative">
+          <Button
+            size="sm"
+            variant={liked ? "secondary" : "outline"}
+            className={`transition-all rounded-full px-3 py-1.5 h-8 ${liked ? "text-pink-500 border-pink-400" : "border-gray-200"}`}
+            onClick={handleLike}
+            disabled={isToggling || !user?.id}
+          >
+            <Heart className={`${liked ? "fill-pink-500 text-pink-500" : ""} ${showHeartAnimation ? "animate-pulse-heart" : ""}`} size={16} />
+            <span className="ml-1 text-sm">{likeCount > 0 ? likeCount : ""}</span>
+          </Button>
+          {/* Floating hearts animation */}
+          {showHeartAnimation && (
+            <>
+              <Heart className="absolute -top-1 left-1/2 -translate-x-1/2 text-pink-500 fill-pink-500 animate-float-heart" size={14} />
+              <Heart className="absolute -top-1 left-1/3 text-red-400 fill-red-400 animate-float-heart" size={10} style={{ animationDelay: '0.1s' }} />
+              <Heart className="absolute -top-1 left-2/3 text-pink-400 fill-pink-400 animate-float-heart" size={12} style={{ animationDelay: '0.2s' }} />
+            </>
+          )}
+        </div>
         <Button
           size="sm"
           variant="outline"

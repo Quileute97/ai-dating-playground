@@ -9,6 +9,8 @@ interface Message {
   sender_id: string;
   created_at: string;
   conversation_id: string;
+  media_url?: string;
+  media_type?: string;
 }
 
 export function useStrangerChat(currentUserId: string | null) {
@@ -24,8 +26,9 @@ export function useStrangerChat(currentUserId: string | null) {
 
     console.log("📨 Setting up realtime for conversation:", conversationId);
 
+    const channelName = `messages-stranger-${conversationId}-${Date.now()}`;
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

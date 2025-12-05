@@ -45,7 +45,7 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
       
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select('id, content, created_at, sender_id, conversation_id, media_url, media_type')
         .eq('conversation_id', conversation.id)
         .order('created_at', { ascending: true });
 
@@ -59,8 +59,9 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
   useEffect(() => {
     if (!conversation?.id) return;
 
+    const channelName = `messages-real-${conversation.id}-${Date.now()}`;
     const channel = supabase
-      .channel(`messages-${conversation.id}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -84,7 +85,7 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
 
   // Send message mutation - lưu tin nhắn vĩnh viễn với enhanced sync
   const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, mediaUrl, mediaType }: { content: string; mediaUrl?: string; mediaType?: string }) => {
       if (!conversation?.id) throw new Error("No conversation found");
       
       const { error } = await supabase
@@ -93,16 +94,22 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
           conversation_id: conversation.id,
           content: content.trim(),
           sender: 'real', // Đánh dấu là tin nhắn từ user thật
-          sender_id: myUserId
+          sender_id: myUserId,
+          media_url: mediaUrl || null,
+          media_type: mediaType || null
         }]);
 
       if (error) throw error;
 
       // Update last message in conversation
+      const lastMessage = content.trim() || (mediaUrl ? 
+        (mediaType === 'image' ? '📷 Đã gửi ảnh' : '🎥 Đã gửi video') : 
+        'Đã gửi tin nhắn');
+      
       await supabase
         .from('conversations')
         .update({
-          last_message: content.trim(),
+          last_message: lastMessage,
           last_message_at: new Date().toISOString()
         })
         .eq('id', conversation.id);
@@ -119,7 +126,8 @@ export function useRealTimeMessages(myUserId: string, friendId: string) {
   return {
     messages: messages || [],
     isLoading,
-    sendMessage: sendMessageMutation.mutateAsync,
+    sendMessage: (content: string, mediaUrl?: string, mediaType?: string) => 
+      sendMessageMutation.mutateAsync({ content, mediaUrl, mediaType }),
     sending: sendMessageMutation.isPending
   };
 }

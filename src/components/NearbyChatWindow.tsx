@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useNearbyConversation } from '@/hooks/useNearbyConversation';
 import { useNavigate } from 'react-router-dom';
@@ -98,11 +99,10 @@ const NearbyChatWindow = ({ user, currentUserId, onClose }: NearbyChatWindowProp
             onClick={handleUserClick}
             className="flex items-center gap-3 hover:bg-purple-50 rounded-lg p-2 transition-colors flex-1"
           >
-            <img 
-              src={user.avatar} 
-              alt={user.name}
-              className="w-10 h-10 rounded-full object-cover border-2 border-purple-200"
-            />
+            <Avatar className="w-10 h-10 border-2 border-purple-200">
+              <AvatarImage src={user.avatar} />
+              <AvatarFallback className="bg-purple-100 text-purple-600">{user.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
             
             <div className="flex-1 text-left">
               <h2 className="font-semibold text-gray-800 hover:text-purple-600 transition-colors">{user.name}, {user.age}</h2>

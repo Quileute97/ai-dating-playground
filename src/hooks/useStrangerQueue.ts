@@ -9,8 +9,9 @@ export function useStrangerQueue() {
 
   // Realtime subscription cho stranger queue
   useEffect(() => {
+    const channelName = `stranger-queue-${Date.now()}-${Math.random()}`;
     const channel = supabase
-      .channel('stranger-queue-changes')
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

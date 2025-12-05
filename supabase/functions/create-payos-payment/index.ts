@@ -1,112 +1,234 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { PaymentRequestSchema } from "./zod-validation.ts";
+import type { PaymentRequest } from "./zod-validation.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface PackageInfo {
+  name: string;
+  price: number;
+  description: string; // Max 25 characters for PayOS
+}
+
+function getPackageInfo(packageType: string): PackageInfo | null {
+  const packages: Record<string, PackageInfo> = {
+    // Dating packages
+    "dating_week": {
+      name: "Premium 1 tuần",
+      price: 20000,
+      description: "Premium 1 tuan" // 14 chars
+    },
+    "dating_month": {
+      name: "Premium 1 tháng", 
+      price: 50000,
+      description: "Premium 1 thang" // 15 chars
+    },
+    "dating_lifetime": {
+      name: "Premium vĩnh viễn",
+      price: 500000,
+      description: "Premium vinh vien" // 17 chars
+    },
+    // Nearby packages
+    "nearby_week": {
+      name: "Nearby 1 tuần",
+      price: 20000,
+      description: "Nearby 1 tuan" // 13 chars
+    },
+    "nearby_month": {
+      name: "Nearby 1 tháng",
+      price: 50000,
+      description: "Nearby 1 thang" // 14 chars
+    },
+    "nearby_unlimited": {
+      name: "Nearby vĩnh viễn", 
+      price: 500000,
+      description: "Nearby vinh vien" // 16 chars
+    }
+  };
+
+  return packages[packageType] || null;
+}
+
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { orderCode, userId, userEmail, packageType, returnUrl, cancelUrl } = await req.json();
+    console.log("🚀 Creating PayOS payment...");
 
-    // Package pricing and details
-    const packageDetails = {
-      'gold': { amount: 99000, description: 'Gói GOLD - Không giới hạn match', duration: -1 },
-      'nearby': { amount: 49000, description: 'Gói Mở rộng Quanh đây - Cũ', duration: -1 },
-      'nearby_week': { amount: 20000, description: 'Gói Premium 1 Tuần - Mở rộng phạm vi 20km', duration: 7 },
-      'nearby_month': { amount: 50000, description: 'Gói Premium 1 Tháng - Mở rộng phạm vi 20km', duration: 30 },
-      'nearby_unlimited': { amount: 500000, description: 'Gói Premium Vô Hạn - Mở rộng phạm vi 20km', duration: -1 }
-    };
+    // Get PayOS credentials from environment
+    const clientId = Deno.env.get("PAYOS_CLIENT_ID");
+    const apiKey = Deno.env.get("PAYOS_API_KEY");
+    const checksumKey = Deno.env.get("PAYOS_CHECKSUM_KEY");
 
-    const selectedPackage = packageDetails[packageType as keyof typeof packageDetails];
-    if (!selectedPackage) {
-      throw new Error('Invalid package type');
+    if (!clientId || !apiKey || !checksumKey) {
+      throw new Error("PayOS credentials not configured");
     }
 
-    // Create PayOS payment
+    // Authenticate user
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
+
+    const authHeader = req.headers.get("Authorization")!;
+    const token = authHeader.replace("Bearer ", "");
+    const { data } = await supabaseClient.auth.getUser(token);
+    const user = data.user;
+    if (!user?.email) throw new Error("User not authenticated");
+
+    console.log("✅ User authenticated:", user.email);
+
+    // Parse and validate request body
+    const rawBody = await req.json();
+    const validationResult = PaymentRequestSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      console.error("❌ Validation failed:", validationResult.error);
+      return new Response(
+        JSON.stringify({
+          error: 1,
+          message: "Invalid request data",
+          details: validationResult.error.errors
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
+    
+    const body = validationResult.data;
+    const { packageType, userId, userEmail } = body;
+
+    console.log("📝 Validated payment request:", { packageType, userId, userEmail });
+
+    // Get package info based on packageType
+    const packageInfo = getPackageInfo(packageType);
+    if (!packageInfo) {
+      throw new Error(`Invalid package type: ${packageType}`);
+    }
+
+    const { name, price: amount, description } = packageInfo;
+    console.log("📦 Package info:", { name, amount, description });
+
+    // Generate unique order code
+    const orderCode = body.orderCode || Date.now();
+    
+    // Default URLs
+    const origin = req.headers.get("origin") || "https://preview--ai-dating-playground.lovable.app";
+    const returnUrl = body.returnUrl || `${origin}/payment-success`;
+    const cancelUrl = body.cancelUrl || `${origin}/payment-cancel`;
+
+    console.log("📝 Payment details:", { orderCode, amount, description });
+
+    // Create payment data
     const paymentData = {
       orderCode,
-      amount: selectedPackage.amount,
-      description: selectedPackage.description,
-      returnUrl: returnUrl || `${req.headers.get('origin')}/payment-success`,
-      cancelUrl: cancelUrl || `${req.headers.get('origin')}/payment-cancel`,
+      amount,
+      description,
+      returnUrl,
+      cancelUrl,
+      signature: ""
     };
 
-    console.log('Creating PayOS payment with data:', paymentData);
+    // Create signature for PayOS
+    const dataStr = `amount=${amount}&cancelUrl=${cancelUrl}&description=${description}&orderCode=${orderCode}&returnUrl=${returnUrl}`;
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(checksumKey);
+    const messageData = encoder.encode(dataStr);
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    
+    const signatureArrayBuffer = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
+    const signatureArray = new Uint8Array(signatureArrayBuffer);
+    const signature = Array.from(signatureArray)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
 
-    const payosResponse = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
-      method: 'POST',
+    paymentData.signature = signature;
+
+    console.log("🔐 Signature generated");
+
+    // Call PayOS API to create payment
+    const payosResponse = await fetch("https://api-merchant.payos.vn/v2/payment-requests", {
+      method: "POST",
       headers: {
-        'x-client-id': Deno.env.get('PAYOS_CLIENT_ID') || '',
-        'x-api-key': Deno.env.get('PAYOS_API_KEY') || '',
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
+        "x-client-id": clientId,
+        "x-api-key": apiKey,
       },
       body: JSON.stringify(paymentData),
     });
 
-    const payosResult = await payosResponse.json();
-    console.log('PayOS API response:', payosResult);
-
-    if (!payosResponse.ok || payosResult.code !== '00') {
-      throw new Error(`PayOS API error: ${payosResult.desc || 'Unknown error'}`);
+    if (!payosResponse.ok) {
+      const errorText = await payosResponse.text();
+      console.error("❌ PayOS API Error:", errorText);
+      throw new Error(`PayOS API Error: ${payosResponse.status} - ${errorText}`);
     }
 
-    // Save upgrade request to database
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const payosResult = await payosResponse.json();
+    console.log("✅ PayOS payment created successfully");
+
+    // Store payment info in database
+    const supabaseService = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
     );
 
-    const { error: dbError } = await supabase
-      .from('upgrade_requests')
-      .insert({
-        user_id: userId,
-        user_email: userEmail,
-        type: packageType,
-        price: selectedPackage.amount,
-        duration_days: selectedPackage.duration,
-        expires_at: selectedPackage.duration > 0 
-          ? new Date(Date.now() + selectedPackage.duration * 24 * 60 * 60 * 1000).toISOString()
-          : null,
-        status: 'pending',
-        bank_info: {
-          orderCode,
-          paymentLinkId: payosResult.data?.paymentLinkId,
-          checkoutUrl: payosResult.data?.checkoutUrl
-        }
-      });
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-      throw new Error('Failed to save upgrade request');
-    }
-
-    return new Response(JSON.stringify({
-      error: 0,
-      message: 'success',
-      data: {
-        checkoutUrl: payosResult.data?.checkoutUrl,
-        orderCode,
-        paymentLinkId: payosResult.data?.paymentLinkId,
-      }
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    await supabaseService.from("payos_invoices").insert({
+      user_id: user.id,
+      order_code: orderCode,
+      amount,
+      description,
+      status: "PENDING",
+      payos_data: payosResult
     });
+
+    console.log("💾 Payment record saved to database");
+
+    return new Response(
+      JSON.stringify({
+        error: 0,
+        message: "Success",
+        data: {
+          checkoutUrl: payosResult.data.checkoutUrl,
+          orderCode,
+          paymentLinkId: payosResult.data.paymentLinkId,
+          amount,
+          description
+        }
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
 
   } catch (error) {
-    console.error('Create payment error:', error);
-    return new Response(JSON.stringify({
-      error: 1,
-      message: error.message || 'Payment creation failed'
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error("💥 Error creating PayOS payment:", error);
+    return new Response(
+      JSON.stringify({
+        error: 1,
+        message: error instanceof Error ? error.message : "Internal server error"
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
 });

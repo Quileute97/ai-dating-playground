@@ -7,6 +7,8 @@ interface Message {
   content: string;
   sender: string;
   created_at: string;
+  media_url?: string;
+  media_type?: string;
 }
 
 export function useNearbyConversation(currentUserId: string | null, targetUserId: string | null) {
@@ -70,8 +72,9 @@ export function useNearbyConversation(currentUserId: string | null, targetUserId
     loadMessages();
 
     // Real-time subscription
+    const channelName = `messages-conv-${conversationId}-${Date.now()}`;
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',

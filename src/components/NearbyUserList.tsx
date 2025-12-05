@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MapPin, Heart, MessageCircle, Star, Crown } from "lucide-react";
+import { getDefaultAvatar } from "@/utils/getDefaultAvatar";
 
 interface NearbyUser {
   id: string;
@@ -11,6 +12,7 @@ interface NearbyUser {
   age: number;
   distance: number;
   avatar: string;
+  gender?: string;
   isOnline: boolean;
   lastSeen: string;
   interests: string[];
@@ -72,7 +74,7 @@ const NearbyUserList: React.FC<NearbyUserListProps> = ({
               {/* Avatar */}
               <div className="relative">
                 <img
-                  src={user.avatar}
+                  src={getDefaultAvatar(user.gender, user.avatar)}
                   alt={user.name}
                   className="w-16 h-16 rounded-full object-cover"
                 />

@@ -29,8 +29,9 @@ export function useTimelineComments(postId?: string) {
   useEffect(() => {
     if (!postId) return;
 
+    const channelName = `comments-${postId}-${Date.now()}`;
     const channel = supabase
-      .channel(`comments-${postId}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

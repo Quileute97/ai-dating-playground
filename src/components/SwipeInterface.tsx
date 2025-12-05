@@ -1,31 +1,42 @@
 import React, { useState, useMemo } from 'react';
-import { Heart, X, Zap, Crown } from 'lucide-react';
+import { Heart, X, Zap, Crown, Star, ArrowRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 import { useBankInfo } from "@/hooks/useBankInfo";
 import DatingProfileView from "./DatingProfileView";
-import NearbyFeatureBanner from "@/components/NearbyFeatureBanner";
-import DatingPackageModal from "./DatingPackageModal";
+import DatingFeatureBanner from "./DatingFeatureBanner";
+import PremiumUpgradeModal from "./PremiumUpgradeModal";
 import { useUserLike } from "@/hooks/useUserLike";
 import { useNearbyProfiles } from "@/hooks/useNearbyProfiles";
 import { useIsDatingActive } from "@/hooks/useDatingSubscription";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useUpdateProfileLocation } from "@/hooks/useUpdateProfileLocation";
 import { useDailyMatches } from "@/hooks/useDailyMatches";
-import { createDatingPackagePayment } from "@/services/datingPackageService";
+import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useFakeUserInteractions } from '@/hooks/useFakeUserInteractions';
+import { useAdminSettings } from '@/hooks/useAdminSettings';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface SwipeInterfaceProps {
   user?: any;
+  onPremiumUpgradeClick?: () => void;
+  onOpenChat?: (userId: string) => void;
 }
 
-const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
+const SwipeInterface = ({ user, onPremiumUpgradeClick, onOpenChat }: SwipeInterfaceProps) => {
+  const navigate = useNavigate();
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [matches, setMatches] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
-  const [showDatingPackageModal, setShowDatingPackageModal] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
+  const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
+  const [matchedProfiles, setMatchedProfiles] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const bankInfoHook = useBankInfo();
   
@@ -41,26 +52,100 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
 
   // Use daily matches hook to get real count from database
   const { dailyMatches, loading: dailyMatchesLoading } = useDailyMatches(user?.id);
+  
+  // Check if premium is required
+  const { getDatingRequiresPremium } = useAdminSettings();
+  const premiumRequired = getDatingRequiresPremium();
 
   // Use real data from database with expanded range (50km for dating vs 5km for nearby)
   const { profiles, loading: profilesLoading } = useNearbyProfiles(user?.id, userLocation, 50);
   
-  const availableProfiles = useMemo(() =>
-    profiles
-      .filter(p => p.id !== user?.id && p.name && p.avatar && p.is_dating_active)
-      .map(p => ({
-        ...p,
-        images: [p.avatar!],
-        bio: p.bio || "Chào bạn! Tôi đang tìm kiếm những kết nối thú vị trên ứng dụng này.",
-        distance: p.distance || Math.floor(Math.random() * 20) + 1, // Use real distance or random if not available
-        interests: Array.isArray(p.interests) ? p.interests : [],
-        age: p.age || 25,
-        height: p.height,
-        job: p.job,
-        education: p.education,
-        location_name: p.location_name
-      })), [profiles, user?.id]
-  );
+  // Import fake user interactions hook
+  const fakeUserInteractions = useFakeUserInteractions(user?.id);
+  
+  // Fetch liked and matched profiles
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const fetchLikedAndMatchedProfiles = async () => {
+      try {
+        // Get all profiles this user has liked
+        const { data: likedData, error: likedError } = await supabase
+          .from('user_likes')
+          .select('liked_id')
+          .eq('liker_id', user.id);
+        
+        if (likedError) throw likedError;
+        
+        // Get all profiles that have mutual likes (matches)
+        const { data: matchedData, error: matchedError } = await supabase
+          .from('user_likes')
+          .select('liked_id, liker_id')
+          .or(`liker_id.eq.${user.id},liked_id.eq.${user.id}`);
+        
+        if (matchedError) throw matchedError;
+        
+        // Set liked profiles
+        const likedIds = new Set<string>(likedData?.map(item => item.liked_id) || []);
+        setLikedProfiles(likedIds);
+        
+        // Find mutual matches
+        const userLikes = matchedData?.filter(item => item.liker_id === user.id).map(item => item.liked_id) || [];
+        const otherLikes = matchedData?.filter(item => item.liked_id === user.id).map(item => item.liker_id) || [];
+        const mutualMatches = userLikes.filter(id => otherLikes.includes(id));
+        
+        setMatchedProfiles(new Set<string>(mutualMatches));
+      } catch (error) {
+        console.error('Error fetching liked/matched profiles:', error);
+      }
+    };
+    
+    fetchLikedAndMatchedProfiles();
+  }, [user?.id]);
+  
+  const availableProfiles = useMemo(() => {
+    console.log('Debug - All profiles:', profiles.length);
+    console.log('Debug - User location:', userLocation);
+    console.log('Debug - Liked profiles:', likedProfiles.size);
+    console.log('Debug - Matched profiles:', matchedProfiles.size);
+    
+    const filtered = profiles.filter(p => {
+      const isValid = p.id !== user?.id && 
+        p.name && 
+        p.avatar && 
+        (p.is_dating_active !== false) && // Support both real and fake users
+        !likedProfiles.has(p.id) &&  // Filter out already liked profiles
+        !matchedProfiles.has(p.id);   // Filter out already matched profiles
+      
+      if (!isValid) {
+        console.log('Debug - Filtered out profile:', p.name, {
+          sameUser: p.id === user?.id,
+          hasName: !!p.name,
+          hasAvatar: !!p.avatar,
+          isDatingActive: p.is_dating_active !== false,
+          isLiked: likedProfiles.has(p.id),
+          isMatched: matchedProfiles.has(p.id)
+        });
+      }
+      
+      return isValid;
+    });
+    
+    console.log('Debug - Available profiles after filter:', filtered.length);
+    
+    return filtered.map(p => ({
+      ...p,
+      images: [getDefaultAvatar(p.gender, p.avatar)],
+      bio: p.bio || "Chào bạn! Tôi đang tìm kiếm những kết nối thú vị trên ứng dụng này.",
+      distance: p.distance || Math.floor(Math.random() * 20) + 1,
+      interests: Array.isArray(p.interests) ? p.interests : [],
+      age: p.age || 25,
+      height: p.height,
+      job: p.job,
+      education: p.education,
+      location_name: p.location_name
+    }));
+  }, [profiles, user?.id, likedProfiles, matchedProfiles, userLocation]);
 
   const maxFreeMatches = 10;
   const remainingMatches = maxFreeMatches - dailyMatches;
@@ -69,13 +154,13 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   const handleSwipe = async (direction: 'left' | 'right' | 'super') => {
     if (!currentProfile) return;
     
-    if (!isDatingActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
+    // Only check limits if premium is required
+    if (premiumRequired && !isDatingActive && dailyMatches >= maxFreeMatches && (direction === 'right' || direction === 'super')) {
       toast({
         title: "Đã hết lượt match miễn phí!",
         description: "Nâng cấp Premium để có không giới hạn lượt match",
         variant: "destructive"
       });
-      setShowDatingPackageModal(true);
       return;
     }
 
@@ -83,8 +168,31 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
 
     if (direction === 'right' || direction === 'super') {
       try {
-        const res = await likeUser(currentProfile.id);
+        let res;
+        
+        // Check if this is a fake user by checking if it exists in fake_users table
+        const { data: fakeUserCheck } = await supabase
+          .from('fake_users')
+          .select('id')
+          .eq('id', currentProfile.id)
+          .single();
+        
+        const isFakeUser = !!fakeUserCheck;
+        
+        if (isFakeUser) {
+          // Like fake user
+          res = await fakeUserInteractions.likeFakeUser(currentProfile.id);
+        } else {
+          // Like real user
+          res = await likeUser(currentProfile.id);
+        }
+        
+        // Add to liked profiles to prevent showing again
+        setLikedProfiles(prev => new Set([...prev, currentProfile.id]));
+        
         if (res.matched) {
+          // Add to matched profiles to prevent showing again
+          setMatchedProfiles(prev => new Set([...prev, currentProfile.id]));
           setMatches(prev => prev + 1);
           setShowMatch(true);
           setTimeout(() => setShowMatch(false), 3000);
@@ -130,50 +238,11 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
     handleSwipe(direction);
   };
 
-  const handleSelectPackage = async (packageId: string) => {
-    if (!user) {
-      toast({
-        title: "Cần đăng nhập",
-        description: "Vui lòng đăng nhập để mua gói Premium",
-        variant: "destructive"
-      });
-      return;
-    }
 
-    try {
-      toast({
-        title: "Đang tạo thanh toán...",
-        description: "Vui lòng chờ trong giây lát",
-      });
-
-      const result = await createDatingPackagePayment(packageId, user.id, user.email);
-      
-      if (result.error) {
-        toast({
-          title: "Có lỗi xảy ra!",
-          description: result.message || "Không thể tạo thanh toán",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (result.checkoutUrl) {
-        // Redirect to PayOS checkout
-        window.location.href = result.checkoutUrl;
-      } else {
-        toast({
-          title: "Có lỗi xảy ra!",
-          description: "Không nhận được URL thanh toán",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      toast({
-        title: "Có lỗi xảy ra!",
-        description: "Vui lòng thử lại sau",
-        variant: "destructive"
-      });
+  const handleChatClick = (profile: any) => {
+    // Open chat in messages tab
+    if (onOpenChat) {
+      onOpenChat(profile.id);
     }
   };
 
@@ -195,21 +264,47 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
   }
 
   if (!currentProfile) {
+    // Only consider out of free matches if premium is required
+    const outOfFreeMatches = premiumRequired && !isDatingActive && dailyMatches >= maxFreeMatches;
+    const noMoreProfiles = availableProfiles.length === 0;
+    
+    // This case should not happen when premium is not required
+    if (outOfFreeMatches) {
+      return null;
+    }
+    
+    if (noMoreProfiles) {
+      return (
+        <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50 p-4">
+          <Card className="p-8 text-center bg-white/80 backdrop-blur-sm max-w-md mx-auto">
+            <div className="w-20 h-20 rounded-full mx-auto bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center mb-6">
+              <Heart className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">
+              Hết người trong khu vực!
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Bạn đã xem hết tất cả người dùng trong bán kính 50km. Hãy quay lại sau để tìm thêm người mới!
+            </p>
+            <p className="text-sm text-gray-500 mt-6">
+              Đã kiểm tra {profiles.length} người dùng trong khu vực
+            </p>
+          </Card>
+        </div>
+      );
+    }
+    
     return (
-      <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50">
-        <Card className="p-8 text-center bg-white/70 backdrop-blur-sm">
+      <div className="flex items-center justify-center h-full bg-gradient-to-br from-pink-50 to-purple-50 p-4">
+        <Card className="p-8 text-center bg-white/80 backdrop-blur-sm max-w-md mx-auto">
           <Heart className="w-16 h-16 text-pink-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Hết người rồi!</h2>
-          <p className="text-gray-600 mb-4">Hãy quay lại sau để gặp thêm người dùng mới</p>
-          <p className="text-sm text-gray-500">
-            Tìm thấy {profiles.length} người dùng trong bán kính 50km
-          </p>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Đang tải...</h2>
+          <p className="text-gray-600">Vui lòng chờ trong giây lát</p>
         </Card>
       </div>
     );
   }
 
-  // Show detailed profile view
   if (selectedProfile) {
     return (
       <DatingProfileView
@@ -233,8 +328,8 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         </div>
       )}
 
-      {/* Daily Matches Counter */}
-      {!isDatingActive && (
+      {/* Daily Matches Counter - only show if premium is required */}
+      {premiumRequired && !isDatingActive && (
         <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
           {remainingMatches <= 3 && (
             <span className="text-red-500">⚠️ </span>
@@ -245,11 +340,53 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
 
       {/* Match Notification */}
       {showMatch && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-pink-500/90 to-purple-500/90 backdrop-blur-sm">
-          <div className="text-center text-white animate-pulse">
-            <Heart className="w-20 h-20 mx-auto mb-4 text-red-300" />
-            <h2 className="text-3xl font-bold mb-2">It's a Match! 💖</h2>
-            <p className="text-lg">Bạn và {currentProfile.name} đã thích nhau!</p>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-pink-500/90 to-purple-500/90 backdrop-blur-sm animate-fade-in">
+          <div className="text-center text-white animate-scale-in">
+            {/* Sparkle Effects */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-yellow-300 rounded-full animate-ping" />
+              <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-white rounded-full animate-pulse" />
+              <div className="absolute bottom-1/3 left-1/3 w-1.5 h-1.5 bg-pink-200 rounded-full animate-bounce" />
+              <div className="absolute top-1/2 right-1/3 w-1 h-1 bg-purple-200 rounded-full animate-ping" />
+              <div className="absolute bottom-1/4 right-1/4 w-2 h-2 bg-yellow-200 rounded-full animate-pulse" />
+            </div>
+            
+            {/* Main Heart with Enhanced Animation */}
+            <div className="relative mb-6">
+              <Heart className="w-24 h-24 mx-auto text-red-400 animate-bounce fill-current" />
+              <div className="absolute inset-0 w-24 h-24 mx-auto">
+                <Heart className="w-24 h-24 text-red-300 animate-ping opacity-75" />
+              </div>
+            </div>
+            
+            {/* Match Text with Gradient */}
+            <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300 bg-clip-text text-transparent animate-pulse">
+              It's a Match! 💖
+            </h2>
+            
+            <p className="text-xl mb-8 opacity-90">
+              Bạn và <span className="font-semibold">{currentProfile.name}</span> đã thích nhau!
+            </p>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-4 justify-center">
+              <Button
+                onClick={() => {
+                  setShowMatch(false);
+                  handleChatClick(currentProfile);
+                }}
+                className="bg-white text-pink-600 hover:bg-pink-50 px-8 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+              >
+                💬 Nhắn tin ngay
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowMatch(false)}
+                className="border-white text-white hover:bg-white/20 px-8 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+              >
+                Tiếp tục khám phá
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -321,7 +458,7 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             size="icon"
             className="w-14 h-14 rounded-full border-blue-200 hover:bg-blue-50 hover:border-blue-300"
             onClick={() => handleSwipe('super')}
-            disabled={!isDatingActive && dailyMatches >= maxFreeMatches}
+            disabled={premiumRequired && !isDatingActive && dailyMatches >= maxFreeMatches}
           >
             <Zap className="w-6 h-6 text-blue-500" />
           </Button>
@@ -331,33 +468,36 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
             size="icon"
             className="w-14 h-14 rounded-full border-green-200 hover:bg-green-50 hover:border-green-300"
             onClick={() => handleSwipe('right')}
-            disabled={!isDatingActive && dailyMatches >= maxFreeMatches}
+            disabled={premiumRequired && !isDatingActive && dailyMatches >= maxFreeMatches}
           >
             <Heart className="w-6 h-6 text-green-500" />
           </Button>
         </div>
 
-        {/* Upgrade Banner - Reduced padding */}
-        {!isDatingActive && !datingLoading && (
-          remainingMatches <= 3 && (
-            <Card className="mt-4 p-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-              <div className="text-center">
-                <Crown className="w-8 h-8 mx-auto mb-1" />
-                <h3 className="font-semibold mb-0.5">Nâng cấp Premium</h3>
-                <p className="text-sm opacity-90 mb-1.5">
-                  Không giới hạn lượt match + nhiều tính năng khác
-                </p>
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  className="text-orange-600"
-                  onClick={() => setShowDatingPackageModal(true)}
-                >
-                  Xem gói Premium
-                </Button>
-              </div>
-            </Card>
-          )
+        {/* Compact Premium Banner - only for remaining matches warning and if premium is required */}
+        {premiumRequired && !isDatingActive && remainingMatches <= 3 && remainingMatches > 0 && (
+          <div className="mt-4 p-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Crown className="w-4 h-4" />
+              <span className="text-sm font-semibold">Sắp hết lượt miễn phí!</span>
+            </div>
+            <p className="text-xs opacity-90 mb-2">Còn {remainingMatches} lượt thả tim</p>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-6 px-3 text-xs text-orange-600 hover:text-orange-700"
+              onClick={() => {
+                console.log('🔥 DEBUG: Nâng cấp Premium button clicked in SwipeInterface (compact banner)');
+                if (onPremiumUpgradeClick) {
+                  onPremiumUpgradeClick();
+                } else {
+                  setShowPremiumModal(true);
+                }
+              }}
+            >
+              Nâng cấp Premium
+            </Button>
+          </div>
         )}
 
         {/* Stats */}
@@ -366,18 +506,22 @@ const SwipeInterface = ({ user }: SwipeInterfaceProps) => {
         </div>
       </div>
 
-      {/* Dating Package Modal */}
-      <DatingPackageModal
-        isOpen={showDatingPackageModal}
-        onClose={() => setShowDatingPackageModal(false)}
-        onSelectPackage={handleSelectPackage}
-        currentUser={user}
-        bankInfo={
-          !bankInfoHook.loading && bankInfoHook.bankInfo.bankName 
-          ? bankInfoHook.bankInfo 
-          : undefined
-        }
-      />
+      {/* Premium Upgrade Modal - only show if premium is required and no parent handler */}
+      {premiumRequired && !onPremiumUpgradeClick && (
+        <PremiumUpgradeModal
+          isOpen={showPremiumModal}
+          onClose={() => setShowPremiumModal(false)}
+          userId={user?.id}
+          userEmail={user?.email}
+          onSuccess={() => {
+            setShowPremiumModal(false);
+            toast({
+              title: "🎉 Chuyển hướng thành công!",
+              description: "Hoàn tất thanh toán để kích hoạt Premium.",
+            });
+          }}
+        />
+      )}
     </div>
   );
 };

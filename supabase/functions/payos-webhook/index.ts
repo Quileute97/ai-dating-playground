@@ -1,10 +1,42 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface PayOSWebhookData {
+  code: string;
+  desc: string;
+  data: {
+    orderCode: number;
+    amount: number;
+    description: string;
+    accountNumber: string;
+    reference: string;
+    transactionDateTime: string;
+    currency: string;
+    paymentLinkId: string;
+    code: string;
+    desc: string;
+    counterAccountBankId?: string;
+    counterAccountBankName?: string;
+    counterAccountName?: string;
+    counterAccountNumber?: string;
+    virtualAccountName?: string;
+    virtualAccountNumber?: string;
+  };
+  signature: string;
+}
+
+const PACKAGE_DURATIONS = {
+  'dating_week': 7,
+  'dating_month': 30, 
+  'dating_lifetime': -1, // Vĩnh viễn
+  'nearby_week': 7,
+  'nearby_month': 30,
+  'nearby_lifetime': -1
 };
 
 serve(async (req) => {
@@ -12,91 +44,228 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Create Supabase client with service role key for admin operations
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+
   try {
-    const webhookData = await req.json();
-    console.log('PayOS Webhook received:', webhookData);
-
+    console.log('🔄 PayOS Webhook received');
+    
+    // Get raw body for signature verification
+    const rawBody = await req.text();
+    
     // Verify webhook signature
-    const checksumKey = Deno.env.get('PAYOS_CHECKSUM_KEY');
-    if (!checksumKey) {
-      throw new Error('PayOS checksum key not configured');
-    }
-
-    // Get signature from header
-    const signature = req.headers.get('x-payos-signature');
-    if (!signature) {
-      throw new Error('Missing PayOS signature');
-    }
-
-    // Verify signature (simplified - in production you should implement proper verification)
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Process webhook based on event type
-    if (webhookData.code === '00' && webhookData.data) {
-      const { orderCode, status } = webhookData.data;
+    const webhookSecret = Deno.env.get('PAYOS_WEBHOOK_SECRET');
+    if (webhookSecret) {
+      const providedSignature = req.headers.get('x-payos-signature');
       
-      if (status === 'PAID') {
-        // Get the upgrade request to calculate expiry
-        const { data: upgradeRequest, error: fetchError } = await supabase
-          .from('upgrade_requests')
-          .select('*')
-          .eq('bank_info->orderCode', orderCode)
-          .single();
+      if (!providedSignature) {
+        console.error('❌ Missing webhook signature');
+        return new Response(JSON.stringify({ error: 'Missing signature' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Create HMAC signature
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(webhookSecret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      
+      const signature = await crypto.subtle.sign(
+        'HMAC',
+        key,
+        encoder.encode(rawBody)
+      );
+      
+      const computedSignature = Array.from(new Uint8Array(signature))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      
+      if (computedSignature !== providedSignature) {
+        console.error('❌ Invalid webhook signature');
+        return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log('✅ Webhook signature verified');
+    } else {
+      console.warn('⚠️ PAYOS_WEBHOOK_SECRET not configured - skipping signature verification');
+    }
+    
+    const webhookData: PayOSWebhookData = JSON.parse(rawBody);
+    console.log('📦 Webhook data:', JSON.stringify(webhookData, null, 2));
 
-        if (fetchError || !upgradeRequest) {
-          console.error('Error fetching upgrade request:', fetchError);
-          throw new Error('Upgrade request not found');
-        }
+    const { data: webhookPayload } = webhookData;
+    
+    if (!webhookPayload || !webhookPayload.orderCode) {
+      console.error('❌ Invalid webhook payload');
+      return new Response(JSON.stringify({ error: 'Invalid payload' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
-        // Calculate expires_at based on duration_days
-        let expiresAt = null;
-        if (upgradeRequest.duration_days && upgradeRequest.duration_days > 0) {
-          expiresAt = new Date(Date.now() + upgradeRequest.duration_days * 24 * 60 * 60 * 1000).toISOString();
-        }
+    // Only process successful payments
+    if (webhookData.code !== '00' || webhookPayload.code !== '00') {
+      console.log('⚠️ Payment not successful, code:', webhookData.code);
+      return new Response(JSON.stringify({ status: 'ignored' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
-        // Update upgrade request status to approved
-        const { data: updateResult, error } = await supabase
-          .from('upgrade_requests')
-          .update({
-            status: 'approved',
-            approved_at: new Date().toISOString(),
-            expires_at: expiresAt,
-            note: 'Thanh toán thành công qua PayOS'
-          })
-          .eq('bank_info->orderCode', orderCode)
-          .select();
+    console.log('✅ Payment successful, processing...');
 
-        if (error) {
-          console.error('Error updating upgrade request:', error);
-        } else {
-          console.log('Upgrade request approved:', updateResult);
-        }
-      } else if (status === 'CANCELLED') {
-        // Update status to rejected
-        await supabase
-          .from('upgrade_requests')
-          .update({
-            status: 'rejected',
-            note: 'Thanh toán bị hủy'
-          })
-          .eq('bank_info->orderCode', orderCode);
+    // Find the invoice in our database
+    const { data: invoice, error: invoiceError } = await supabaseAdmin
+      .from('payos_invoices')
+      .select('*')
+      .eq('order_code', webhookPayload.orderCode)
+      .single();
+
+    if (invoiceError || !invoice) {
+      console.error('❌ Invoice not found:', invoiceError);
+      return new Response(JSON.stringify({ error: 'Invoice not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('📄 Found invoice:', invoice);
+
+    // Update invoice status to paid
+    const { error: updateInvoiceError } = await supabaseAdmin
+      .from('payos_invoices')
+      .update({
+        status: 'PAID',
+        payos_data: webhookPayload,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', invoice.id);
+
+    if (updateInvoiceError) {
+      console.error('❌ Failed to update invoice:', updateInvoiceError);
+    } else {
+      console.log('✅ Invoice updated to PAID');
+    }
+
+    // Extract package type from description or invoice data
+    let packageType = '';
+    if (invoice.description) {
+      // Extract package type from description (e.g., "Premium 1 thang" -> "dating_month")
+      if (invoice.description.includes('Premium 1 thang')) {
+        packageType = 'dating_month';
+      } else if (invoice.description.includes('Premium 1 tuan')) {
+        packageType = 'dating_week';  
+      } else if (invoice.description.includes('Premium Vinh vien')) {
+        packageType = 'dating_lifetime';
+      } else if (invoice.description.includes('Nearby 1 thang')) {
+        packageType = 'nearby_month';
+      } else if (invoice.description.includes('Nearby 1 tuan')) {
+        packageType = 'nearby_week';
+      } else if (invoice.description.includes('Nearby Vinh vien')) {
+        packageType = 'nearby_lifetime';
       }
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    if (!packageType) {
+      console.error('❌ Could not determine package type from description:', invoice.description);
+      return new Response(JSON.stringify({ error: 'Unknown package type' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('📦 Package type:', packageType);
+
+    // Calculate expiration date
+    const durationDays = PACKAGE_DURATIONS[packageType as keyof typeof PACKAGE_DURATIONS];
+    let premiumExpires = null;
+    
+    if (durationDays !== -1) {
+      const expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + durationDays);
+      premiumExpires = expirationDate.toISOString();
+    }
+
+    console.log('⏰ Premium expires:', premiumExpires || 'Never (lifetime)');
+
+    // Update user profile with premium status
+    const { error: updateProfileError } = await supabaseAdmin
+      .from('profiles')
+      .update({
+        is_premium: true,
+        premium_expires: premiumExpires,
+        last_active: new Date().toISOString()
+      })
+      .eq('id', invoice.user_id);
+
+    if (updateProfileError) {
+      console.error('❌ Failed to update user profile:', updateProfileError);
+      return new Response(JSON.stringify({ error: 'Failed to activate premium' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('✅ User premium status activated');
+
+    // Create a subscription record for tracking
+    const { error: subscriptionError } = await supabaseAdmin
+      .from('user_subscriptions')
+      .upsert({
+        user_id: invoice.user_id,
+        package_type: packageType,
+        status: 'active',
+        started_at: new Date().toISOString(),
+        expires_at: premiumExpires,
+        payment_amount: invoice.amount,
+        order_code: webhookPayload.orderCode.toString()
+      }, {
+        onConflict: 'user_id,package_type'
+      });
+
+    if (subscriptionError) {
+      console.error('❌ Failed to create subscription record:', subscriptionError);
+      // Don't fail the webhook, profile is already updated
+    } else {
+      console.log('✅ Subscription record created');
+    }
+
+    return new Response(JSON.stringify({ 
+      status: 'success',
+      message: 'Premium activated successfully',
+      packageType,
+      expiresAt: premiumExpires
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('PayOS webhook error:', error);
-    return new Response(JSON.stringify({
-      error: error.message || 'Webhook processing failed'
+    console.error('💥 Webhook processing error:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : "Unknown error"
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });

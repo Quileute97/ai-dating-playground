@@ -1,11 +1,11 @@
 
 import React, { useState } from "react";
-import { Plus, Edit, Trash2, MessageSquare } from "lucide-react";
+import { Plus, Edit, Trash2, MessageSquare, Image } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-// import FakeUserChatModal from "./FakeUserChatModal";
-// import PostAsFakeUserModal from "./PostAsFakeUserModal";
+import PostAsFakeUserModal from "./PostAsFakeUserModal";
 import FakeUserConversationModal from "./FakeUserConversationModal";
+import AdminUserAlbumModal from "./AdminUserAlbumModal";
 import type { FakeUser, AIPrompt } from "@/types/admin"; 
 
 interface Props {
@@ -19,7 +19,8 @@ interface Props {
   handleDeleteUser: (id: string) => void;
   user: any;
   aiPrompts: AIPrompt[];
-  handlePostAsFakeUser: (content: string, user: FakeUser) => void;
+  handlePostAsFakeUser: (content: string, mediaUrl?: string, mediaType?: string) => void;
+  refetchFakeUsers: () => void;
 }
 
 const AdminFakeUsersTab: React.FC<Props> = ({
@@ -34,9 +35,11 @@ const AdminFakeUsersTab: React.FC<Props> = ({
   user,
   aiPrompts,
   handlePostAsFakeUser,
+  refetchFakeUsers,
 }) => {
   // Quản lý state: user nào đang mở modal chat dạng conversation
   const [convModalFakeUser, setConvModalFakeUser] = useState<FakeUser | null>(null);
+  const [albumUser, setAlbumUser] = useState<FakeUser | null>(null);
 
   return (
     <div className="space-y-6">
@@ -87,13 +90,21 @@ const AdminFakeUsersTab: React.FC<Props> = ({
                       <MessageSquare className="w-4 h-4 mr-1" />
                       Tin nhắn
                     </Button>
-                    {/* <Button
+                    <Button
                       size="sm"
                       variant="secondary"
                       onClick={() => setPostFakeUser(user)}
                     >
                       Đăng bài
-                    </Button> */}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setAlbumUser(user)}
+                    >
+                      <Image className="w-4 h-4 mr-1" />
+                      Album
+                    </Button>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -133,6 +144,22 @@ const AdminFakeUsersTab: React.FC<Props> = ({
             : null
         }
         onClose={() => setConvModalFakeUser(null)}
+      />
+      
+      {/* Modal đăng bài cho user ảo */}
+      <PostAsFakeUserModal
+        isOpen={!!postFakeUser}
+        user={postFakeUser}
+        onClose={() => setPostFakeUser(null)}
+        onPost={handlePostAsFakeUser}
+      />
+      
+      {/* Modal quản lý album cho user ảo */}
+      <AdminUserAlbumModal
+        isOpen={!!albumUser}
+        user={albumUser}
+        onClose={() => setAlbumUser(null)}
+        onAlbumUpdated={refetchFakeUsers}
       />
     </div>
   );

@@ -7,8 +7,78 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
+      admin_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          fake_user_id: string
+          id: string
+          is_from_admin: boolean | null
+          real_user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          fake_user_id: string
+          id?: string
+          is_from_admin?: boolean | null
+          real_user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          fake_user_id?: string
+          id?: string
+          is_from_admin?: boolean | null
+          real_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_messages_fake_user_id_fkey"
+            columns: ["fake_user_id"]
+            isOneToOne: false
+            referencedRelation: "fake_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       ai_prompts: {
         Row: {
           category: string | null
@@ -129,38 +199,173 @@ export type Database = {
         }
         Relationships: []
       }
+      fake_post_comments: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fake_post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "fake_user_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fake_post_likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fake_post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "fake_user_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fake_user_posts: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          fake_user_id: string
+          id: string
+          location: Json | null
+          media_type: string | null
+          media_url: string | null
+          sticker: Json | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          fake_user_id: string
+          id?: string
+          location?: Json | null
+          media_type?: string | null
+          media_url?: string | null
+          sticker?: Json | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          fake_user_id?: string
+          id?: string
+          location?: Json | null
+          media_type?: string | null
+          media_url?: string | null
+          sticker?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fake_user_posts_fake_user_id_fkey"
+            columns: ["fake_user_id"]
+            isOneToOne: false
+            referencedRelation: "fake_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fake_users: {
         Row: {
           age: number | null
           ai_prompt_id: string | null
+          album: Json | null
           avatar: string | null
           bio: string | null
           created_at: string | null
+          dating_preferences: Json | null
+          education: string | null
           gender: string | null
+          height: number | null
           id: string
+          interests: Json | null
           is_active: boolean | null
+          is_dating_active: boolean | null
+          job: string | null
+          last_active: string | null
+          lat: number | null
+          lng: number | null
+          location_name: string | null
           name: string
         }
         Insert: {
           age?: number | null
           ai_prompt_id?: string | null
+          album?: Json | null
           avatar?: string | null
           bio?: string | null
           created_at?: string | null
+          dating_preferences?: Json | null
+          education?: string | null
           gender?: string | null
+          height?: number | null
           id?: string
+          interests?: Json | null
           is_active?: boolean | null
+          is_dating_active?: boolean | null
+          job?: string | null
+          last_active?: string | null
+          lat?: number | null
+          lng?: number | null
+          location_name?: string | null
           name: string
         }
         Update: {
           age?: number | null
           ai_prompt_id?: string | null
+          album?: Json | null
           avatar?: string | null
           bio?: string | null
           created_at?: string | null
+          dating_preferences?: Json | null
+          education?: string | null
           gender?: string | null
+          height?: number | null
           id?: string
+          interests?: Json | null
           is_active?: boolean | null
+          is_dating_active?: boolean | null
+          job?: string | null
+          last_active?: string | null
+          lat?: number | null
+          lng?: number | null
+          location_name?: string | null
           name?: string
         }
         Relationships: [
@@ -206,6 +411,8 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          media_type: string | null
+          media_url: string | null
           sender: string
           sender_id: string | null
         }
@@ -214,6 +421,8 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
+          media_type?: string | null
+          media_url?: string | null
           sender: string
           sender_id?: string | null
         }
@@ -222,6 +431,8 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
+          media_type?: string | null
+          media_url?: string | null
           sender?: string
           sender_id?: string | null
         }
@@ -234,6 +445,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payos_invoices: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          order_code: number
+          payos_data: Json | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_code: number
+          payos_data?: Json | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_code?: number
+          payos_data?: Json | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       post_likes: {
         Row: {
@@ -326,12 +573,14 @@ export type Database = {
           id: string
           interests: Json | null
           is_dating_active: boolean | null
+          is_premium: boolean | null
           job: string | null
           last_active: string | null
           lat: number | null
           lng: number | null
           location_name: string | null
           name: string | null
+          premium_expires: string | null
           tai_khoan_hoat_dong: boolean | null
         }
         Insert: {
@@ -347,12 +596,14 @@ export type Database = {
           id: string
           interests?: Json | null
           is_dating_active?: boolean | null
+          is_premium?: boolean | null
           job?: string | null
           last_active?: string | null
           lat?: number | null
           lng?: number | null
           location_name?: string | null
           name?: string | null
+          premium_expires?: string | null
           tai_khoan_hoat_dong?: boolean | null
         }
         Update: {
@@ -368,12 +619,14 @@ export type Database = {
           id?: string
           interests?: Json | null
           is_dating_active?: boolean | null
+          is_premium?: boolean | null
           job?: string | null
           last_active?: string | null
           lat?: number | null
           lng?: number | null
           location_name?: string | null
           name?: string | null
+          premium_expires?: string | null
           tai_khoan_hoat_dong?: boolean | null
         }
         Relationships: []
@@ -513,18 +766,139 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          order_code: string | null
+          package_type: string
+          payment_amount: number | null
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          order_code?: string | null
+          package_type: string
+          payment_amount?: number | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          order_code?: string | null
+          package_type?: string
+          payment_amount?: number | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      comment_on_fake_post: {
+        Args: {
+          content_param: string
+          post_id_param: string
+          user_id_param: string
+        }
+        Returns: string
+      }
+      create_conversation_with_fake_user: {
+        Args: { fake_user_id: string; real_user_id: string }
+        Returns: string
+      }
+      get_fake_users_for_dating: {
+        Args: {
+          gender_pref?: string
+          max_age?: number
+          max_distance?: number
+          min_age?: number
+          user_lat: number
+          user_lng: number
+        }
+        Returns: {
+          age: number
+          album: Json
+          avatar: string
+          bio: string
+          distance_km: number
+          education: string
+          gender: string
+          height: number
+          id: string
+          interests: Json
+          job: string
+          lat: number
+          lng: number
+          location_name: string
+          name: string
+        }[]
+      }
+      get_timeline_with_fake_posts: {
+        Args: {
+          limit_param?: number
+          offset_param?: number
+          user_id_param?: string
+        }
+        Returns: {
+          comment_count: number
+          content: string
+          created_at: string
+          id: string
+          is_fake_user: boolean
+          like_count: number
+          location: Json
+          media_type: string
+          media_url: string
+          sticker: Json
+          user_age: number
+          user_avatar: string
+          user_gender: string
+          user_has_liked: boolean
+          user_id: string
+          user_name: string
+        }[]
+      }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
+      like_fake_post: {
+        Args: { post_id_param: string; user_id_param: string }
+        Returns: undefined
+      }
+      like_fake_user: {
+        Args: {
+          liked_id_param: string
+          liked_type_param: string
+          liker_id_param: string
+          liker_type_param: string
+        }
+        Returns: boolean
+      }
+      send_friend_request_to_fake_user: {
+        Args: { fake_user_id: string; real_user_id: string }
+        Returns: string
+      }
+      trigger_sitemap_ping: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"
@@ -535,21 +909,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -567,14 +945,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -590,14 +970,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -613,14 +995,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -628,14 +1012,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never

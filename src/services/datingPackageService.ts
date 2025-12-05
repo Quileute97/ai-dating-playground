@@ -13,7 +13,7 @@ export const DATING_PACKAGES: DatingPackage[] = [
     id: 'dating_week',
     name: 'Premium 1 Tuần',
     description: 'Trải nghiệm premium trong 7 ngày',
-    price: 49000,
+    price: 20000,
     duration: 7,
     features: [
       'Không giới hạn lượt swipe',
@@ -27,7 +27,7 @@ export const DATING_PACKAGES: DatingPackage[] = [
     id: 'dating_month',
     name: 'Premium 1 Tháng',
     description: 'Gói phổ biến nhất cho trải nghiệm tối ưu',
-    price: 149000,
+    price: 50000,
     duration: 30,
     features: [
       'Tất cả tính năng gói tuần',
@@ -39,10 +39,10 @@ export const DATING_PACKAGES: DatingPackage[] = [
     ]
   },
   {
-    id: 'dating_unlimited',
+    id: 'dating_lifetime',
     name: 'Premium Vĩnh Viễn',
     description: 'Sở hữu tất cả tính năng premium mãi mãi',
-    price: 399000,
+    price: 500000,
     duration: -1,
     features: [
       'Tất cả tính năng premium',
@@ -60,43 +60,103 @@ export const createDatingPackagePayment = async (
   userId: string,
   userEmail?: string
 ) => {
-  const selectedPackage = DATING_PACKAGES.find(pkg => pkg.id === packageId);
-  if (!selectedPackage) {
-    throw new Error('Gói không tồn tại');
-  }
-
   try {
-    console.log('Creating dating package payment:', { packageId, userId });
+    console.log('🚀 Creating dating package payment:', { packageId, userId, userEmail });
     
-    const response = await fetch('https://oeepmsbttxfknkznbnym.supabase.co/functions/v1/create-payos-payment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        orderCode: Math.floor(Date.now() / 1000),
-        amount: selectedPackage.price,
-        description: `Goi ${selectedPackage.name}`,
-        returnUrl: `${window.location.origin}/payment-success`,
-        cancelUrl: `${window.location.origin}/payment-cancel`,
-        userId,
-        userEmail,
-        packageType: packageId,
-      }),
+    // Strict validation
+    if (!packageId || typeof packageId !== 'string' || packageId.trim() === '') {
+      throw new Error('Package ID không hợp lệ');
+    }
+    
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+      throw new Error('User ID không hợp lệ');
+    }
+    
+    const selectedPackage = DATING_PACKAGES.find(pkg => pkg.id === packageId);
+    if (!selectedPackage) {
+      throw new Error(`Gói ${packageId} không tồn tại`);
+    }
+    
+    console.log('✅ Package validated:', selectedPackage);
+    
+    // Generate unique orderCode following PayOS requirements (max 9999999999)
+    const timestamp = Math.floor(Date.now() / 1000);
+    const random = Math.floor(Math.random() * 999) + 1;
+    let orderCode = parseInt(`${timestamp.toString().slice(-6)}${random.toString().padStart(3, '0')}`);
+    
+    // Ensure orderCode is within PayOS limits
+    if (orderCode > 9999999999 || orderCode <= 0) {
+      orderCode = Math.floor(Math.random() * 999999999) + 100000000;
+    }
+    
+    console.log('📝 Generated order code:', orderCode);
+    
+    // Prepare request data with clean URLs
+    const requestData = {
+      orderCode: orderCode,
+      userId: userId.trim(),
+      userEmail: userEmail?.trim() || '',
+      packageType: packageId,
+      returnUrl: `${window.location.origin}/payment-success`,
+      cancelUrl: `${window.location.origin}/payment-cancel`,
+    };
+    
+    console.log('📤 Sending payment request:', requestData);
+    
+    // Import supabase at the top of the file
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    const { data: response, error: functionError } = await supabase.functions.invoke('create-payos-payment', {
+      body: requestData
     });
 
-    const result = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(result.message || 'API call failed');
+    if (functionError) {
+      console.error('❌ Function error:', functionError);
+      throw new Error(functionError.message || 'Lỗi khi gọi function thanh toán');
     }
-
+    
+    console.log('📥 Function response:', response);
+    const result = response;
+    
+    // Handle error responses
+    if (result.error && result.error !== 0) {
+      console.error('❌ API error response:', result);
+      throw new Error(result.message || 'Có lỗi xảy ra khi tạo thanh toán');
+    }
+    
+    // Validate success response structure
+    if (!result.data || !result.data.checkoutUrl) {
+      console.error('❌ Invalid success response:', result);
+      throw new Error('Không nhận được URL thanh toán');
+    }
+    
+    console.log('✅ Payment created successfully:', result.data);
     return result;
+
   } catch (error) {
-    console.error('PayOS dating package payment error:', error);
+    console.error('💥 PayOS dating package payment error:', error);
+    
+    // Provide user-friendly error messages
+    let userMessage = 'Có lỗi xảy ra khi tạo thanh toán';
+    
+    if (error.message?.includes('Package ID không hợp lệ')) {
+      userMessage = 'Gói thanh toán không hợp lệ';
+    } else if (error.message?.includes('User ID không hợp lệ')) {
+      userMessage = 'Thông tin người dùng không hợp lệ';
+    } else if (error.message?.includes('không tồn tại')) {
+      userMessage = 'Gói thanh toán không tồn tại';
+    } else if (error.message?.includes('Dữ liệu thanh toán không hợp lệ')) {
+      userMessage = error.message;
+    } else if (error.message?.includes('Phản hồi từ server')) {
+      userMessage = 'Lỗi kết nối với server. Vui lòng thử lại.';
+    } else if (error.message) {
+      userMessage = error.message;
+    }
+    
     return {
       error: 1,
-      message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi tạo thanh toán'
+      message: userMessage,
+      originalError: error.message
     };
   }
 };

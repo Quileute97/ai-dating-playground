@@ -607,7 +607,50 @@ const ProfileChatWindow = ({
                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl'
                     : 'bg-white/95 backdrop-blur-sm text-gray-800 border border-white/30 shadow-md hover:shadow-lg'
                 }`}>
-                  <p className="text-sm break-words leading-relaxed">{message.content}</p>
+                  {/* Display image if media_url exists and is image */}
+                  {message.media_url && message.media_type?.startsWith('image') && (
+                    <div className="mb-2">
+                      <img 
+                        src={message.media_url} 
+                        alt="Shared image" 
+                        className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => window.open(message.media_url, '_blank')}
+                        style={{ maxHeight: '200px' }}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Display video if media_url exists and is video */}
+                  {message.media_url && message.media_type?.startsWith('video') && (
+                    <div className="mb-2">
+                      <video 
+                        src={message.media_url} 
+                        controls 
+                        className="max-w-full h-auto rounded-lg"
+                        style={{ maxHeight: '200px' }}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Handle legacy image messages in content */}
+                  {!message.media_url && message.content?.includes('https://') && message.content?.includes('[🖼️ Ảnh]') && (
+                    <div className="mb-2">
+                      <img 
+                        src={message.content.split('] ')[1]} 
+                        alt="Shared image" 
+                        className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => window.open(message.content.split('] ')[1], '_blank')}
+                        style={{ maxHeight: '200px' }}
+                      />
+                      <p className="text-xs mt-1 break-words">{message.content.split('] ')[0]}]</p>
+                    </div>
+                  )}
+                  
+                  {/* Display regular text content */}
+                  {message.content && (!message.content.includes('[🖼️ Ảnh]') || message.media_url) && (
+                    <p className="text-sm break-words leading-relaxed">{message.content}</p>
+                  )}
+                  
                   <p className={`text-xs mt-2 ${
                     message.sender_id === currentUserId ? 'text-purple-100' : 'text-gray-500'
                   }`}>

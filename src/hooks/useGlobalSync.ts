@@ -12,9 +12,11 @@ export function useGlobalSync(userId?: string) {
   useEffect(() => {
     if (!userId) return;
 
+    const timestamp = Date.now();
+    
     // Đồng bộ profile updates
     const profileChannel = supabase
-      .channel(`profile-sync-${userId}`)
+      .channel(`profile-sync-${userId}-${timestamp}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -30,7 +32,7 @@ export function useGlobalSync(userId?: string) {
 
     // Đồng bộ messages/conversations
     const messageChannel = supabase
-      .channel(`messages-sync-${userId}`)
+      .channel(`messages-sync-${userId}-${timestamp}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -45,7 +47,7 @@ export function useGlobalSync(userId?: string) {
 
     // Đồng bộ timeline messages
     const timelineMessageChannel = supabase
-      .channel(`timeline-messages-sync-${userId}`)
+      .channel(`timeline-messages-sync-${userId}-${timestamp}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -58,7 +60,7 @@ export function useGlobalSync(userId?: string) {
 
     // Đồng bộ user interactions (likes, matches)
     const interactionChannel = supabase
-      .channel(`interactions-sync-${userId}`)
+      .channel(`interactions-sync-${userId}-${timestamp}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -72,7 +74,7 @@ export function useGlobalSync(userId?: string) {
 
     // Đồng bộ posts và comments
     const postsChannel = supabase
-      .channel(`posts-sync-${userId}`)
+      .channel(`posts-sync-${userId}-${timestamp}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -84,7 +86,7 @@ export function useGlobalSync(userId?: string) {
       .subscribe();
 
     const commentsChannel = supabase
-      .channel(`comments-sync-${userId}`)
+      .channel(`comments-sync-${userId}-${timestamp}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

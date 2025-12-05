@@ -114,7 +114,50 @@ export default function ChatWidget({
                           ? 'bg-blue-500 text-white'
                           : 'bg-white border border-gray-200 text-gray-800 shadow-sm'
                       }`}>
-                        <p className="break-words">{msg.content}</p>
+                        {/* Display image if media_url exists and is image */}
+                        {msg.media_url && msg.media_type?.startsWith('image') && (
+                          <div className="mb-2">
+                            <img 
+                              src={msg.media_url} 
+                              alt="Shared image" 
+                              className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => window.open(msg.media_url, '_blank')}
+                              style={{ maxHeight: '150px' }}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Display video if media_url exists and is video */}
+                        {msg.media_url && msg.media_type?.startsWith('video') && (
+                          <div className="mb-2">
+                            <video 
+                              src={msg.media_url} 
+                              controls 
+                              className="max-w-full h-auto rounded-lg"
+                              style={{ maxHeight: '150px' }}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Handle legacy image messages in content */}
+                        {!msg.media_url && msg.content?.includes('https://') && msg.content?.includes('[🖼️ Ảnh]') && (
+                          <div className="mb-2">
+                            <img 
+                              src={msg.content.split('] ')[1]} 
+                              alt="Shared image" 
+                              className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => window.open(msg.content.split('] ')[1], '_blank')}
+                              style={{ maxHeight: '150px' }}
+                            />
+                            <p className="text-xs mt-1 break-words">{msg.content.split('] ')[0]}]</p>
+                          </div>
+                        )}
+                        
+                        {/* Display regular text content */}
+                        {msg.content && (!msg.content.includes('[🖼️ Ảnh]') || msg.media_url) && (
+                          <p className="break-words">{msg.content}</p>
+                        )}
+                        
                         <p className={`text-xs mt-1 ${
                           msg.sender_id === myUserId ? 'text-blue-100' : 'text-gray-500'
                         }`}>

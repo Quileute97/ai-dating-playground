@@ -541,18 +541,18 @@ const PostItem: React.FC<{
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 leading-none mb-1">
                   <span className="font-semibold text-sm">{cmt.profiles?.name ?? "Ẩn danh"}</span>
+                  {user?.id && (
+                    <button
+                      type="button"
+                      className="text-xs text-gray-500 hover:text-blue-500 transition-colors"
+                      onClick={() => handleReply(cmt.profiles?.name ?? "Ẩn danh")}
+                    >
+                      Trả lời
+                    </button>
+                  )}
                   <span className="text-xs text-gray-400">{new Date(cmt.created_at).toLocaleTimeString("vi-VN")}</span>
                 </div>
                 <div className="text-sm text-gray-800">{renderCommentContent(cmt.content)}</div>
-                {user?.id && (
-                  <button
-                    type="button"
-                    className="text-xs text-gray-500 hover:text-blue-500 mt-1 transition-colors"
-                    onClick={() => handleReply(cmt.profiles?.name ?? "Ẩn danh")}
-                  >
-                    Trả lời
-                  </button>
-                )}
               </div>
             </div>
           ))}

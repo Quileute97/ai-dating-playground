@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { MessageSquare } from "lucide-react"
 import { useActiveFriendsWithPresence } from '@/hooks/useActiveFriendsWithPresence';
 import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface ActiveFriendsWithChatPanelProps {
   myId: string;
@@ -66,7 +67,7 @@ export default function ActiveFriendsWithChatPanel({
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src={friend.avatar || '/placeholder.svg'} />
+                    <AvatarImage src={getDefaultAvatar(null, friend.avatar)} />
                     <AvatarFallback>{friend.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   {friend.online && (

@@ -11,6 +11,7 @@ import { usePremiumStatus } from '@/hooks/usePremiumStatus';
 import PremiumUpgradeModal from './PremiumUpgradeModal';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
 import { useNavigate } from 'react-router-dom';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface MessagesTabProps {
   userId: string;
@@ -180,7 +181,7 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
                     className="w-12 h-12 mr-3 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
                     onClick={(e) => handleViewProfile(conversation.other_user?.id, e)}
                   >
-                    <AvatarImage src={conversation.other_user?.avatar || '/placeholder.svg'} />
+                    <AvatarImage src={getDefaultAvatar(null, conversation.other_user?.avatar)} />
                     <AvatarFallback>
                       {conversation.other_user?.name?.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
@@ -228,7 +229,7 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
                         className="flex items-center p-4 opacity-60"
                       >
                         <Avatar className="w-12 h-12 mr-3">
-                          <AvatarImage src={conversation.other_user?.avatar || '/placeholder.svg'} />
+                          <AvatarImage src={getDefaultAvatar(null, conversation.other_user?.avatar)} />
                           <AvatarFallback>
                             {conversation.other_user?.name?.slice(0, 2).toUpperCase()}
                           </AvatarFallback>

@@ -9,6 +9,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useNearbyConversation } from '@/hooks/useNearbyConversation';
 import { useNavigate } from 'react-router-dom';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface NearbyUser {
   id: string;
@@ -100,7 +101,7 @@ const NearbyChatWindow = ({ user, currentUserId, onClose }: NearbyChatWindowProp
             className="flex items-center gap-3 hover:bg-purple-50 rounded-lg p-2 transition-colors flex-1"
           >
             <Avatar className="w-10 h-10 border-2 border-purple-200">
-              <AvatarImage src={user.avatar} />
+              <AvatarImage src={getDefaultAvatar(null, user.avatar)} />
               <AvatarFallback className="bg-purple-100 text-purple-600">{user.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
             

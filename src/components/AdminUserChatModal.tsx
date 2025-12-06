@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface AdminUserChatModalProps {
   isOpen: boolean;
@@ -191,7 +192,7 @@ const AdminUserChatModal: React.FC<AdminUserChatModalProps> = ({
                     >
                       <div className="flex items-center space-x-3">
                         <Avatar className="w-10 h-10">
-                          <AvatarImage src={conv.real_user_profile.avatar || '/placeholder.svg'} />
+                          <AvatarImage src={getDefaultAvatar(conv.real_user_profile.gender, conv.real_user_profile.avatar)} />
                           <AvatarFallback>{conv.real_user_profile.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
@@ -218,7 +219,7 @@ const AdminUserChatModal: React.FC<AdminUserChatModalProps> = ({
                 <div className="border-b pb-4 mb-4">
                   <div className="flex items-center space-x-3">
                     <Avatar className="w-12 h-12">
-                      <AvatarImage src={activeConversation.real_user_profile.avatar || '/placeholder.svg'} />
+                      <AvatarImage src={getDefaultAvatar(activeConversation.real_user_profile.gender, activeConversation.real_user_profile.avatar)} />
                       <AvatarFallback>{activeConversation.real_user_profile.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>

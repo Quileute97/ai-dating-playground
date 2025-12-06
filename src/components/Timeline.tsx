@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { uploadTimelineMedia } from "@/utils/uploadTimelineMedia";
 import { VN_PROVINCES } from "@/utils/vnProvinces";
 import HashtagPostsModal from "./HashtagPostsModal";
+import { getDefaultAvatar } from "@/utils/getDefaultAvatar";
 import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -221,7 +222,7 @@ const PostForm: React.FC<{
 
   const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
-  const currentAvatar = userProfile?.avatar || user?.avatar || demoUser.avatar;
+  const currentAvatar = getDefaultAvatar(userProfile?.gender || user?.gender, userProfile?.avatar || user?.avatar);
   const currentName = userProfile?.name || user?.name || demoUser.name;
 
   const handleMediaChange = async (e: ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
@@ -425,7 +426,7 @@ const PostItem: React.FC<{
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <img
-            src={post.user_avatar || demoUser.avatar}
+            src={getDefaultAvatar(post.user_gender, post.user_avatar)}
             alt={post.user_name || "User"}
             className="w-10 h-10 rounded-full object-cover border shadow cursor-pointer"
             onClick={() => {
@@ -537,7 +538,7 @@ const PostItem: React.FC<{
           {commentsLoading && <div className="text-sm text-gray-400 px-2">Đang tải bình luận...</div>}
           {comments.map((cmt: any) => (
             <div key={cmt.id} className="flex items-start gap-2">
-              <img src={cmt.profiles?.avatar || demoUser.avatar} alt={cmt.profiles?.name || "User"} className="w-6 h-6 rounded-full object-cover border flex-shrink-0" />
+              <img src={getDefaultAvatar(cmt.profiles?.gender, cmt.profiles?.avatar)} alt={cmt.profiles?.name || "User"} className="w-6 h-6 rounded-full object-cover border flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 leading-none mb-1">
                   <span className="font-semibold text-sm">{cmt.profiles?.name ?? "Ẩn danh"}</span>

@@ -3,6 +3,7 @@ import React from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { useTimelinePosts } from "@/hooks/useTimelinePosts";
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface HashtagPostsModalProps {
   hashtag: string;
@@ -30,7 +31,7 @@ export default function HashtagPostsModal({ hashtag, open, onClose, user }: Hash
           {hashtagPosts.map(post => (
             <Card key={post.id} className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <img src={post.user_avatar || "/placeholder.svg"} className="w-7 h-7 rounded-full object-cover" />
+                <img src={getDefaultAvatar(post.user_gender, post.user_avatar)} className="w-7 h-7 rounded-full object-cover" />
                 <div>
                   <div className="font-bold text-gray-800">{post.user_name || "Ẩn danh"}</div>
                   <div className="text-xs text-gray-400">{new Date(post.created_at).toLocaleString("vi-VN")}</div>

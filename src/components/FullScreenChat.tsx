@@ -9,6 +9,7 @@ import { uploadTimelineMedia } from '@/utils/uploadTimelineMedia';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface FullScreenChatProps {
   currentUserId: string;
@@ -156,7 +157,7 @@ export default function FullScreenChat({
           className="w-10 h-10 mr-3 cursor-pointer hover:opacity-80 transition-opacity"
           onClick={handleViewProfile}
         >
-          <AvatarImage src={targetUserAvatar || '/placeholder.svg'} />
+          <AvatarImage src={getDefaultAvatar(null, targetUserAvatar)} />
           <AvatarFallback>{targetUserName?.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
         
@@ -208,7 +209,7 @@ export default function FullScreenChat({
                     >
                       {!isMyMessage && (
                         <Avatar className={`w-8 h-8 ${showAvatar ? 'opacity-100' : 'opacity-0'}`}>
-                          <AvatarImage src={targetUserAvatar || '/placeholder.svg'} />
+                          <AvatarImage src={getDefaultAvatar(null, targetUserAvatar)} />
                           <AvatarFallback className="text-xs">
                             {targetUserName?.slice(0, 2).toUpperCase()}
                           </AvatarFallback>

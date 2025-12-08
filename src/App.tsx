@@ -35,7 +35,7 @@ const App = () => (
           <Route path="/messages" element={<Index />} />
           <Route path="/notifications" element={<Index />} />
           <Route path="/profile/:userId" element={<UserProfilePage />} />
-          <Route path="/fake-profile/:userId" element={<FakeUserProfilePage />} />
+          <Route path="/u/:userId" element={<FakeUserProfilePage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />

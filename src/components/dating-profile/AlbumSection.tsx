@@ -59,41 +59,54 @@ const AlbumSection = ({
         )}
         {profileData.album && profileData.album.length > 0 ? (
           <>
-            <div className="grid grid-cols-3 gap-2">
-              {profileData.album.map((img: string, idx: number) => (
-                <div key={idx} className="relative group">
-                  <img
-                    src={img}
-                    alt={`Ảnh ${idx + 1}`}
-                    className="rounded-lg object-cover w-full h-24 border cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => !isEditing && setShowAlbumModal(true)}
-                  />
-                  {isEditing && (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeAlbumImage(idx)}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+            {/* Horizontal scrollable preview */}
+            <div className="relative">
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-pink-300 scrollbar-track-transparent">
+                {profileData.album.map((img: string, idx: number) => (
+                  <div key={idx} className="relative group flex-shrink-0">
+                    <img
+                      src={img}
+                      alt={`Ảnh ${idx + 1}`}
+                      className="rounded-lg object-cover w-24 h-24 border cursor-pointer hover:opacity-80 transition-all duration-200 hover:scale-105"
+                      onClick={() => !isEditing && setShowAlbumModal(true)}
+                    />
+                    {isEditing && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeAlbumImage(idx)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                    {!isEditing && (
+                      <div className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                        {idx + 1}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* Scroll hint gradient */}
+              {profileData.album.length > 3 && (
+                <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+              )}
             </div>
             {!isEditing && (
               <Button
                 onClick={() => setShowAlbumModal(true)}
                 variant="outline"
                 size="sm"
-                className="w-full mt-3"
+                className="w-full mt-2"
               >
+                <Album className="w-4 h-4 mr-2" />
                 Xem tất cả ({profileData.album.length} ảnh)
               </Button>
             )}
           </>
         ) : (
-          <p className="text-gray-400 text-sm">Chưa có ảnh nào</p>
+          <p className="text-muted-foreground text-sm">Chưa có ảnh nào</p>
         )}
       </CardContent>
 

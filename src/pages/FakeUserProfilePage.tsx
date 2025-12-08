@@ -141,7 +141,7 @@ const FakeUserProfilePage: React.FC = () => {
         description={profile?.bio || `Xem hồ sơ của ${profile?.name || 'người dùng'} trên Hyliya - Ứng dụng hẹn hò và kết nối thông minh.`}
         keywords={`${profile?.name || 'người dùng'}, hồ sơ, hẹn hò, kết nối, Hyliya`}
         image={profile?.avatar || "https://hyliya.com/og-image.jpg"}
-        url={`https://hyliya.com/fake-profile/${userId}`}
+        url={`https://hyliya.com/u/${userId}`}
         type="profile"
       />
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-100">

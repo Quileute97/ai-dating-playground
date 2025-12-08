@@ -432,7 +432,7 @@ const PostItem: React.FC<{
             onClick={() => {
               if (post.user_id) {
                 if (post.is_fake_user) {
-                  navigate(`/fake-profile/${post.user_id}`);
+                  navigate(`/u/${post.user_id}`);
                 } else {
                   navigate(`/profile/${post.user_id}`);
                 }
@@ -445,7 +445,7 @@ const PostItem: React.FC<{
               onClick={() => {
                 if (post.user_id) {
                   if (post.is_fake_user) {
-                    navigate(`/fake-profile/${post.user_id}`);
+                    navigate(`/u/${post.user_id}`);
                   } else {
                     navigate(`/profile/${post.user_id}`);
                   }

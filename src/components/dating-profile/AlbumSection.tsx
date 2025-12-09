@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { ImagePlus, Loader2, X, Album } from 'lucide-react';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { ImagePlus, Loader2, X, Album, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface AlbumSectionProps {
   profileData: any;
@@ -23,6 +24,7 @@ const AlbumSection = ({
   onAlbumUpload
 }: AlbumSectionProps) => {
   const [showAlbumModal, setShowAlbumModal] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   
   const removeAlbumImage = (index: number) => {
     const newAlbum = profileData.album.filter((_: any, idx: number) => idx !== index);
@@ -68,7 +70,12 @@ const AlbumSection = ({
                       src={img}
                       alt={`Ảnh ${idx + 1}`}
                       className="rounded-lg object-cover w-24 h-24 border cursor-pointer hover:opacity-80 transition-all duration-200 hover:scale-105"
-                      onClick={() => !isEditing && setShowAlbumModal(true)}
+                      onClick={() => {
+                        if (!isEditing) {
+                          setSelectedImageIndex(idx);
+                          setShowAlbumModal(true);
+                        }
+                      }}
                     />
                     {isEditing && (
                       <Button
@@ -110,7 +117,7 @@ const AlbumSection = ({
         )}
       </CardContent>
 
-      {/* Album Modal - Full screen on mobile, optimized for all devices */}
+      {/* Album Modal with Swipe Support */}
       <Dialog open={showAlbumModal} onOpenChange={setShowAlbumModal}>
         <DialogContent className="w-full h-full max-w-full max-h-full md:max-w-[90vw] md:max-h-[90vh] md:h-auto overflow-hidden p-0 bg-black/95 border-0 md:rounded-2xl gap-0">
           <Button
@@ -128,29 +135,44 @@ const AlbumSection = ({
               Album ảnh
             </h2>
             
-            <div className="flex-1 overflow-y-auto -mx-2 px-2 custom-scrollbar">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 pb-4">
-                {profileData.album?.map((img: string, idx: number) => (
-                  <div 
-                    key={idx} 
-                    className="relative group cursor-pointer overflow-hidden rounded-lg md:rounded-xl"
-                  >
-                    <div className="aspect-square w-full">
-                      <img
-                        src={img}
-                        alt={`Ảnh ${idx + 1}`}
-                        className="w-full h-full object-cover transform transition-all duration-300 group-hover:scale-110"
-                      />
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3 md:pb-4">
-                      <span className="text-white font-semibold text-sm md:text-base">
-                        {idx + 1} / {profileData.album.length}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {/* Swipeable Carousel for Mobile */}
+            <div className="flex-1 flex items-center justify-center">
+              <Carousel 
+                className="w-full max-w-4xl"
+                opts={{
+                  startIndex: selectedImageIndex,
+                  loop: true,
+                }}
+              >
+                <CarouselContent>
+                  {profileData.album?.map((img: string, idx: number) => (
+                    <CarouselItem key={idx}>
+                      <div className="flex items-center justify-center p-2">
+                        <div className="relative w-full max-h-[70vh] flex items-center justify-center">
+                          <img
+                            src={img}
+                            alt={`Ảnh ${idx + 1}`}
+                            className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                          />
+                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm px-3 py-1 rounded-full">
+                            {idx + 1} / {profileData.album.length}
+                          </div>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                
+                {/* Navigation buttons - hidden on mobile, shown on desktop */}
+                <CarouselPrevious className="hidden md:flex left-4 h-12 w-12 bg-white/20 hover:bg-white/30 border-white/30 text-white" />
+                <CarouselNext className="hidden md:flex right-4 h-12 w-12 bg-white/20 hover:bg-white/30 border-white/30 text-white" />
+              </Carousel>
             </div>
+            
+            {/* Swipe hint for mobile */}
+            <p className="text-center text-white/60 text-sm mt-4 md:hidden">
+              ← Vuốt để xem ảnh tiếp theo →
+            </p>
           </div>
         </DialogContent>
       </Dialog>

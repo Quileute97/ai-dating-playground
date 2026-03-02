@@ -19,6 +19,7 @@ import AdminFakeUsersTab from "./AdminFakeUsersTab";
 import AdminAIPromptsTab from "./AdminAIPromptsTab";
 import AdminSettingsTab from "./AdminSettingsTab";
 import AdminTimelinePostsTab from "./AdminTimelinePostsTab";
+import AdminRealUsersTab from "./AdminRealUsersTab";
 
 import { toast } from "@/hooks/use-toast";
 import type { FakeUser, AIPrompt } from "@/types/admin";
@@ -48,27 +49,7 @@ const AdminDashboard = () => {
   // NEW: Đếm số yêu cầu upgrade pending để hiện thông báo cho admin
   const [pendingUpgradeCount, setPendingUpgradeCount] = React.useState(0);
 
-  // NEW: Tải dữ liệu user thật từ bảng profiles để quản lý "Tài khoản hoạt động"
-  const [realUsers, setRealUsers] = React.useState<any[]>([]);
-  React.useEffect(() => {
-    const fetchProfiles = async () => {
-      const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-      setRealUsers(data || []);
-    };
-    fetchProfiles();
-  }, []);
-
-  // Cập nhật trạng thái tài khoản hoạt động
-  const handleToggleHoatDong = async (id: string, value: boolean) => {
-    await supabase
-      .from("profiles")
-      .update({ tai_khoan_hoat_dong: value })
-      .eq("id", id);
-
-    setRealUsers((users) =>
-      users.map((u) => (u.id === id ? { ...u, tai_khoan_hoat_dong: value } : u))
-    );
-  };
+  // Removed: realUsers state and handleToggleHoatDong moved to AdminRealUsersTab
 
   React.useEffect(() => {
     // Lấy số lượng pending upgrade
@@ -268,8 +249,9 @@ const AdminDashboard = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+            <TabsTrigger value="real-users">User thật</TabsTrigger>
             <TabsTrigger value="admin-users">Admin Users</TabsTrigger>
             <TabsTrigger value="fake-users">Người dùng ảo</TabsTrigger>
             <TabsTrigger value="ai-prompts">AI Prompts</TabsTrigger>
@@ -338,69 +320,8 @@ const AdminDashboard = () => {
             <AdminSettingsTab />
           </TabsContent>
 
-          {/* THÊM tab quản lý user thật nếu muốn */}
           <TabsContent value="real-users" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Danh sách tài khoản người dùng thật</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="min-w-[600px] w-full border rounded text-sm">
-                    <thead>
-                      <tr>
-                        <th className="p-2 font-semibold">ID</th>
-                        <th className="p-2">Tên</th>
-                        <th className="p-2">Giới tính</th>
-                        <th className="p-2">Tuổi</th>
-                        <th className="p-2">Hoạt động</th>
-                        <th className="p-2">Tác vụ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {realUsers.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="text-center py-4">
-                            Không có tài khoản nào.
-                          </td>
-                        </tr>
-                      )}
-                      {realUsers.map((u) => (
-                        <tr key={u.id}>
-                          <td className="p-2">{u.id}</td>
-                          <td className="p-2">{u.name}</td>
-                          <td className="p-2">{u.gender}</td>
-                          <td className="p-2">{u.age}</td>
-                          <td className="p-2">
-                            <span
-                              className={`inline-block w-3 h-3 rounded-full mr-1 ${
-                                u.tai_khoan_hoat_dong ? "bg-green-500" : "bg-gray-400"
-                              }`}
-                              title={u.tai_khoan_hoat_dong ? "Hoạt động" : "Ngưng hoạt động"}
-                            ></span>
-                            {u.tai_khoan_hoat_dong ? "Hoạt động" : "Ngưng"}
-                          </td>
-                          <td className="p-2">
-                            <button
-                              className={`px-3 py-1 rounded ${
-                                u.tai_khoan_hoat_dong
-                                  ? "bg-red-100 text-red-600 hover:bg-red-200"
-                                  : "bg-green-100 text-green-700 hover:bg-green-200"
-                              }`}
-                              onClick={() =>
-                                handleToggleHoatDong(u.id, !u.tai_khoan_hoat_dong)
-                              }
-                            >
-                              {u.tai_khoan_hoat_dong ? "Ngưng hoạt động" : "Kích hoạt"}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+            <AdminRealUsersTab />
           </TabsContent>
         </Tabs>
 

@@ -13,6 +13,7 @@ import ResetPassword from "./pages/ResetPassword";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
 import PaymentPage from "./pages/PaymentPage";
+import PostPage from "./pages/PostPage";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/notifications" element={<Index />} />
           <Route path="/profile/:userId" element={<UserProfilePage />} />
           <Route path="/u/:userId" element={<FakeUserProfilePage />} />
+          <Route path="/post/:postId" element={<PostPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />

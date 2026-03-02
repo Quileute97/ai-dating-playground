@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import SEOHead from "@/components/SEOHead";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, MapPin, Briefcase, GraduationCap, Ruler, Clock, UserPlus, MessageCircle, Album, X, ArrowLeft, Home } from "lucide-react";
+import { Heart, MapPin, Briefcase, GraduationCap, Ruler, Clock, UserPlus, MessageCircle, Album, X, ArrowLeft, Home, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSendFriendRequest, useFriendList, useSentFriendRequests } from "@/hooks/useFriends";
 import { useToast } from "@/hooks/use-toast";
@@ -211,14 +211,32 @@ const UserProfilePage: React.FC = () => {
             
             <h1 className="font-semibold text-gray-800">Hồ sơ cá nhân</h1>
             
-            <Button 
-              onClick={() => navigate('/')}
-              variant="ghost" 
-              size="sm"
-              className="hover:bg-purple-100 transition-colors"
-            >
-              <Home className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                onClick={async () => {
+                  const url = `${window.location.origin}/profile/${userId}`;
+                  if (navigator.share) {
+                    try { await navigator.share({ title: `${profile?.name} - Hyliya`, url }); } catch {}
+                  } else {
+                    await navigator.clipboard.writeText(url);
+                    toast({ title: "Đã sao chép link", description: "Link hồ sơ đã được sao chép." });
+                  }
+                }}
+                variant="ghost"
+                size="sm"
+                className="hover:bg-purple-100 transition-colors"
+              >
+                <Share2 className="w-5 h-5" />
+              </Button>
+              <Button 
+                onClick={() => navigate('/')}
+                variant="ghost" 
+                size="sm"
+                className="hover:bg-purple-100 transition-colors"
+              >
+                <Home className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
         </div>
 

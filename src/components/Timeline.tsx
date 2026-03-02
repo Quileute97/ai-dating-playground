@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent } from "react";
-import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings } from "lucide-react";
+import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings, Share2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -163,15 +163,6 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
   };
 
   const { startChatWith } = useChatIntegration();
-
-  const handleUserClick = (userId: string, userName: string, userAvatar: string) => {
-    // Use unified chat system
-    startChatWith({
-      id: userId,
-      name: userName,
-      avatar: userAvatar
-    });
-  };
 
   return (
     <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in">
@@ -344,6 +335,7 @@ const PostItem: React.FC<{
   const [commentInput, setCommentInput] = React.useState("");
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const commentInputRef = React.useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const handleReply = (username: string) => {
     const mention = `@${username} `;
@@ -529,6 +521,22 @@ const PostItem: React.FC<{
         >
           <MessageCircle size={16} />
           <span className="ml-1 text-sm">{comments?.length ?? 0}</span>
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full px-3 py-1.5 h-8 border-gray-200"
+          onClick={async () => {
+            const url = `${window.location.origin}/post/${post.id}`;
+            if (navigator.share) {
+              try { await navigator.share({ title: `Bài viết của ${post.user_name || 'người dùng'}`, url }); } catch {}
+            } else {
+              await navigator.clipboard.writeText(url);
+              toast({ title: "Đã sao chép link", description: "Link bài viết đã được sao chép." });
+            }
+          }}
+        >
+          <Share2 size={16} />
         </Button>
       </div>
       

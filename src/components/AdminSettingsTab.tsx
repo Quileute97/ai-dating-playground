@@ -20,6 +20,8 @@ export default function AdminSettingsTab() {
     setDatingRequiresPremium,
     getChatFilterEnabled,
     setChatFilterEnabled,
+    getNearbyRequiresPremium,
+    setNearbyRequiresPremium,
     isLoading: settingsLoading
   } = useAdminSettings();
 
@@ -153,6 +155,31 @@ export default function AdminSettingsTab() {
               id="dating-premium-toggle"
               checked={getDatingRequiresPremium()}
               onCheckedChange={(checked) => setDatingRequiresPremium(checked)}
+              disabled={settingsLoading}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Cài đặt tính năng Quanh đây</CardTitle>
+          <CardDescription>Quản lý quyền truy cập Premium cho tính năng Quanh đây</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="nearby-premium-toggle" className="flex-1">
+              <div className="space-y-1">
+                <div>Yêu cầu Premium cho Quanh đây</div>
+                <div className="text-sm text-muted-foreground">
+                  Khi tắt, tất cả người dùng có thể sử dụng phạm vi 20km và ẩn banner Premium
+                </div>
+              </div>
+            </Label>
+            <Switch
+              id="nearby-premium-toggle"
+              checked={getNearbyRequiresPremium()}
+              onCheckedChange={(checked) => setNearbyRequiresPremium(checked)}
               disabled={settingsLoading}
             />
           </div>

@@ -83,6 +83,18 @@ export function useAdminSettings() {
     });
   };
 
+  const getNearbyRequiresPremium = () => {
+    const setting = getSetting("nearby_requires_premium");
+    return setting?.setting_value?.enabled ?? true;
+  };
+
+  const setNearbyRequiresPremium = (enabled: boolean) => {
+    updateSettingMutation.mutate({
+      key: "nearby_requires_premium",
+      value: { enabled },
+    });
+  };
+
   return {
     settings,
     isLoading,
@@ -91,6 +103,8 @@ export function useAdminSettings() {
     setDatingRequiresPremium,
     getChatFilterEnabled,
     setChatFilterEnabled,
+    getNearbyRequiresPremium,
+    setNearbyRequiresPremium,
     updateSetting: updateSettingMutation.mutate,
   };
 }

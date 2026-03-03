@@ -14,6 +14,7 @@ import NearbyPackageModal from "./NearbyPackageModal";
 import { createNearbyPackagePayment } from "@/services/payosService";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { useAdminSettings } from "@/hooks/useAdminSettings";
 import { supabase } from "@/integrations/supabase/client";
 
 interface NearbyInterfaceProps {
@@ -40,16 +41,20 @@ const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const fakeUserInteractions = useFakeUserInteractions(user?.id);
+  const { getNearbyRequiresPremium } = useAdminSettings();
   
   // Get user location
   const { position: userLocation } = useGeolocation();
   
   // Check premium status
   const { premiumStatus, isLoading: premiumLoading } = usePremiumStatus(user?.id);
+
+  const nearbyRequiresPremium = getNearbyRequiresPremium();
   
   // Set distance based on premium status: 5km for free, 20km for premium
-  const distance = premiumStatus?.isPremium ? 20 : 5;
-  const hasExpandedRange = premiumStatus?.isPremium || false;
+  // If nearby premium is disabled globally, everyone gets 20km
+  const distance = (!nearbyRequiresPremium || premiumStatus?.isPremium) ? 20 : 5;
+  const hasExpandedRange = !nearbyRequiresPremium || premiumStatus?.isPremium || false;
   
   // Use the hook with correct parameters
   const { profiles, loading } = useNearbyProfiles(user?.id, userLocation, distance);
@@ -330,8 +335,8 @@ const NearbyInterface = ({ user, onOpenChat }: NearbyInterfaceProps) => {
           </div>
         </ScrollArea>
 
-        {/* Feature Banner - Only show if not premium */}
-        {!premiumStatus?.isPremium && (
+        {/* Feature Banner - Only show if nearby premium is required and not premium */}
+        {nearbyRequiresPremium && !premiumStatus?.isPremium && (
           <NearbyFeatureBanner
             upgradeStatus={undefined}
             nearbyLoading={loading}

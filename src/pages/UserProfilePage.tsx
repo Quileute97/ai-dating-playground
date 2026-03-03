@@ -215,12 +215,14 @@ const UserProfilePage: React.FC = () => {
               <Button
                 onClick={async () => {
                   const url = `${window.location.origin}/profile/${userId}`;
-                  if (navigator.share) {
-                    try { await navigator.share({ title: `${profile?.name} - Hyliya`, url }); } catch {}
-                  } else {
+                  try {
                     await navigator.clipboard.writeText(url);
                     toast({ title: "Đã sao chép link", description: "Link hồ sơ đã được sao chép." });
+                  } catch {
+                    const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                    toast({ title: "Đã sao chép link", description: "Link hồ sơ đã được sao chép." });
                   }
+                  if (navigator.share) { try { await navigator.share({ title: `${profile?.name} - Hyliya`, url }); } catch {} }
                 }}
                 variant="ghost"
                 size="sm"

@@ -528,11 +528,21 @@ const PostItem: React.FC<{
           className="rounded-full px-3 py-1.5 h-8 border-gray-200"
           onClick={async () => {
             const url = `${window.location.origin}/post/${post.id}`;
-            if (navigator.share) {
-              try { await navigator.share({ title: `Bài viết của ${post.user_name || 'người dùng'}`, url }); } catch {}
-            } else {
+            try {
               await navigator.clipboard.writeText(url);
               toast({ title: "Đã sao chép link", description: "Link bài viết đã được sao chép." });
+            } catch {
+              // Fallback for clipboard failure
+              const textArea = document.createElement('textarea');
+              textArea.value = url;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              toast({ title: "Đã sao chép link", description: "Link bài viết đã được sao chép." });
+            }
+            if (navigator.share) {
+              try { await navigator.share({ title: `Bài viết của ${post.user_name || 'người dùng'}`, url }); } catch {}
             }
           }}
         >

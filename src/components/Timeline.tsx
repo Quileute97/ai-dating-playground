@@ -355,7 +355,8 @@ const PostItem: React.FC<{
   onHashtagClick: (tag: string) => void;
   onDeletePost: (postId: string) => void;
   isDeleting: boolean;
-}> = ({ post, user, onHashtagClick, onDeletePost, isDeleting }) => {
+  onDonate?: (target: { id: string; name: string; postId?: string }) => void;
+}> = ({ post, user, onHashtagClick, onDeletePost, isDeleting, onDonate }) => {
   const [commentInput, setCommentInput] = React.useState("");
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const commentInputRef = React.useRef<HTMLInputElement>(null);

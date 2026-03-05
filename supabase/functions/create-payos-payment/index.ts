@@ -47,6 +47,22 @@ function getPackageInfo(packageType: string): PackageInfo | null {
       name: "Nearby vĩnh viễn", 
       price: 500000,
       description: "Nearby vinh vien" // 16 chars
+    },
+    // Star packages
+    "stars_10": {
+      name: "10 Sao",
+      price: 10000,
+      description: "Nap 10 sao" // 10 chars
+    },
+    "stars_50": {
+      name: "50 Sao",
+      price: 45000,
+      description: "Nap 50 sao" // 10 chars
+    },
+    "stars_100": {
+      name: "100 Sao",
+      price: 80000,
+      description: "Nap 100 sao" // 11 chars
     }
   };
 

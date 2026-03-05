@@ -5,13 +5,15 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import SEOHead from "@/components/SEOHead";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, MapPin, Briefcase, GraduationCap, Ruler, Clock, UserPlus, MessageCircle, Album, X, ArrowLeft, Home, Share2 } from "lucide-react";
+import { Heart, MapPin, Briefcase, GraduationCap, Ruler, Clock, UserPlus, MessageCircle, Album, X, ArrowLeft, Home, Share2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSendFriendRequest, useFriendList, useSentFriendRequests } from "@/hooks/useFriends";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ProfileChatWindow from "@/components/ProfileChatWindow";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
+import { useStars } from "@/hooks/useStars";
+import DonateStarModal from "@/components/DonateStarModal";
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -21,6 +23,7 @@ const UserProfilePage: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAlbumModal, setShowAlbumModal] = useState(false);
   const [showChatWindow, setShowChatWindow] = useState(false);
+  const [showDonate, setShowDonate] = useState(false);
   const { toast } = useToast();
   
   // Friend hooks
@@ -28,6 +31,7 @@ const UserProfilePage: React.FC = () => {
   const { data: friends } = useFriendList(currentUser?.id);
   const { data: sentRequests } = useSentFriendRequests(currentUser?.id);
   const fakeUserInteractions = useFakeUserInteractions(currentUser?.id);
+  const { starBalance, donateStars } = useStars(currentUser?.id);
 
   useEffect(() => {
     // Get current user
@@ -299,6 +303,15 @@ const UserProfilePage: React.FC = () => {
                       Nhắn tin
                     </Button>
                     
+                    <Button
+                      onClick={() => setShowDonate(true)}
+                      variant="outline"
+                      className="flex-shrink-0 border-yellow-300 text-yellow-600 hover:bg-yellow-50 shadow-md transform hover:scale-105 transition-all duration-200"
+                      size="sm"
+                    >
+                      <Star className="w-4 h-4 fill-yellow-400" />
+                    </Button>
+
                     {profile.album && Array.isArray(profile.album) && profile.album.length > 0 && (
                       <Button
                         onClick={() => setShowAlbumModal(true)}
@@ -477,6 +490,17 @@ const UserProfilePage: React.FC = () => {
           targetUserAvatar={profile.avatar || '/placeholder.svg'}
           currentUserId={currentUser.id}
           onClose={() => setShowChatWindow(false)}
+        />
+      )}
+
+      {showDonate && profile && currentUser && (
+        <DonateStarModal
+          isOpen={showDonate}
+          onClose={() => setShowDonate(false)}
+          receiverName={profile.name || 'Người dùng'}
+          receiverId={userId!}
+          currentBalance={starBalance.balance}
+          onDonate={donateStars}
         />
       )}
     </>

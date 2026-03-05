@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent } from "react";
-import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings, Share2 } from "lucide-react";
+import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings, Share2, Star } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,6 +118,9 @@ import { useDatingProfile } from "@/hooks/useDatingProfile";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 import { useFakePostComments } from "@/hooks/useFakePostComments";
 import { useFakePostLikes } from "@/hooks/useFakePostLikes";
+import { useStars } from "@/hooks/useStars";
+import DonateStarModal from "./DonateStarModal";
+import StarBalanceWidget from "./StarBalanceWidget";
 
 type TimelineProps = {
   user: any;
@@ -130,6 +133,8 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
   const [hashtag, setHashtag] = React.useState<string | null>(null);
   const fakeUserInteractions = useFakeUserInteractions(userId);
   const { toast } = useToast();
+  const { starBalance, donateStars } = useStars(userId);
+  const [donateTarget, setDonateTarget] = useState<{ id: string; name: string; postId?: string } | null>(null);
 
   const handlePostSubmit = async (
     data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">
@@ -167,7 +172,12 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
   return (
     <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in">
       {user && (
-        <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
+        <>
+          <div className="flex justify-end mb-1">
+            <StarBalanceWidget userId={userId} userEmail={user?.email} />
+          </div>
+          <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
+        </>
       )}
       
       <div className="flex-1 overflow-y-auto space-y-2 mt-3">
@@ -182,6 +192,7 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
             onHashtagClick={setHashtag}
             onDeletePost={handleDeletePost}
             isDeleting={deleting}
+            onDonate={(target) => setDonateTarget(target)}
           />
         ))}
         {posts?.length === 0 && !isLoading && (
@@ -195,6 +206,18 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
           open={!!hashtag}
           user={user}
           onClose={() => setHashtag(null)}
+        />
+      )}
+
+      {donateTarget && (
+        <DonateStarModal
+          isOpen={!!donateTarget}
+          onClose={() => setDonateTarget(null)}
+          receiverName={donateTarget.name}
+          receiverId={donateTarget.id}
+          postId={donateTarget.postId}
+          currentBalance={starBalance.balance}
+          onDonate={donateStars}
         />
       )}
     </div>
@@ -331,7 +354,8 @@ const PostItem: React.FC<{
   onHashtagClick: (tag: string) => void;
   onDeletePost: (postId: string) => void;
   isDeleting: boolean;
-}> = ({ post, user, onHashtagClick, onDeletePost, isDeleting }) => {
+  onDonate?: (target: { id: string; name: string; postId?: string }) => void;
+}> = ({ post, user, onHashtagClick, onDeletePost, isDeleting, onDonate }) => {
   const [commentInput, setCommentInput] = React.useState("");
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const commentInputRef = React.useRef<HTMLInputElement>(null);
@@ -548,6 +572,17 @@ const PostItem: React.FC<{
         >
           <Share2 size={16} />
         </Button>
+        {user?.id && post.user_id !== user.id && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-full px-3 py-1.5 h-8 border-yellow-300 text-yellow-600 hover:bg-yellow-50"
+            onClick={() => onDonate?.({ id: post.user_id, name: post.user_name || 'Người dùng', postId: post.id })}
+          >
+            <Star size={16} className="fill-yellow-400" />
+            <span className="ml-1 text-xs">Donate</span>
+          </Button>
+        )}
       </div>
       
       {/* Comments */}

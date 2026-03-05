@@ -194,6 +194,7 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
             onHashtagClick={setHashtag}
             onDeletePost={handleDeletePost}
             isDeleting={deleting}
+            onDonate={(target) => setDonateTarget(target)}
           />
         ))}
         {posts?.length === 0 && !isLoading && (
@@ -578,7 +579,7 @@ const PostItem: React.FC<{
             size="sm"
             variant="outline"
             className="rounded-full px-3 py-1.5 h-8 border-yellow-300 text-yellow-600 hover:bg-yellow-50"
-            onClick={() => setDonateTarget({ id: post.user_id, name: post.user_name || 'Người dùng', postId: post.id })}
+            onClick={() => onDonate?.({ id: post.user_id, name: post.user_name || 'Người dùng', postId: post.id })}
           >
             <Star size={16} className="fill-yellow-400" />
             <span className="ml-1 text-xs">Donate</span>

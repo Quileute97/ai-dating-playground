@@ -172,14 +172,12 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
   return (
     <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in">
       {user && (
-        <div className="flex items-center justify-between mb-2">
+        <>
+          <div className="flex justify-end mb-1">
+            <StarBalanceWidget userId={userId} userEmail={user?.email} />
+          </div>
           <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
-        </div>
-      )}
-      {user && (
-        <div className="flex justify-end mb-2">
-          <StarBalanceWidget userId={userId} userEmail={user?.email} />
-        </div>
+        </>
       )}
       
       <div className="flex-1 overflow-y-auto space-y-2 mt-3">

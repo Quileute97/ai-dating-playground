@@ -10,7 +10,10 @@ export const PaymentRequestSchema = z.object({
     'dating_lifetime',
     'nearby_week',
     'nearby_month',
-    'nearby_unlimited'
+    'nearby_unlimited',
+    'stars_10',
+    'stars_50',
+    'stars_100'
   ], {
     errorMap: () => ({ message: "Invalid package type" })
   }),

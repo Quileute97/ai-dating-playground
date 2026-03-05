@@ -631,6 +631,42 @@ export type Database = {
         }
         Relationships: []
       }
+      star_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          note: string | null
+          order_code: string | null
+          related_post_id: string | null
+          related_user_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          order_code?: string | null
+          related_post_id?: string | null
+          related_user_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          order_code?: string | null
+          related_post_id?: string | null
+          related_user_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stories: {
         Row: {
           created_at: string
@@ -796,6 +832,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_stars: {
+        Row: {
+          balance: number
+          created_at: string | null
+          id: string
+          last_daily_claim: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string | null
+          id?: string
+          last_daily_claim?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string | null
+          id?: string
+          last_daily_claim?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           created_at: string
@@ -840,6 +903,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_daily_stars: {
+        Args: { daily_amount?: number; user_id_param: string }
+        Returns: boolean
+      }
       comment_on_fake_post: {
         Args: {
           content_param: string
@@ -851,6 +918,16 @@ export type Database = {
       create_conversation_with_fake_user: {
         Args: { fake_user_id: string; real_user_id: string }
         Returns: string
+      }
+      donate_stars: {
+        Args: {
+          amount_param: number
+          note_param?: string
+          post_id_param?: string
+          receiver_id_param: string
+          sender_id_param: string
+        }
+        Returns: boolean
       }
       get_fake_users_for_dating: {
         Args: {

@@ -172,7 +172,14 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
   return (
     <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in">
       {user && (
-        <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
+        <div className="flex items-center justify-between mb-2">
+          <PostForm user={user} userProfile={profile} onCreate={handlePostSubmit} posting={creating} />
+        </div>
+      )}
+      {user && (
+        <div className="flex justify-end mb-2">
+          <StarBalanceWidget userId={userId} userEmail={user?.email} />
+        </div>
       )}
       
       <div className="flex-1 overflow-y-auto space-y-2 mt-3">
@@ -200,6 +207,18 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
           open={!!hashtag}
           user={user}
           onClose={() => setHashtag(null)}
+        />
+      )}
+
+      {donateTarget && (
+        <DonateStarModal
+          isOpen={!!donateTarget}
+          onClose={() => setDonateTarget(null)}
+          receiverName={donateTarget.name}
+          receiverId={donateTarget.id}
+          postId={donateTarget.postId}
+          currentBalance={starBalance.balance}
+          onDonate={donateStars}
         />
       )}
     </div>
@@ -553,6 +572,17 @@ const PostItem: React.FC<{
         >
           <Share2 size={16} />
         </Button>
+        {user?.id && post.user_id !== user.id && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-full px-3 py-1.5 h-8 border-yellow-300 text-yellow-600 hover:bg-yellow-50"
+            onClick={() => setDonateTarget({ id: post.user_id, name: post.user_name || 'Người dùng', postId: post.id })}
+          >
+            <Star size={16} className="fill-yellow-400" />
+            <span className="ml-1 text-xs">Donate</span>
+          </Button>
+        )}
       </div>
       
       {/* Comments */}

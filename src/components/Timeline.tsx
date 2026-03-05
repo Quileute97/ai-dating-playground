@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent } from "react";
-import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings, Share2 } from "lucide-react";
+import { User, MessageCircle, Heart, SendHorizonal, MapPin, Image as ImageIcon, Video as VideoIcon, Smile, MoreHorizontal, Trash2, Settings, Share2, Star } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,6 +118,9 @@ import { useDatingProfile } from "@/hooks/useDatingProfile";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 import { useFakePostComments } from "@/hooks/useFakePostComments";
 import { useFakePostLikes } from "@/hooks/useFakePostLikes";
+import { useStars } from "@/hooks/useStars";
+import DonateStarModal from "./DonateStarModal";
+import StarBalanceWidget from "./StarBalanceWidget";
 
 type TimelineProps = {
   user: any;
@@ -130,6 +133,8 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
   const [hashtag, setHashtag] = React.useState<string | null>(null);
   const fakeUserInteractions = useFakeUserInteractions(userId);
   const { toast } = useToast();
+  const { starBalance, donateStars } = useStars(userId);
+  const [donateTarget, setDonateTarget] = useState<{ id: string; name: string; postId?: string } | null>(null);
 
   const handlePostSubmit = async (
     data: Omit<Post, "id" | "likes" | "liked" | "comments" | "createdAt">

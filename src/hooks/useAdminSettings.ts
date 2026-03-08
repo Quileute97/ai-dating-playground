@@ -85,7 +85,7 @@ export function useAdminSettings() {
 
   const getNearbyRequiresPremium = () => {
     const setting = getSetting("nearby_requires_premium");
-    return setting?.setting_value?.enabled ?? true;
+    return setting?.setting_value?.enabled ?? false; // Mặc định false = không hiện banner
   };
 
   const setNearbyRequiresPremium = (enabled: boolean) => {

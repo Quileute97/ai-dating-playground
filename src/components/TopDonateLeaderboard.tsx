@@ -91,7 +91,7 @@ export function TopDonateBannerMobile() {
             {entries.slice(0, 10).map((entry, index) => (
               <div
                 key={entry.user_id}
-                onClick={() => navigate(`/user/${entry.user_id}`)}
+                onClick={() => navigate(`/profile/${entry.user_id}`)}
                 className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/80 border border-border/50 shrink-0 cursor-pointer hover:bg-accent/50 transition-colors"
               >
                 {getRankIcon(index)}
@@ -132,7 +132,7 @@ export default function TopDonateLeaderboard() {
             {entries.map((entry, index) => (
               <div
                 key={entry.user_id}
-                onClick={() => navigate(`/user/${entry.user_id}`)}
+                onClick={() => navigate(`/profile/${entry.user_id}`)}
                 className={`flex items-center gap-2.5 p-2 rounded-lg transition-colors cursor-pointer ${
                   index < 3 ? 'bg-accent/50 hover:bg-accent/70' : 'hover:bg-accent/30'
                 }`}

@@ -1,0 +1,1 @@
+UPDATE admin_settings SET setting_value = '{"enabled": false}'::jsonb, updated_at = now() WHERE setting_key = 'nearby_requires_premium';

@@ -16,6 +16,7 @@ import DatingAppModals from "./DatingAppModals";
 import UnifiedProfileButton from "./UnifiedProfileButton";
 import RequireLogin from "./RequireLogin";
 import DatingAppLayout from "./DatingAppLayout";
+import { TopDonateBannerMobile } from "./TopDonateLeaderboard";
 import { useDatingAppUser } from "./hooks/useDatingAppUser";
 import { useUnifiedProfile } from "@/hooks/useUnifiedProfile";
 import { useGlobalSync } from "@/hooks/useGlobalSync";
@@ -343,6 +344,9 @@ const DatingApp = () => {
             </div>
           </div>
         )}
+
+        {/* Mobile Top Donate Banner */}
+        {!isAdminMode && <TopDonateBannerMobile />}
 
         {/* Main Layout (side panels + content) */}
         <DatingAppLayout

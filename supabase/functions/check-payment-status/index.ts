@@ -7,8 +7,36 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const STAR_PACKAGES: Record<string, number> = {
+  'stars_10': 10,
+  'stars_50': 50,
+  'stars_100': 100,
+};
+
+const PACKAGE_DURATIONS: Record<string, number> = {
+  'dating_week': 7,
+  'dating_month': 30,
+  'dating_lifetime': -1,
+  'nearby_week': 7,
+  'nearby_month': 30,
+  'nearby_lifetime': -1,
+};
+
+function detectPackageType(description: string | null): string {
+  if (!description) return '';
+  if (description.includes('Nap 10 sao')) return 'stars_10';
+  if (description.includes('Nap 50 sao')) return 'stars_50';
+  if (description.includes('Nap 100 sao')) return 'stars_100';
+  if (description.includes('Premium 1 thang')) return 'dating_month';
+  if (description.includes('Premium 1 tuan')) return 'dating_week';
+  if (description.includes('Premium Vinh vien') || description.includes('Premium vinh vien')) return 'dating_lifetime';
+  if (description.includes('Nearby 1 thang')) return 'nearby_month';
+  if (description.includes('Nearby 1 tuan')) return 'nearby_week';
+  if (description.includes('Nearby Vinh vien') || description.includes('Nearby vinh vien')) return 'nearby_lifetime';
+  return '';
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -16,7 +44,6 @@ serve(async (req) => {
   try {
     console.log("🔍 Checking payment status...");
 
-    // Get PayOS credentials
     const clientId = Deno.env.get("PAYOS_CLIENT_ID");
     const apiKey = Deno.env.get("PAYOS_API_KEY");
 
@@ -36,39 +63,32 @@ serve(async (req) => {
     const user = data.user;
     if (!user) throw new Error("User not authenticated");
 
-    // Get and validate order code from query params
+    // Get order code from query params or body
     const url = new URL(req.url);
-    const rawOrderCode = url.searchParams.get("orderCode");
+    let rawOrderCode = url.searchParams.get("orderCode");
     
     if (!rawOrderCode) {
+      try {
+        const body = await req.json();
+        rawOrderCode = body?.orderCode?.toString() || null;
+      } catch {}
+    }
+
+    if (!rawOrderCode) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Order code is required"
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        }
+        JSON.stringify({ success: false, error: "Order code is required" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
-    
-    // Validate order code format
+
     const validationResult = OrderCodeSchema.safeParse(rawOrderCode);
     if (!validationResult.success) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Invalid order code format",
-          details: validationResult.error.errors
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        }
+        JSON.stringify({ success: false, error: "Invalid order code format" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
-    
+
     const orderCode = validationResult.data;
     console.log("🔍 Checking order:", orderCode);
 
@@ -89,9 +109,9 @@ serve(async (req) => {
     }
 
     const payosResult = await payosResponse.json();
-    console.log("📋 PayOS payment status:", payosResult.data.status);
+    console.log("📋 PayOS payment status:", payosResult.data?.status);
 
-    // Get payment from database
+    // Admin client for DB operations
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -110,15 +130,16 @@ serve(async (req) => {
       throw new Error("Payment not found");
     }
 
-    // Update status if changed
-    const payosStatus = payosResult.data.status;
+    const payosStatus = payosResult.data?.status;
     let dbStatus = "PENDING";
-    
+
     if (payosStatus === "PAID") {
       dbStatus = "PAID";
     } else if (payosStatus === "CANCELLED") {
       dbStatus = "FAILED";
     }
+
+    let starsAdded = 0;
 
     if (invoice.status !== dbStatus) {
       await supabase
@@ -130,20 +151,65 @@ serve(async (req) => {
         })
         .eq("order_code", orderCode);
 
-      // If payment successful, upgrade user to premium
       if (dbStatus === "PAID") {
-        const premiumExpires = new Date();
-        premiumExpires.setDate(premiumExpires.getDate() + 30);
+        const packageType = detectPackageType(invoice.description);
+        console.log("📦 Package type:", packageType);
 
-        await supabase
-          .from("profiles")
-          .update({
-            is_premium: true,
-            premium_expires: premiumExpires.toISOString(),
-          })
-          .eq("id", user.id);
+        if (packageType in STAR_PACKAGES) {
+          // Handle star purchase
+          const starAmount = STAR_PACKAGES[packageType];
+          console.log(`⭐ Adding ${starAmount} stars to user ${user.id}`);
 
-        console.log("✅ User upgraded to premium");
+          const { data: existing } = await supabase
+            .from('user_stars')
+            .select('id, balance')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (existing) {
+            await supabase.from('user_stars').update({
+              balance: existing.balance + starAmount,
+              updated_at: new Date().toISOString()
+            }).eq('user_id', user.id);
+          } else {
+            await supabase.from('user_stars').insert({
+              user_id: user.id,
+              balance: starAmount
+            });
+          }
+
+          await supabase.from('star_transactions').insert({
+            user_id: user.id,
+            type: 'purchase',
+            amount: starAmount,
+            order_code: orderCode,
+            note: `Mua ${starAmount} sao qua PayOS`
+          });
+
+          starsAdded = starAmount;
+          console.log(`✅ Added ${starAmount} stars`);
+
+        } else if (packageType in PACKAGE_DURATIONS) {
+          // Handle premium upgrade
+          const durationDays = PACKAGE_DURATIONS[packageType];
+          let premiumExpires = null;
+
+          if (durationDays !== -1) {
+            const expirationDate = new Date();
+            expirationDate.setDate(expirationDate.getDate() + durationDays);
+            premiumExpires = expirationDate.toISOString();
+          }
+
+          await supabase
+            .from("profiles")
+            .update({
+              is_premium: true,
+              premium_expires: premiumExpires,
+            })
+            .eq("id", user.id);
+
+          console.log("✅ User upgraded to premium");
+        }
       }
     }
 
@@ -155,13 +221,11 @@ serve(async (req) => {
           status: dbStatus,
           amount: invoice.amount,
           description: invoice.description,
-          isPaid: dbStatus === "PAID"
+          isPaid: dbStatus === "PAID",
+          starsAdded,
         }
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
 
   } catch (error) {
@@ -171,10 +235,7 @@ serve(async (req) => {
         success: false,
         error: error instanceof Error ? error.message : "Internal server error"
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });

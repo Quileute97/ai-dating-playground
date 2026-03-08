@@ -2,8 +2,7 @@
 import React from "react";
 import RealTimeActivityPanel from "./RealTimeActivityPanel";
 import SidePanelToggle from "./SidePanelToggle";
-import ActiveFriendsWithChatPanel from "./ActiveFriendsWithChatPanel";
-import { useChatUserSelection } from "@/hooks/useChatUserSelection";
+import TopDonateLeaderboard from "./TopDonateLeaderboard";
 
 interface DatingAppLayoutProps {
   user: any;
@@ -24,8 +23,6 @@ export default function DatingAppLayout({
   setIsRightPanelOpen,
   children
 }: DatingAppLayoutProps) {
-  const { selectedChatUserId, selectUserForChat } = useChatUserSelection();
-
   return (
     <div className="flex-1 overflow-hidden relative">
       <div className="h-full flex flex-row">
@@ -51,22 +48,18 @@ export default function DatingAppLayout({
           )
         )}
         
-        {/* CENTER: main tab content - expanded to fill available space */}
+        {/* CENTER: main tab content */}
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <div className="h-full w-full overflow-auto">
             {children}
           </div>
         </div>
         
-        {/* RIGHT: ActiveFriendsWithChatPanel (chỉ user login) - Hidden on mobile */}
-        {!isAdminMode && user && (
+        {/* RIGHT: Top Donate Leaderboard - Hidden on mobile */}
+        {!isAdminMode && (
           isRightPanelOpen ? (
             <div className="relative flex-shrink-0 hidden lg:block">
-              <ActiveFriendsWithChatPanel 
-                myId={user.id}
-                selectedChatUserId={selectedChatUserId}
-                onChatUserChange={selectUserForChat}
-              />
+              <TopDonateLeaderboard />
               <SidePanelToggle
                 isOpen={isRightPanelOpen}
                 side="right"

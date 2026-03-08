@@ -19,6 +19,7 @@ import AdminFakeUsersTab from "./AdminFakeUsersTab";
 import AdminAIPromptsTab from "./AdminAIPromptsTab";
 import AdminSettingsTab from "./AdminSettingsTab";
 import AdminTimelinePostsTab from "./AdminTimelinePostsTab";
+import AdminStarsTab from "./AdminStarsTab";
 
 import { toast } from "@/hooks/use-toast";
 import type { FakeUser, AIPrompt } from "@/types/admin";

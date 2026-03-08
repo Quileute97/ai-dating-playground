@@ -93,8 +93,9 @@ export default function TopDonateLeaderboard() {
             {entries.map((entry, index) => (
               <div
                 key={entry.user_id}
-                className={`flex items-center gap-2.5 p-2 rounded-lg transition-colors ${
-                  index < 3 ? 'bg-accent/50' : 'hover:bg-accent/30'
+                onClick={() => navigate(`/user/${entry.user_id}`)}
+                className={`flex items-center gap-2.5 p-2 rounded-lg transition-colors cursor-pointer ${
+                  index < 3 ? 'bg-accent/50 hover:bg-accent/70' : 'hover:bg-accent/30'
                 }`}
               >
                 {getRankIcon(index)}

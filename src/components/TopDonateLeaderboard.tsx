@@ -16,6 +16,7 @@ interface LeaderboardEntry {
 }
 
 export default function TopDonateLeaderboard() {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 

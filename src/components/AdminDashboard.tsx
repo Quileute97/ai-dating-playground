@@ -19,6 +19,7 @@ import AdminFakeUsersTab from "./AdminFakeUsersTab";
 import AdminAIPromptsTab from "./AdminAIPromptsTab";
 import AdminSettingsTab from "./AdminSettingsTab";
 import AdminTimelinePostsTab from "./AdminTimelinePostsTab";
+import AdminStarsTab from "./AdminStarsTab";
 
 import { toast } from "@/hooks/use-toast";
 import type { FakeUser, AIPrompt } from "@/types/admin";
@@ -268,12 +269,13 @@ const AdminDashboard = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
             <TabsTrigger value="admin-users">Admin Users</TabsTrigger>
             <TabsTrigger value="fake-users">Người dùng ảo</TabsTrigger>
             <TabsTrigger value="ai-prompts">AI Prompts</TabsTrigger>
             <TabsTrigger value="timeline-posts">Bài đăng</TabsTrigger>
+            <TabsTrigger value="stars">⭐ Sao</TabsTrigger>
             <TabsTrigger value="settings">Cài đặt</TabsTrigger>
           </TabsList>
 
@@ -332,6 +334,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="timeline-posts" className="space-y-6">
             <AdminTimelinePostsTab />
+          </TabsContent>
+
+          <TabsContent value="stars" className="space-y-6">
+            <AdminStarsTab />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">

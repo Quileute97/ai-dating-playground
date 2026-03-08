@@ -39,6 +39,12 @@ const PACKAGE_DURATIONS = {
   'nearby_lifetime': -1
 };
 
+const STAR_PACKAGES: Record<string, number> = {
+  'stars_10': 10,
+  'stars_50': 50,
+  'stars_100': 100,
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });

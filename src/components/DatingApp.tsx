@@ -345,6 +345,9 @@ const DatingApp = () => {
           </div>
         )}
 
+        {/* Mobile Top Donate Banner */}
+        {!isAdminMode && <TopDonateBannerMobile />}
+
         {/* Main Layout (side panels + content) */}
         <DatingAppLayout
           user={user}

@@ -269,12 +269,13 @@ const AdminDashboard = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
             <TabsTrigger value="admin-users">Admin Users</TabsTrigger>
             <TabsTrigger value="fake-users">Người dùng ảo</TabsTrigger>
             <TabsTrigger value="ai-prompts">AI Prompts</TabsTrigger>
             <TabsTrigger value="timeline-posts">Bài đăng</TabsTrigger>
+            <TabsTrigger value="stars">⭐ Sao</TabsTrigger>
             <TabsTrigger value="settings">Cài đặt</TabsTrigger>
           </TabsList>
 

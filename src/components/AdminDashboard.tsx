@@ -336,6 +336,10 @@ const AdminDashboard = () => {
             <AdminTimelinePostsTab />
           </TabsContent>
 
+          <TabsContent value="stars" className="space-y-6">
+            <AdminStarsTab />
+          </TabsContent>
+
           <TabsContent value="settings" className="space-y-6">
             <AdminSettingsTab />
           </TabsContent>

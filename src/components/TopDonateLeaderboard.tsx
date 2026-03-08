@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +16,7 @@ interface LeaderboardEntry {
 }
 
 export default function TopDonateLeaderboard() {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -91,8 +93,9 @@ export default function TopDonateLeaderboard() {
             {entries.map((entry, index) => (
               <div
                 key={entry.user_id}
-                className={`flex items-center gap-2.5 p-2 rounded-lg transition-colors ${
-                  index < 3 ? 'bg-accent/50' : 'hover:bg-accent/30'
+                onClick={() => navigate(`/user/${entry.user_id}`)}
+                className={`flex items-center gap-2.5 p-2 rounded-lg transition-colors cursor-pointer ${
+                  index < 3 ? 'bg-accent/50 hover:bg-accent/70' : 'hover:bg-accent/30'
                 }`}
               >
                 {getRankIcon(index)}

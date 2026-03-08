@@ -39,6 +39,12 @@ const PACKAGE_DURATIONS = {
   'nearby_lifetime': -1
 };
 
+const STAR_PACKAGES: Record<string, number> = {
+  'stars_10': 10,
+  'stars_50': 50,
+  'stars_100': 100,
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -165,22 +171,27 @@ serve(async (req) => {
       console.log('✅ Invoice updated to PAID');
     }
 
-    // Extract package type from description or invoice data
+    // Extract package type from description
     let packageType = '';
     if (invoice.description) {
-      // Extract package type from description (e.g., "Premium 1 thang" -> "dating_month")
       if (invoice.description.includes('Premium 1 thang')) {
         packageType = 'dating_month';
       } else if (invoice.description.includes('Premium 1 tuan')) {
         packageType = 'dating_week';  
-      } else if (invoice.description.includes('Premium Vinh vien')) {
+      } else if (invoice.description.includes('Premium Vinh vien') || invoice.description.includes('Premium vinh vien')) {
         packageType = 'dating_lifetime';
       } else if (invoice.description.includes('Nearby 1 thang')) {
         packageType = 'nearby_month';
       } else if (invoice.description.includes('Nearby 1 tuan')) {
         packageType = 'nearby_week';
-      } else if (invoice.description.includes('Nearby Vinh vien')) {
+      } else if (invoice.description.includes('Nearby Vinh vien') || invoice.description.includes('Nearby vinh vien')) {
         packageType = 'nearby_lifetime';
+      } else if (invoice.description.includes('Nap 10 sao')) {
+        packageType = 'stars_10';
+      } else if (invoice.description.includes('Nap 50 sao')) {
+        packageType = 'stars_50';
+      } else if (invoice.description.includes('Nap 100 sao')) {
+        packageType = 'stars_100';
       }
     }
 
@@ -194,7 +205,52 @@ serve(async (req) => {
 
     console.log('📦 Package type:', packageType);
 
-    // Calculate expiration date
+    // Handle STAR packages
+    if (packageType in STAR_PACKAGES) {
+      const starAmount = STAR_PACKAGES[packageType];
+      console.log(`⭐ Processing star purchase: ${starAmount} stars for user ${invoice.user_id}`);
+
+      // Upsert user_stars balance
+      const { data: existing } = await supabaseAdmin
+        .from('user_stars')
+        .select('id, balance')
+        .eq('user_id', invoice.user_id)
+        .maybeSingle();
+
+      if (existing) {
+        await supabaseAdmin.from('user_stars').update({
+          balance: existing.balance + starAmount,
+          updated_at: new Date().toISOString()
+        }).eq('user_id', invoice.user_id);
+      } else {
+        await supabaseAdmin.from('user_stars').insert({
+          user_id: invoice.user_id,
+          balance: starAmount
+        });
+      }
+
+      // Record transaction
+      await supabaseAdmin.from('star_transactions').insert({
+        user_id: invoice.user_id,
+        type: 'purchase',
+        amount: starAmount,
+        order_code: webhookPayload.orderCode.toString(),
+        note: `Mua ${starAmount} sao qua PayOS`
+      });
+
+      console.log(`✅ Added ${starAmount} stars to user ${invoice.user_id}`);
+
+      return new Response(JSON.stringify({ 
+        status: 'success',
+        message: `Added ${starAmount} stars`,
+        packageType
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Handle PREMIUM packages (existing logic)
     const durationDays = PACKAGE_DURATIONS[packageType as keyof typeof PACKAGE_DURATIONS];
     let premiumExpires = null;
     
@@ -206,7 +262,6 @@ serve(async (req) => {
 
     console.log('⏰ Premium expires:', premiumExpires || 'Never (lifetime)');
 
-    // Update user profile with premium status
     const { error: updateProfileError } = await supabaseAdmin
       .from('profiles')
       .update({
@@ -226,7 +281,6 @@ serve(async (req) => {
 
     console.log('✅ User premium status activated');
 
-    // Create a subscription record for tracking
     const { error: subscriptionError } = await supabaseAdmin
       .from('user_subscriptions')
       .upsert({
@@ -243,7 +297,6 @@ serve(async (req) => {
 
     if (subscriptionError) {
       console.error('❌ Failed to create subscription record:', subscriptionError);
-      // Don't fail the webhook, profile is already updated
     } else {
       console.log('✅ Subscription record created');
     }

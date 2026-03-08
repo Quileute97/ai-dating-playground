@@ -39,18 +39,28 @@ export function useStars(userId?: string) {
 
   const claimDaily = async () => {
     if (!userId) return false;
-    const { data, error } = await supabase.rpc('claim_daily_stars', { user_id_param: userId });
-    if (error) {
+    try {
+      console.log('⭐ Claiming daily stars for user:', userId);
+      const { data, error } = await supabase.rpc('claim_daily_stars', { user_id_param: userId });
+      console.log('⭐ Claim result:', { data, error });
+      if (error) {
+        console.error('⭐ Claim error:', error);
+        toast({ title: 'Lỗi', description: `Không thể nhận sao: ${error.message}`, variant: 'destructive' });
+        return false;
+      }
+      if (data === false) {
+        toast({ title: 'Đã nhận rồi', description: 'Bạn đã nhận sao miễn phí hôm nay.' });
+        await fetchBalance();
+        return false;
+      }
+      toast({ title: '⭐ Nhận sao thành công!', description: 'Bạn đã nhận 5 sao miễn phí hôm nay!' });
+      await fetchBalance();
+      return true;
+    } catch (err) {
+      console.error('⭐ Claim exception:', err);
       toast({ title: 'Lỗi', description: 'Không thể nhận sao hàng ngày.', variant: 'destructive' });
       return false;
     }
-    if (data === false) {
-      toast({ title: 'Đã nhận rồi', description: 'Bạn đã nhận sao miễn phí hôm nay.' });
-      return false;
-    }
-    toast({ title: '⭐ Nhận sao thành công!', description: 'Bạn đã nhận 5 sao miễn phí hôm nay!' });
-    await fetchBalance();
-    return true;
   };
 
   const donateStars = async (receiverId: string, amount: number, postId?: string, note?: string) => {

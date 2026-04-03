@@ -42,6 +42,9 @@ const DatingApp = () => {
 
   // Global sync hook để đồng bộ giữa các tab
   const { syncAll } = useGlobalSync(user?.id);
+  
+  // Notification alerts
+  const { unreadCount, clearUnread } = useNotificationAlerts(user?.id);
 
   // Xác định tab từ URL
   const getTabFromPath = (pathname: string): string => {

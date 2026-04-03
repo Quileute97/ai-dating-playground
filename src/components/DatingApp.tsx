@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import MessagesTab from "./MessagesTab";
 import NotificationsTab from "./NotificationsTab";
 import PremiumBadge from "./PremiumBadge";
+import { useNotificationAlerts } from "@/hooks/useNotificationAlerts";
 
 const DatingApp = () => {
   const { toast } = useToast();
@@ -41,6 +42,9 @@ const DatingApp = () => {
 
   // Global sync hook để đồng bộ giữa các tab
   const { syncAll } = useGlobalSync(user?.id);
+  
+  // Notification alerts
+  const { unreadCount, clearUnread } = useNotificationAlerts(user?.id);
 
   // Xác định tab từ URL
   const getTabFromPath = (pathname: string): string => {
@@ -97,7 +101,9 @@ const DatingApp = () => {
     setActiveTab(tabId);
     const newPath = tabId === 'chat' ? '/' : `/${tabId}`;
     navigate(newPath);
-    // Trigger sync khi chuyển tab để đảm bảo dữ liệu được cập nhật
+    if (tabId === 'notifications') {
+      clearUnread();
+    }
     setTimeout(() => {
       syncAll();
     }, 100);
@@ -109,7 +115,7 @@ const DatingApp = () => {
     { id: "nearby", label: "Quanh đây", icon: MapPin, color: "from-blue-500 to-purple-500" },
     { id: "timeline", label: "Timeline", icon: Star, color: "from-yellow-400 to-pink-500" },
     { id: "messages", label: "Tin nhắn", icon: Users, color: "from-blue-500 to-green-500" },
-    { id: "notifications", label: "Thông báo", icon: Bell, color: "from-orange-500 to-yellow-500" },
+    { id: "notifications", label: "Thông báo", icon: Bell, color: "from-orange-500 to-yellow-500", badge: unreadCount },
   ];
 
   const handleLogin = (userData: any) => {

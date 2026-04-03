@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import MessagesTab from "./MessagesTab";
 import NotificationsTab from "./NotificationsTab";
 import PremiumBadge from "./PremiumBadge";
+import { useNotificationAlerts } from "@/hooks/useNotificationAlerts";
 
 const DatingApp = () => {
   const { toast } = useToast();

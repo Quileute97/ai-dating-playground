@@ -101,7 +101,9 @@ const DatingApp = () => {
     setActiveTab(tabId);
     const newPath = tabId === 'chat' ? '/' : `/${tabId}`;
     navigate(newPath);
-    // Trigger sync khi chuyển tab để đảm bảo dữ liệu được cập nhật
+    if (tabId === 'notifications') {
+      clearUnread();
+    }
     setTimeout(() => {
       syncAll();
     }, 100);

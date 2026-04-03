@@ -10,6 +10,7 @@ interface Tab {
 
 interface CustomTab extends Tab {
   locked?: boolean;
+  badge?: number;
 }
 
 interface BottomNavigationProps {
@@ -41,6 +42,7 @@ export default function BottomNavigation({ activeTab, onTabChange, isAdminMode, 
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             const isLocked = Boolean(tab.locked);
+            const badge = tab.badge || 0;
 
             return (
               <button
@@ -56,7 +58,14 @@ export default function BottomNavigation({ activeTab, onTabChange, isAdminMode, 
                 }`}
                 title={isLocked ? 'Đăng nhập để dùng tính năng này' : undefined}
               >
-                <Icon className={`w-5 h-5 transition-all duration-200 ${isActive ? 'scale-105' : ''}`} />
+                <div className="relative">
+                  <Icon className={`w-5 h-5 transition-all duration-200 ${isActive ? 'scale-105' : ''}`} />
+                  {badge > 0 && !isActive && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 animate-pulse">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] font-medium leading-tight text-center px-0.5 max-w-full break-words">
                   {tab.label}
                 </span>

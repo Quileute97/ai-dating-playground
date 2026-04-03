@@ -115,7 +115,7 @@ const DatingApp = () => {
     { id: "nearby", label: "Quanh đây", icon: MapPin, color: "from-blue-500 to-purple-500" },
     { id: "timeline", label: "Timeline", icon: Star, color: "from-yellow-400 to-pink-500" },
     { id: "messages", label: "Tin nhắn", icon: Users, color: "from-blue-500 to-green-500" },
-    { id: "notifications", label: "Thông báo", icon: Bell, color: "from-orange-500 to-yellow-500" },
+    { id: "notifications", label: "Thông báo", icon: Bell, color: "from-orange-500 to-yellow-500", badge: unreadCount },
   ];
 
   const handleLogin = (userData: any) => {

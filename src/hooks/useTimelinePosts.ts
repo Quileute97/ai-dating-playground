@@ -75,11 +75,36 @@ export function useTimelinePosts(userId?: string) {
         console.error('Error creating post:', error);
         throw error;
       }
+
+      // Tự động thêm ảnh vào album profile nếu có media_url là ảnh
+      if (values.media_url && values.media_type === 'image') {
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("album")
+            .eq("id", values.user_id)
+            .single();
+
+          const currentAlbum = Array.isArray(profile?.album) ? profile.album : [];
+          const updatedAlbum = [...currentAlbum, values.media_url];
+
+          await supabase
+            .from("profiles")
+            .update({ album: updatedAlbum })
+            .eq("id", values.user_id);
+
+          console.log('📸 Ảnh đã được thêm vào album profile');
+        } catch (albumError) {
+          console.error('Lỗi khi thêm ảnh vào album:', albumError);
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
       console.log('Post created successfully');
       queryClient.invalidateQueries({ queryKey: ["timeline-posts", userId] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
     onError: (error) => {
       console.error('Failed to create post:', error);

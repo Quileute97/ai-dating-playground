@@ -119,7 +119,7 @@ const AlbumSection = ({
 
       {/* Album Modal with Swipe Support */}
       <Dialog open={showAlbumModal} onOpenChange={setShowAlbumModal}>
-        <DialogContent className="w-full h-full max-w-full max-h-full md:max-w-[90vw] md:max-h-[90vh] md:h-auto overflow-hidden p-0 bg-black/95 border-0 md:rounded-2xl gap-0">
+        <DialogContent className="w-full h-full max-w-full max-h-full overflow-hidden p-0 bg-black/95 border-0 gap-0 rounded-none">
           <Button
             variant="ghost"
             size="icon"

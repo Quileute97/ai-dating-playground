@@ -198,6 +198,17 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
         {posts?.length === 0 && !isLoading && (
           <div className="text-center text-gray-400 pt-16">Chưa có bài viết nào.</div>
         )}
+        {hasMore && !isLoading && (
+          <div className="text-center py-4">
+            <Button
+              variant="outline"
+              onClick={loadMore}
+              className="rounded-full px-6"
+            >
+              Xem thêm bài viết
+            </Button>
+          </div>
+        )}
       </div>
       
       {hashtag && (

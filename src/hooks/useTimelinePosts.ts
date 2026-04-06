@@ -167,6 +167,8 @@ export function useTimelinePosts(userId?: string) {
     posts,
     isLoading,
     error,
+    hasMore,
+    loadMore,
     refetch: () => queryClient.invalidateQueries({ queryKey: ["timeline-posts", userId] }),
     createPost: createPostMutation.mutateAsync,
     creating: createPostMutation.isPending,

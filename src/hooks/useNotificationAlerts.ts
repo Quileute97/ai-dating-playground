@@ -2,12 +2,48 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Notification sound using Web Audio API
+const playNotificationSound = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // First tone
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.frequency.value = 830;
+    osc1.type = 'sine';
+    gain1.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+    osc1.start(audioCtx.currentTime);
+    osc1.stop(audioCtx.currentTime + 0.25);
+
+    // Second tone (higher, slight delay)
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.frequency.value = 1100;
+    osc2.type = 'sine';
+    gain2.gain.setValueAtTime(0.12, audioCtx.currentTime + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+    osc2.start(audioCtx.currentTime + 0.15);
+    osc2.stop(audioCtx.currentTime + 0.4);
+
+    setTimeout(() => audioCtx.close(), 500);
+  } catch (e) {
+    // Silently fail if audio is not supported
+  }
+};
+
 export function useNotificationAlerts(userId: string | undefined) {
   const [unreadCount, setUnreadCount] = useState(0);
   const lastCheckedRef = useRef<string>(new Date().toISOString());
   const isFirstLoadRef = useRef(true);
 
   const showNotification = useCallback((title: string, description?: string) => {
+    playNotificationSound();
     toast(title, {
       description,
       duration: 4000,

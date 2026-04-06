@@ -128,7 +128,7 @@ type TimelineProps = {
 
 const Timeline: React.FC<TimelineProps> = ({ user }) => {
   const userId = user?.id;
-  const { posts, isLoading, createPost, creating, refetch, deletePost, deleting } = useTimelinePosts(userId);
+  const { posts, isLoading, createPost, creating, refetch, deletePost, deleting, hasMore, loadMore } = useTimelinePosts(userId);
   const { profile } = useDatingProfile(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
   const fakeUserInteractions = useFakeUserInteractions(userId);

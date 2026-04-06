@@ -128,7 +128,7 @@ type TimelineProps = {
 
 const Timeline: React.FC<TimelineProps> = ({ user }) => {
   const userId = user?.id;
-  const { posts, isLoading, createPost, creating, refetch, deletePost, deleting } = useTimelinePosts(userId);
+  const { posts, isLoading, createPost, creating, refetch, deletePost, deleting, hasMore, loadMore } = useTimelinePosts(userId);
   const { profile } = useDatingProfile(userId);
   const [hashtag, setHashtag] = React.useState<string | null>(null);
   const fakeUserInteractions = useFakeUserInteractions(userId);
@@ -185,7 +185,7 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
           <div className="text-center text-gray-500 pt-12">Đang tải timeline...</div>
         )}
         {!isLoading && posts?.map((post: any) => (
-          <PostItem 
+          <MemoizedPostItem 
             key={post.id} 
             post={post} 
             user={user} 
@@ -197,6 +197,17 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
         ))}
         {posts?.length === 0 && !isLoading && (
           <div className="text-center text-gray-400 pt-16">Chưa có bài viết nào.</div>
+        )}
+        {hasMore && !isLoading && (
+          <div className="text-center py-4">
+            <Button
+              variant="outline"
+              onClick={loadMore}
+              className="rounded-full px-6"
+            >
+              Xem thêm bài viết
+            </Button>
+          </div>
         )}
       </div>
       
@@ -507,6 +518,7 @@ const PostItem: React.FC<{
           <img
             src={post.media_url}
             alt="media"
+            loading="lazy"
             className="w-full rounded-lg object-cover cursor-pointer hover:opacity-95 transition-opacity"
             style={{ maxHeight: '500px' }}
             onClick={() => window.open(post.media_url, '_blank')}
@@ -666,6 +678,8 @@ const PostItem: React.FC<{
     </Card>
   );
 };
+
+const MemoizedPostItem = React.memo(PostItem);
 
 const renderContent = (content: string, onHashtagClick: (tag: string) => void) => {
   if (!content) return null;

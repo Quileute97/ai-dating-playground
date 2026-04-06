@@ -13,7 +13,7 @@ export function useTimelinePosts(userId?: string) {
       // Sử dụng function get_timeline_with_fake_posts để lấy cả real và fake user posts
       const { data, error } = await supabase.rpc("get_timeline_with_fake_posts", {
         user_id_param: userId || null,
-        limit_param: 50,
+        limit_param: 20,
         offset_param: 0
       });
       

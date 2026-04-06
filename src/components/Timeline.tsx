@@ -507,6 +507,7 @@ const PostItem: React.FC<{
           <img
             src={post.media_url}
             alt="media"
+            loading="lazy"
             className="w-full rounded-lg object-cover cursor-pointer hover:opacity-95 transition-opacity"
             style={{ maxHeight: '500px' }}
             onClick={() => window.open(post.media_url, '_blank')}

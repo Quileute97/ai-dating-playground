@@ -1,7 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export function useTimelinePosts(userId?: string) {
   const queryClient = useQueryClient();

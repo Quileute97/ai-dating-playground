@@ -668,7 +668,9 @@ const PostItem: React.FC<{
   );
 };
 
-const MemoizedPostItem = React.memo(PostItem); = (content: string, onHashtagClick: (tag: string) => void) => {
+const MemoizedPostItem = React.memo(PostItem);
+
+const renderContent = (content: string, onHashtagClick: (tag: string) => void) => {
   if (!content) return null;
   return <>{parseHashtags(content, onHashtagClick)}</>;
 };

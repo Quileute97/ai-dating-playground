@@ -5,15 +5,14 @@ import { useEffect, useState, useCallback } from "react";
 
 export function useTimelinePosts(userId?: string) {
   const queryClient = useQueryClient();
+  const [visibleCount, setVisibleCount] = useState(20);
 
-  // Lấy tất cả bài post (bao gồm cả fake users) 
-  const { data: posts, isLoading, error } = useQuery({
+  const { data: allPosts, isLoading, error } = useQuery({
     queryKey: ["timeline-posts", userId],
     queryFn: async () => {
-      // Sử dụng function get_timeline_with_fake_posts để lấy cả real và fake user posts
       const { data, error } = await supabase.rpc("get_timeline_with_fake_posts", {
         user_id_param: userId || null,
-        limit_param: 20,
+        limit_param: 100,
         offset_param: 0
       });
       
@@ -24,8 +23,16 @@ export function useTimelinePosts(userId?: string) {
       
       console.log('📊 Timeline posts fetched:', data?.length || 0, 'posts');
       return data ?? [];
-    }
+    },
+    staleTime: 30000, // Cache for 30s to avoid refetching
   });
+
+  const posts = allPosts?.slice(0, visibleCount);
+  const hasMore = (allPosts?.length || 0) > visibleCount;
+
+  const loadMore = useCallback(() => {
+    setVisibleCount(prev => prev + 20);
+  }, []);
 
   // Realtime subscription cho posts và fake_user_posts
   useEffect(() => {

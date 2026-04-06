@@ -185,7 +185,7 @@ const Timeline: React.FC<TimelineProps> = ({ user }) => {
           <div className="text-center text-gray-500 pt-12">Đang tải timeline...</div>
         )}
         {!isLoading && posts?.map((post: any) => (
-          <PostItem 
+          <MemoizedPostItem 
             key={post.id} 
             post={post} 
             user={user} 

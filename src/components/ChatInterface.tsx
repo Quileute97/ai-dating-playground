@@ -150,6 +150,7 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
               variant="outline" 
               size="sm"
               onClick={() => setShowStrangerSettings(true)}
+              aria-label="Cài đặt chat"
             >
               <Settings className="w-4 h-4" />
             </Button>

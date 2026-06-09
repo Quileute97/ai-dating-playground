@@ -11,8 +11,8 @@ Disallow: /reset-password
 # Crawl-delay for respectful crawling
 Crawl-delay: 1
 
-# Sitemap Index (Dynamic)
-Sitemap: https://oeepmsbttxfknkznbnym.supabase.co/functions/v1/generate-sitemap-index
+# Sitemap
+Sitemap: https://ai-dating-playground.lovable.app/sitemap.xml
 
 # Specific rules for major search engines
 User-agent: Googlebot

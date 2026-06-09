@@ -319,6 +319,7 @@ const DatingApp = () => {
                 variant="outline"
                 size="sm"
                 onClick={handleAdminToggle}
+                aria-label={isAdminMode ? "Tắt chế độ quản trị" : "Bật chế độ quản trị"}
                 className={`backdrop-blur-sm border-purple-200 shadow-sm transition-all duration-200 p-1 md:p-2 ${
                   isAdminMode
                     ? "bg-purple-500 text-white hover:bg-purple-600 shadow-lg"
@@ -332,6 +333,7 @@ const DatingApp = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowFilters(true)}
+                  aria-label="Cài đặt bộ lọc"
                   className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-purple-50 shadow-sm p-1 md:p-2"
                 >
                   <Settings className="w-3 h-3 md:w-4 md:h-4" />
@@ -342,6 +344,7 @@ const DatingApp = () => {
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
+                  aria-label="Đăng xuất"
                   className="bg-white/90 backdrop-blur-sm border-purple-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 shadow-sm p-1 md:p-2"
                 >
                   <LogOut className="w-3 h-3 md:w-4 md:h-4" />

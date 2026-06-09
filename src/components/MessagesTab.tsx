@@ -131,7 +131,7 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
     return (
       <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in bg-background">
         <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Tin nhắn</h2>
+          <h1 className="text-lg font-semibold">Tin nhắn</h1>
         </div>
         <div className="flex-1 p-4">
           <div className="text-center text-muted-foreground text-sm">
@@ -146,7 +146,7 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
     <div className="max-w-2xl mx-auto py-4 px-2 h-full flex flex-col animate-fade-in bg-background">
       {/* Header */}
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold mb-3">Tin nhắn</h2>
+        <h1 className="text-lg font-semibold mb-3">Tin nhắn</h1>
         
         {/* Search */}
         <div className="relative">

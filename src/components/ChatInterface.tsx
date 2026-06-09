@@ -150,6 +150,7 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
               variant="outline" 
               size="sm"
               onClick={() => setShowStrangerSettings(true)}
+              aria-label="Cài đặt chat"
             >
               <Settings className="w-4 h-4" />
             </Button>
@@ -283,7 +284,7 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
                       <div className="mb-2">
                         <img 
                           src={message.media_url} 
-                          alt="Shared image" 
+                          alt="Hình ảnh được chia sẻ trong cuộc trò chuyện" 
                           className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => window.open(message.media_url, '_blank')}
                           style={{ maxHeight: '200px' }}
@@ -308,7 +309,7 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
                       <div className="mb-2">
                         <img 
                           src={message.content.split('] ')[1]} 
-                          alt="Shared image" 
+                          alt="Hình ảnh được chia sẻ trong cuộc trò chuyện" 
                           className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => window.open(message.content.split('] ')[1], '_blank')}
                           style={{ maxHeight: '200px' }}

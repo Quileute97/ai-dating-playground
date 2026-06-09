@@ -1,0 +1,19 @@
+# Hyliya
+
+> Mạng xã hội kết hợp hẹn hò, chat ngẫu nhiên với người lạ, timeline và tin nhắn dành cho người Việt.
+
+Hyliya là nền tảng giúp người dùng kết nối, trò chuyện ẩn danh, tìm bạn hẹn hò, khám phá người dùng quanh khu vực và chia sẻ khoảnh khắc qua timeline.
+
+## Pages
+
+- [Trang chủ](/): Giới thiệu nền tảng và các tính năng chính.
+- [Chat với người lạ](/chat): Trò chuyện ngẫu nhiên và ẩn danh với người dùng khác.
+- [Hẹn hò](/dating): Khám phá và kết nối với những người phù hợp.
+- [Quanh đây](/nearby): Tìm người dùng ở gần vị trí của bạn.
+- [Timeline](/timeline): Bảng tin với các bài đăng từ cộng đồng.
+- [Tin nhắn](/messages): Hộp thư trò chuyện riêng tư với bạn bè.
+- [Thông báo](/notifications): Trung tâm thông báo hoạt động tài khoản.
+
+## Optional
+
+- [Nâng cấp Premium](/payment): Thông tin về các gói trả phí.

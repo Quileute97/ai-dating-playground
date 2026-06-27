@@ -37,10 +37,67 @@ const playNotificationSound = () => {
   }
 };
 
+// Request browser notification permission (once)
+const requestNotificationPermission = async () => {
+  if (!("Notification" in window)) return "unsupported";
+  if (Notification.permission === "default") {
+    try {
+      return await Notification.requestPermission();
+    } catch {
+      return "denied";
+    }
+  }
+  return Notification.permission;
+};
+
+// Show native OS/browser notification (works even when tab is hidden)
+const showBrowserNotification = (title: string, body?: string) => {
+  try {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    // Only show native notification when the tab is not visible/focused
+    if (document.visibilityState === "visible" && document.hasFocus()) return;
+
+    const notif = new Notification(title, {
+      body,
+      icon: "/favicon.ico",
+      badge: "/favicon.ico",
+      tag: "lovable-message",
+      renotify: true,
+      requireInteraction: false,
+    } as NotificationOptions);
+
+    notif.onclick = () => {
+      window.focus();
+      notif.close();
+    };
+
+    setTimeout(() => notif.close(), 8000);
+  } catch {
+    // silently ignore
+  }
+};
+
+const originalTitle = typeof document !== "undefined" ? document.title : "";
+
+const updateTabTitle = (count: number) => {
+  if (typeof document === "undefined") return;
+  if (count > 0) {
+    document.title = `(${count > 99 ? "99+" : count}) ${originalTitle}`;
+  } else {
+    document.title = originalTitle;
+  }
+};
+
 export function useNotificationAlerts(userId: string | undefined) {
   const [unreadCount, setUnreadCount] = useState(0);
   const lastCheckedRef = useRef<string>(new Date().toISOString());
   const isFirstLoadRef = useRef(true);
+
+  // Request permission once when hook mounts with a user
+  useEffect(() => {
+    if (!userId) return;
+    requestNotificationPermission();
+  }, [userId]);
 
   const showNotification = useCallback((title: string, description?: string) => {
     playNotificationSound();
@@ -48,12 +105,34 @@ export function useNotificationAlerts(userId: string | undefined) {
       description,
       duration: 4000,
     });
-    setUnreadCount(prev => prev + 1);
+    showBrowserNotification(title, description);
+    setUnreadCount(prev => {
+      const next = prev + 1;
+      updateTabTitle(next);
+      return next;
+    });
   }, []);
 
   const clearUnread = useCallback(() => {
     setUnreadCount(0);
+    updateTabTitle(0);
     lastCheckedRef.current = new Date().toISOString();
+  }, []);
+
+  // Clear badge when user returns to the tab
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        setUnreadCount(0);
+        updateTabTitle(0);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, []);
 
   useEffect(() => {

@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
-import ProfileChatWindow from "@/components/ProfileChatWindow";
+
 import { useStars } from "@/hooks/useStars";
 import DonateStarModal from "@/components/DonateStarModal";
 
@@ -20,7 +20,7 @@ const FakeUserProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAlbumModal, setShowAlbumModal] = useState(false);
-  const [showChatWindow, setShowChatWindow] = useState(false);
+  
   const [showDonate, setShowDonate] = useState(false);
   const { toast } = useToast();
   const fakeUserInteractions = useFakeUserInteractions(currentUser?.id);
@@ -87,7 +87,8 @@ const FakeUserProfilePage: React.FC = () => {
     
     try {
       await fakeUserInteractions.createConversationWithFakeUser(userId);
-      setShowChatWindow(true);
+      // Đồng bộ: chuyển sang tab Tin nhắn duy nhất
+      navigate(`/messages?user=${userId}`);
     } catch (error) {
       toast({
         title: "Lỗi",
@@ -410,16 +411,7 @@ const FakeUserProfilePage: React.FC = () => {
         </Dialog>
       </div>
 
-      {/* Chat Window */}
-      {showChatWindow && currentUser && profile && (
-        <ProfileChatWindow
-          targetUserId={userId!}
-          targetUserName={profile.name}
-          targetUserAvatar={profile.avatar || '/placeholder.svg'}
-          currentUserId={currentUser.id}
-          onClose={() => setShowChatWindow(false)}
-        />
-      )}
+      {/* Chat đã được đồng bộ vào tab Tin nhắn — không render cửa sổ chat riêng tại đây */}
 
       {showDonate && profile && currentUser && (
         <DonateStarModal

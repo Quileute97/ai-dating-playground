@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSendFriendRequest, useFriendList, useSentFriendRequests } from "@/hooks/useFriends";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import ProfileChatWindow from "@/components/ProfileChatWindow";
+
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 import { useStars } from "@/hooks/useStars";
 import DonateStarModal from "@/components/DonateStarModal";
@@ -21,7 +21,7 @@ const UserProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAlbumModal, setShowAlbumModal] = useState(false);
-  const [showChatWindow, setShowChatWindow] = useState(false);
+  
   const [showDonate, setShowDonate] = useState(false);
   const { toast } = useToast();
   
@@ -100,7 +100,7 @@ const UserProfilePage: React.FC = () => {
       return;
     }
     
-    // Check if this is a fake user and create conversation accordingly
+    // Đồng bộ: mọi cuộc trò chuyện đều mở trong tab Tin nhắn duy nhất
     supabase
       .from('fake_users')
       .select('id')
@@ -108,14 +108,12 @@ const UserProfilePage: React.FC = () => {
       .single()
       .then(({ data: fakeUser }) => {
         if (fakeUser) {
-          // Create conversation with fake user
           fakeUserInteractions.createConversationWithFakeUser(userId)
             .then(() => {
-              setShowChatWindow(true);
+              navigate(`/messages?user=${userId}`);
             });
         } else {
-          // Regular chat with real user
-          setShowChatWindow(true);
+          navigate(`/messages?user=${userId}`);
         }
       });
   };
@@ -541,16 +539,7 @@ const UserProfilePage: React.FC = () => {
         </Dialog>
       </div>
 
-      {/* Chat Window */}
-      {showChatWindow && currentUser && profile && (
-        <ProfileChatWindow
-          targetUserId={userId!}
-          targetUserName={profile.name}
-          targetUserAvatar={profile.avatar || '/placeholder.svg'}
-          currentUserId={currentUser.id}
-          onClose={() => setShowChatWindow(false)}
-        />
-      )}
+      {/* Chat đã được đồng bộ vào tab Tin nhắn — không render cửa sổ chat riêng tại đây */}
 
       {showDonate && profile && currentUser && (
         <DonateStarModal

@@ -87,7 +87,8 @@ const FakeUserProfilePage: React.FC = () => {
     
     try {
       await fakeUserInteractions.createConversationWithFakeUser(userId);
-      setShowChatWindow(true);
+      // Đồng bộ: chuyển sang tab Tin nhắn duy nhất
+      navigate(`/messages?user=${userId}`);
     } catch (error) {
       toast({
         title: "Lỗi",
@@ -410,16 +411,7 @@ const FakeUserProfilePage: React.FC = () => {
         </Dialog>
       </div>
 
-      {/* Chat Window */}
-      {showChatWindow && currentUser && profile && (
-        <ProfileChatWindow
-          targetUserId={userId!}
-          targetUserName={profile.name}
-          targetUserAvatar={profile.avatar || '/placeholder.svg'}
-          currentUserId={currentUser.id}
-          onClose={() => setShowChatWindow(false)}
-        />
-      )}
+      {/* Chat đã được đồng bộ vào tab Tin nhắn — không render cửa sổ chat riêng tại đây */}
 
       {showDonate && profile && currentUser && (
         <DonateStarModal

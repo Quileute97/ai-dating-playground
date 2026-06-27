@@ -7,9 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import PostDetailModal from "./PostDetailModal";
 import FriendRequestDetailModal from "./FriendRequestDetailModal";
-import ChatWidget from "./ChatWidget";
-import { useChatWidget } from "@/hooks/useChatWidget";
-
 interface PanelProps {
   userId?: string;
 }
@@ -19,18 +16,12 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
   const navigate = useNavigate();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [selectedFriendRequestId, setSelectedFriendRequestId] = useState<string | null>(null);
-  
-  const { isOpen, chatUser, openChat, closeChat } = useChatWidget();
 
-  const handleUserClick = (e: React.MouseEvent, activityUserId: string, activityUserName: string, activityUserAvatar: string) => {
+  const handleUserClick = (e: React.MouseEvent, activityUserId: string, _activityUserName: string, _activityUserAvatar: string) => {
     e.stopPropagation();
     if (activityUserId && userId) {
-      // Mở chat widget thay vì navigate
-      openChat({
-        id: activityUserId,
-        name: activityUserName || "Người dùng",
-        avatar: activityUserAvatar || "/placeholder.svg"
-      });
+      // Đồng bộ: mở tab Tin nhắn duy nhất thay vì widget chat riêng
+      navigate(`/messages?user=${activityUserId}`);
     }
   };
 
@@ -121,17 +112,7 @@ export default function RealTimeActivityPanel({ userId }: PanelProps) {
         onClose={() => setSelectedFriendRequestId(null)}
       />
 
-      {/* Chat Widget */}
-      {chatUser && userId && (
-        <ChatWidget
-          isOpen={isOpen}
-          onClose={closeChat}
-          userId={chatUser.id}
-          userName={chatUser.name}
-          userAvatar={chatUser.avatar}
-          myUserId={userId}
-        />
-      )}
+      {/* Chat đã đồng bộ vào tab Tin nhắn duy nhất */}
     </>
   );
 }

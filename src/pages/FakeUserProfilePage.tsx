@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
-import ProfileChatWindow from "@/components/ProfileChatWindow";
+
 import { useStars } from "@/hooks/useStars";
 import DonateStarModal from "@/components/DonateStarModal";
 
@@ -20,7 +20,7 @@ const FakeUserProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAlbumModal, setShowAlbumModal] = useState(false);
-  const [showChatWindow, setShowChatWindow] = useState(false);
+  
   const [showDonate, setShowDonate] = useState(false);
   const { toast } = useToast();
   const fakeUserInteractions = useFakeUserInteractions(currentUser?.id);

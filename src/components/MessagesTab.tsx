@@ -10,7 +10,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { usePremiumStatus } from '@/hooks/usePremiumStatus';
 import PremiumUpgradeModal from './PremiumUpgradeModal';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getDefaultAvatar } from '@/utils/getDefaultAvatar';
 
 interface MessagesTabProps {
@@ -32,7 +32,10 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
   const isPremium = premiumStatus.isPremium;
   const { getChatFilterEnabled } = useAdminSettings();
   const navigate = useNavigate();
-  
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryUserId = searchParams.get('user');
+  const effectiveSelectedUserId = selectedUserId || queryUserId;
+
   const chatFilterEnabled = getChatFilterEnabled();
 
   const handleViewProfile = (profileId: string, e: React.MouseEvent) => {
@@ -40,11 +43,11 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
     navigate(`/profile/${profileId}`);
   };
 
-  // Auto-open chat if selectedUserId is provided
+  // Auto-open chat if selectedUserId hoặc ?user= được cung cấp
   React.useEffect(() => {
-    if (selectedUserId && conversations) {
+    if (effectiveSelectedUserId && conversations) {
       const conversation = conversations.find(
-        c => c.other_user?.id === selectedUserId
+        c => c.other_user?.id === effectiveSelectedUserId
       );
       if (conversation) {
         setSelectedChat({
@@ -53,13 +56,28 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
           userAvatar: conversation.other_user.avatar
         });
       } else {
-        // Create a new chat if no conversation exists
+        // Tạo chat mới — kiểm tra fake user trước, sau đó profile thật
         import('@/integrations/supabase/client').then(async ({ supabase }) => {
+          const { data: fakeData } = await supabase
+            .from('fake_users')
+            .select('id, name, avatar')
+            .eq('id', effectiveSelectedUserId)
+            .maybeSingle();
+
+          if (fakeData) {
+            setSelectedChat({
+              userId: fakeData.id,
+              userName: fakeData.name || 'Unknown',
+              userAvatar: fakeData.avatar || '/placeholder.svg'
+            });
+            return;
+          }
+
           const { data: profileData } = await supabase
             .from('profiles')
             .select('id, name, avatar')
-            .eq('id', selectedUserId)
-            .single();
+            .eq('id', effectiveSelectedUserId)
+            .maybeSingle();
 
           if (profileData) {
             setSelectedChat({
@@ -71,7 +89,7 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
         });
       }
     }
-  }, [selectedUserId, conversations]);
+  }, [effectiveSelectedUserId, conversations]);
   
   const FREE_CHAT_LIMIT = 5;
 
@@ -85,6 +103,10 @@ export default function MessagesTab({ userId, selectedUserId }: MessagesTabProps
 
   const handleBackToList = () => {
     setSelectedChat(null);
+    if (queryUserId) {
+      searchParams.delete('user');
+      setSearchParams(searchParams, { replace: true });
+    }
   };
 
   const filteredConversations = conversations?.filter(conv => 

@@ -1,47 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://ai-dating-playground.lovable.app/</loc>
+    <loc>https://hyliya.com/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://ai-dating-playground.lovable.app/chat</loc>
+    <loc>https://hyliya.com/chat</loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://ai-dating-playground.lovable.app/dating</loc>
+    <loc>https://hyliya.com/dating</loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://ai-dating-playground.lovable.app/nearby</loc>
+    <loc>https://hyliya.com/nearby</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ai-dating-playground.lovable.app/timeline</loc>
+    <loc>https://hyliya.com/timeline</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ai-dating-playground.lovable.app/messages</loc>
+    <loc>https://hyliya.com/messages</loc>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://ai-dating-playground.lovable.app/notifications</loc>
+    <loc>https://hyliya.com/notifications</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ai-dating-playground.lovable.app/payment</loc>
+    <loc>https://hyliya.com/payment</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://ai-dating-playground.lovable.app/payment-success</loc>
+    <loc>https://hyliya.com/payment-success</loc>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>

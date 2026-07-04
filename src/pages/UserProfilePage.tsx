@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 import { useStars } from "@/hooks/useStars";
 import DonateStarModal from "@/components/DonateStarModal";
+import ProfileAlbumSection from "@/components/ProfileAlbumSection";
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();

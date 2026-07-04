@@ -437,41 +437,13 @@ const UserProfilePage: React.FC = () => {
               )}
 
               {/* Photo Album */}
-              {profile.album && Array.isArray(profile.album) && profile.album.length > 0 && (
-                <div className="mb-8">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em]">
-                      Album ảnh · {profile.album.length}
-                    </h3>
-                    <button
-                      onClick={() => setShowAlbumModal(true)}
-                      className="text-xs text-rose-500 font-semibold hover:text-rose-600"
-                    >
-                      Xem tất cả →
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {profile.album.slice(0, 6).map((img: string, idx: number) => (
-                      <div
-                        key={idx}
-                        className="relative group cursor-pointer overflow-hidden rounded-xl aspect-square"
-                        onClick={() => setShowAlbumModal(true)}
-                      >
-                        <img
-                          src={img}
-                          alt={`Ảnh ${idx + 1}`}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                        />
-                        {idx === 5 && profile.album.length > 6 && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
-                            <span className="text-white font-bold text-sm">+{profile.album.length - 6}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Photo Album */}
+              <ProfileAlbumSection
+                userId={userId!}
+                album={Array.isArray(profile.album) ? profile.album : []}
+                isOwner={isOwnProfile}
+                onAlbumChange={(next) => setProfile({ ...profile, album: next })}
+              />
 
               {/* Footer */}
               <div className="pt-6 border-t border-slate-100 flex flex-col items-center gap-1">
@@ -486,52 +458,6 @@ const UserProfilePage: React.FC = () => {
             </div>
           </div>
         </div>
-
-
-        {/* Album Modal - Improved for all devices */}
-        <Dialog open={showAlbumModal} onOpenChange={setShowAlbumModal}>
-          <DialogContent className="w-full h-full max-w-full max-h-full overflow-hidden p-0 bg-black/95 border-0 gap-0 rounded-none">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowAlbumModal(false)}
-              className="absolute top-2 right-2 md:top-4 md:right-4 z-50 h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/30 shadow-lg"
-            >
-              <X className="h-5 w-5 md:h-6 md:w-6" />
-            </Button>
-            
-            <div className="h-full flex flex-col p-4 md:p-6 lg:p-8">
-              <h2 className="text-lg md:text-2xl font-bold text-white mb-4 md:mb-6 flex items-center gap-2 pt-8 md:pt-0">
-                <Album className="w-5 h-5 md:w-6 md:h-6 text-pink-400" />
-                Album ảnh của {profile.name}
-              </h2>
-              
-              <div className="flex-1 overflow-y-auto -mx-2 px-2 custom-scrollbar">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 pb-4">
-                  {profile.album?.map((img: string, idx: number) => (
-                    <div 
-                      key={idx} 
-                      className="relative group cursor-pointer overflow-hidden rounded-lg md:rounded-xl"
-                    >
-                      <div className="aspect-square w-full">
-                        <img
-                          src={img}
-                          alt={`Ảnh ${idx + 1}`}
-                          className="w-full h-full object-cover transform transition-all duration-300 group-hover:scale-110"
-                        />
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3 md:pb-4">
-                        <span className="text-white font-semibold text-sm md:text-base">
-                          {idx + 1} / {profile.album.length}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Chat đã được đồng bộ vào tab Tin nhắn — không render cửa sổ chat riêng tại đây */}

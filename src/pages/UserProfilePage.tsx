@@ -1,19 +1,18 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import SEOHead from "@/components/SEOHead";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, MapPin, Briefcase, GraduationCap, Ruler, Clock, UserPlus, MessageCircle, Album, X, ArrowLeft, Home, Share2, Star } from "lucide-react";
+import { MapPin, Briefcase, GraduationCap, Ruler, Clock, UserPlus, MessageCircle, Album, ArrowLeft, Home, Share2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSendFriendRequest, useFriendList, useSentFriendRequests } from "@/hooks/useFriends";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { useFakeUserInteractions } from "@/hooks/useFakeUserInteractions";
 import { useStars } from "@/hooks/useStars";
 import DonateStarModal from "@/components/DonateStarModal";
-import ProfileAlbumSection from "@/components/ProfileAlbumSection";
+import ProfileAlbumSection, { ProfileAlbumHandle } from "@/components/ProfileAlbumSection";
 
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();

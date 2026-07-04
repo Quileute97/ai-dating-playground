@@ -1,10 +1,15 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, X, Upload, Trash2, GripVertical, Plus, Album as AlbumIcon, Loader2 } from 'lucide-react';
 import { uploadAlbumImage } from '@/utils/uploadAlbumImage';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+
+export interface ProfileAlbumHandle {
+  openViewer: (index?: number) => void;
+  openGrid: () => void;
+}
 
 interface Props {
   userId: string;
@@ -13,7 +18,7 @@ interface Props {
   onAlbumChange?: (album: string[]) => void;
 }
 
-const ProfileAlbumSection: React.FC<Props> = ({ userId, album, isOwner, onAlbumChange }) => {
+const ProfileAlbumSection = forwardRef<ProfileAlbumHandle, Props>(({ userId, album, isOwner, onAlbumChange }, ref) => {
   const [items, setItems] = useState<string[]>(Array.isArray(album) ? album : []);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [gridOpen, setGridOpen] = useState(false);

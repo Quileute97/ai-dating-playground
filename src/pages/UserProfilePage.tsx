@@ -438,6 +438,7 @@ const UserProfilePage: React.FC = () => {
               {/* Photo Album */}
               {/* Photo Album */}
               <ProfileAlbumSection
+                ref={albumRef}
                 userId={userId!}
                 album={Array.isArray(profile.album) ? profile.album : []}
                 isOwner={isOwnProfile}

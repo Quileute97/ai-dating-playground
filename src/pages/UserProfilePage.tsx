@@ -274,7 +274,7 @@ const UserProfilePage: React.FC = () => {
                         {profile.album.slice(0, 5).map((img: string, idx: number) => (
                           <button
                             key={idx}
-                            onClick={() => setShowAlbumModal(true)}
+                            onClick={() => albumRef.current?.openViewer(idx)}
                             className={`relative size-14 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${idx === 0 ? 'border-white shadow-lg' : 'border-white/40 hover:border-white/80'}`}
                           >
                             <img src={img} alt={`Ảnh ${idx + 1}`} className={`w-full h-full object-cover ${idx === 0 ? '' : 'opacity-90'}`} />

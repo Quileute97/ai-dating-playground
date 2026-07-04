@@ -27,6 +27,11 @@ const ProfileAlbumSection = forwardRef<ProfileAlbumHandle, Props>(({ userId, alb
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  useImperativeHandle(ref, () => ({
+    openViewer: (index = 0) => setViewerIndex(index),
+    openGrid: () => setGridOpen(true),
+  }), []);
+
   useEffect(() => {
     setItems(Array.isArray(album) ? album : []);
   }, [album]);

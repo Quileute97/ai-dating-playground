@@ -336,6 +336,8 @@ const ProfileAlbumSection = forwardRef<ProfileAlbumHandle, Props>(({ userId, alb
       </Dialog>
     </div>
   );
-};
+});
+
+ProfileAlbumSection.displayName = 'ProfileAlbumSection';
 
 export default ProfileAlbumSection;

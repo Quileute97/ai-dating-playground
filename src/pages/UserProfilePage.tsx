@@ -196,22 +196,22 @@ const UserProfilePage: React.FC = () => {
         url={`https://hyliya.com/profile/${userId}`}
         type="profile"
       />
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-100">
+      <div className="min-h-screen bg-slate-50 font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
         {/* Header Navigation */}
-        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-purple-100 shadow-sm">
+        <div className="sticky top-0 z-10 bg-white/70 backdrop-blur-xl border-b border-slate-100">
           <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-            <Button 
+            <Button
               onClick={handleBackClick}
-              variant="ghost" 
+              variant="ghost"
               size="sm"
-              className="hover:bg-purple-100 transition-colors"
+              className="hover:bg-slate-100 text-slate-700 rounded-full"
             >
-              <ArrowLeft className="w-5 h-5 mr-2" />
+              <ArrowLeft className="w-5 h-5 mr-1.5" />
               Quay lại
             </Button>
-            
-            <h1 className="font-semibold text-gray-800">Hồ sơ cá nhân</h1>
-            
+
+            <h1 className="font-semibold text-slate-800 text-sm tracking-wide">Hồ sơ cá nhân</h1>
+
             <div className="flex items-center gap-1">
               <Button
                 onClick={async () => {
@@ -227,15 +227,15 @@ const UserProfilePage: React.FC = () => {
                 }}
                 variant="ghost"
                 size="sm"
-                className="hover:bg-purple-100 transition-colors"
+                className="hover:bg-slate-100 text-slate-700 rounded-full"
               >
                 <Share2 className="w-5 h-5" />
               </Button>
-              <Button 
+              <Button
                 onClick={() => navigate('/')}
-                variant="ghost" 
+                variant="ghost"
                 size="sm"
-                className="hover:bg-purple-100 transition-colors"
+                className="hover:bg-slate-100 text-slate-700 rounded-full"
               >
                 <Home className="w-5 h-5" />
               </Button>
@@ -244,192 +244,189 @@ const UserProfilePage: React.FC = () => {
         </div>
 
         {/* Profile Content */}
-        <div className="flex justify-center items-start py-0 px-0 sm:py-6 sm:px-4">
-          <div className="max-w-md w-full bg-white/90 backdrop-blur-sm sm:rounded-2xl shadow-xl overflow-hidden">
-            
-            {/* Hero Album Cover */}
-            <div className="relative">
+        <div className="flex justify-center items-start py-0 sm:py-8 px-0 sm:px-4">
+          <div className="w-full max-w-[420px] bg-white sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 overflow-hidden">
+
+            {/* Hero / Cover Area */}
+            <div className="relative h-[280px]">
               {profile.album && Array.isArray(profile.album) && profile.album.length > 0 ? (
-                <div className="relative h-56 sm:h-64 overflow-hidden">
+                <>
                   <img
                     src={profile.album[0]}
                     alt="Cover"
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-
-                  {/* Thumbnail strip */}
-                  {profile.album.length > 1 && (
-                    <div className="absolute bottom-16 left-3 right-3 flex gap-1.5">
-                      {profile.album.slice(0, 5).map((img: string, idx: number) => (
-                        <button
-                          key={idx}
-                          onClick={() => setShowAlbumModal(true)}
-                          className="relative flex-1 h-14 rounded-lg overflow-hidden border-2 border-white/50 hover:border-white transition-all duration-200 hover:scale-105 shadow-md"
-                        >
-                          <img src={img} alt={`Ảnh ${idx + 1}`} className="w-full h-full object-cover" />
-                          {idx === 4 && profile.album.length > 5 && (
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                              <span className="text-white text-xs font-bold">+{profile.album.length - 5}</span>
-                            </div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
 
                   {/* Album count badge */}
                   <button
                     onClick={() => setShowAlbumModal(true)}
-                    className="absolute top-3 right-3 bg-black/50 hover:bg-black/70 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm flex items-center gap-1.5 transition-colors"
+                    className="absolute top-3 right-3 bg-black/40 hover:bg-black/60 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 transition-colors border border-white/20"
                   >
                     <Album className="w-3.5 h-3.5" />
                     {profile.album.length} ảnh
                   </button>
 
-                  {/* Name on cover */}
-                  <div className="absolute bottom-3 left-3">
-                    <h2 className="text-2xl font-bold text-white drop-shadow-lg">{profile.name}</h2>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2.5 py-0.5 rounded-full">
-                        {profile.age} tuổi
-                      </span>
-                      <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2.5 py-0.5 rounded-full">
-                        {getGenderDisplay(profile.gender)}
-                      </span>
-                      {profile.height && (
-                        <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                          <Ruler className="w-3 h-3" />
-                          {profile.height}cm
-                        </span>
-                      )}
+                  {/* Thumbnail Strip */}
+                  {profile.album.length > 1 && (
+                    <div className="absolute bottom-4 left-0 right-0 px-4">
+                      <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                        {profile.album.slice(0, 5).map((img: string, idx: number) => (
+                          <button
+                            key={idx}
+                            onClick={() => setShowAlbumModal(true)}
+                            className={`relative size-14 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${idx === 0 ? 'border-white shadow-lg' : 'border-white/40 hover:border-white/80'}`}
+                          >
+                            <img src={img} alt={`Ảnh ${idx + 1}`} className={`w-full h-full object-cover ${idx === 0 ? '' : 'opacity-90'}`} />
+                            {idx === 4 && profile.album.length > 5 && (
+                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
+                                <span className="text-white text-xs font-bold">+{profile.album.length - 5}</span>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+                </>
               ) : (
-                <div className="relative h-40 bg-gradient-to-r from-purple-400 via-pink-400 to-rose-400">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  <div className="absolute bottom-3 left-3">
-                    <h2 className="text-2xl font-bold text-white drop-shadow-lg">{profile.name}</h2>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2.5 py-0.5 rounded-full">
-                        {profile.age} tuổi
-                      </span>
-                      <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2.5 py-0.5 rounded-full">
-                        {getGenderDisplay(profile.gender)}
-                      </span>
-                    </div>
-                  </div>
+                <div className="relative h-full bg-gradient-to-br from-rose-200 via-pink-200 to-purple-200">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                 </div>
               )}
-
-              {/* Avatar overlapping */}
-              <div className="absolute -bottom-10 right-4">
-                <div className="relative">
-                  <img
-                    src={profile.avatar || '/placeholder.svg'}
-                    alt={profile.name}
-                    className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-xl bg-white"
-                  />
-                  <div className="absolute -bottom-1 -right-1">
-                    {getDatingStatus()}
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* Content */}
-            <div className="pt-6 px-4 pb-6 space-y-4">
+            {/* Profile Content */}
+            <div className="px-6 -mt-10 relative pb-8">
+              {/* Avatar + Status Row */}
+              <div className="flex justify-between items-end mb-5">
+                <div className="relative">
+                  <div className="size-24 rounded-full border-4 border-white shadow-xl overflow-hidden bg-slate-100">
+                    <img
+                      src={profile.avatar || '/placeholder.svg'}
+                      alt={profile.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {profile.is_dating_active && (
+                    <div className="absolute bottom-1 right-1 bg-emerald-500 border-2 border-white size-5 rounded-full shadow-sm"></div>
+                  )}
+                </div>
+                {profile.is_dating_active ? (
+                  <div className="bg-emerald-50 px-3 py-1.5 rounded-full flex items-center gap-1.5 mb-1 border border-emerald-100">
+                    <div className="size-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">Đang hoạt động</span>
+                  </div>
+                ) : (
+                  <div className="bg-slate-100 px-3 py-1.5 rounded-full mb-1 border border-slate-200">
+                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Tạm dừng</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Name + Chips */}
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                  {profile.name}{profile.age ? `, ${profile.age}` : ''}
+                </h1>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <span className="px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-xs font-medium border border-rose-100">
+                    {getGenderDisplay(profile.gender)}
+                  </span>
+                  {profile.height && (
+                    <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium border border-blue-100 inline-flex items-center gap-1">
+                      <Ruler className="w-3 h-3" />
+                      {profile.height}cm
+                    </span>
+                  )}
+                  {profile.location_name && (
+                    <span className="px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium border border-amber-100 inline-flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {profile.location_name}
+                    </span>
+                  )}
+                </div>
+              </div>
+
               {/* Action Buttons */}
               {!isOwnProfile && (
-                <div className="flex gap-2 pt-2">
+                <div className="grid grid-cols-12 gap-3 mb-8">
                   <Button
                     onClick={handleSendFriendRequest}
                     disabled={isAlreadyFriend || isRequestSent || sendFriendRequest.isPending}
-                    className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-md text-sm"
-                    size="sm"
+                    className="col-span-5 h-12 bg-gradient-to-br from-rose-500 to-pink-600 text-white font-bold rounded-2xl shadow-lg shadow-rose-200 active:scale-95 transition-transform disabled:opacity-60 disabled:from-slate-300 disabled:to-slate-400 disabled:shadow-none"
                   >
                     <UserPlus className="w-4 h-4 mr-1.5" />
-                    {isAlreadyFriend ? "Đã kết bạn" : isRequestSent ? "Đã gửi" : "Kết bạn"}
+                    {isAlreadyFriend ? "Bạn bè" : isRequestSent ? "Đã gửi" : "Kết bạn"}
                   </Button>
                   <Button
                     onClick={handleSendMessage}
-                    className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-md text-sm"
-                    size="sm"
+                    className="col-span-5 h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-lg shadow-slate-300 active:scale-95 transition-transform"
                   >
                     <MessageCircle className="w-4 h-4 mr-1.5" />
                     Nhắn tin
                   </Button>
-                  <Button
+                  <button
                     onClick={() => setShowDonate(true)}
-                    variant="outline"
-                    className="border-yellow-300 text-yellow-600 hover:bg-yellow-50 shadow-sm"
-                    size="sm"
+                    className="col-span-2 bg-amber-100 hover:bg-amber-200 flex items-center justify-center rounded-2xl active:scale-95 transition-transform"
+                    aria-label="Tặng sao"
                   >
-                    <Star className="w-4 h-4 fill-yellow-400" />
-                  </Button>
+                    <Star className="w-6 h-6 text-amber-500 fill-amber-400" />
+                  </button>
                 </div>
               )}
 
               {isOwnProfile && (
-                <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-3 text-center">
-                  <p className="text-purple-700 font-medium text-sm">✨ Đây là hồ sơ của bạn</p>
+                <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl p-3 text-center mb-8 border border-slate-100">
+                  <p className="text-slate-700 font-medium text-sm">✨ Đây là hồ sơ của bạn</p>
                 </div>
               )}
 
               {/* Bio */}
               {profile.bio && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <span className="font-semibold text-gray-800 text-sm block mb-2">💭 Giới thiệu</span>
-                  <span className="text-gray-700 text-sm leading-relaxed">{profile.bio}</span>
+                <div className="mb-8">
+                  <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-2">Giới thiệu</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">{profile.bio}</p>
                 </div>
               )}
 
-              {/* Info cards */}
-              <div className="grid grid-cols-2 gap-2">
-                {profile.job && (
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-xl">
-                    <Briefcase className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <span className="font-medium text-gray-800 text-xs block">Nghề nghiệp</span>
-                      <span className="text-gray-600 text-xs truncate block">{profile.job}</span>
-                    </div>
+              {/* Detail Cards */}
+              <div className="grid grid-cols-3 gap-3 mb-8">
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Briefcase className="w-3 h-3 text-slate-400" />
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase">Nghề</span>
                   </div>
-                )}
-                {profile.education && (
-                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-xl">
-                    <GraduationCap className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <span className="font-medium text-gray-800 text-xs block">Học vấn</span>
-                      <span className="text-gray-600 text-xs truncate block">{profile.education}</span>
-                    </div>
+                  <span className="text-xs font-bold text-slate-800 line-clamp-2">{profile.job || '—'}</span>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-1 mb-1">
+                    <GraduationCap className="w-3 h-3 text-slate-400" />
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase">Học vấn</span>
                   </div>
-                )}
-                <div className={`flex items-center gap-2 p-3 bg-purple-50 rounded-xl ${!profile.job && !profile.education ? 'col-span-2' : ''}`}>
-                  <MapPin className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <span className="font-medium text-gray-800 text-xs block">Địa điểm</span>
-                    <span className="text-gray-600 text-xs truncate block">
-                      {profile.location_name || (
-                        profile.lat && profile.lng
-                          ? `${parseFloat(profile.lat).toFixed(2)}, ${parseFloat(profile.lng).toFixed(2)}`
-                          : "Chưa cập nhật"
-                      )}
-                    </span>
+                  <span className="text-xs font-bold text-slate-800 line-clamp-2">{profile.education || '—'}</span>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-1 mb-1">
+                    <MapPin className="w-3 h-3 text-slate-400" />
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase">Địa điểm</span>
                   </div>
+                  <span className="text-xs font-bold text-slate-800 line-clamp-2">
+                    {profile.location_name || (profile.lat && profile.lng ? `${parseFloat(profile.lat).toFixed(2)}, ${parseFloat(profile.lng).toFixed(2)}` : '—')}
+                  </span>
                 </div>
               </div>
 
               {/* Interests */}
               {profile.interests && Array.isArray(profile.interests) && profile.interests.length > 0 && (
-                <div className="p-4 bg-yellow-50 rounded-xl">
-                  <span className="font-semibold text-gray-800 text-sm block mb-2">🎯 Sở thích</span>
+                <div className="mb-8">
+                  <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-3">Sở thích</h3>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.interests.map((interest: string, idx: number) => (
-                      <Badge 
-                        key={idx} 
+                      <Badge
+                        key={idx}
                         variant="secondary"
-                        className="bg-white border border-yellow-200 text-yellow-800 hover:bg-yellow-100 text-xs"
+                        className="bg-slate-50 border border-slate-100 text-slate-700 hover:bg-slate-100 text-xs font-medium rounded-full px-3 py-1"
                       >
                         {interest}
                       </Badge>
@@ -438,22 +435,19 @@ const UserProfilePage: React.FC = () => {
                 </div>
               )}
 
-              {/* Full Album Grid - More prominent */}
+              {/* Photo Album */}
               {profile.album && Array.isArray(profile.album) && profile.album.length > 0 && (
-                <div className="p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-semibold text-gray-800 text-sm flex items-center gap-1.5">
-                      📸 Album ảnh
-                      <span className="bg-pink-200 text-pink-700 text-xs px-2 py-0.5 rounded-full">{profile.album.length}</span>
-                    </span>
-                    <Button
+                <div className="mb-8">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em]">
+                      Album ảnh · {profile.album.length}
+                    </h3>
+                    <button
                       onClick={() => setShowAlbumModal(true)}
-                      variant="ghost"
-                      size="sm"
-                      className="text-pink-600 hover:text-pink-700 hover:bg-pink-100 text-xs h-7"
+                      className="text-xs text-rose-500 font-semibold hover:text-rose-600"
                     >
                       Xem tất cả →
-                    </Button>
+                    </button>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {profile.album.slice(0, 6).map((img: string, idx: number) => (
@@ -467,10 +461,9 @@ const UserProfilePage: React.FC = () => {
                           alt={`Ảnh ${idx + 1}`}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
                         {idx === 5 && profile.album.length > 6 && (
                           <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
-                            <span className="text-white font-bold text-lg">+{profile.album.length - 6}</span>
+                            <span className="text-white font-bold text-sm">+{profile.album.length - 6}</span>
                           </div>
                         )}
                       </div>
@@ -479,19 +472,20 @@ const UserProfilePage: React.FC = () => {
                 </div>
               )}
 
-              {profile.last_active && (
-                <div className="flex items-center gap-2 text-xs text-gray-500 p-3 bg-gray-50 rounded-xl">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Hoạt động lần cuối: {new Date(profile.last_active).toLocaleDateString('vi-VN')}</span>
-                </div>
-              )}
-
-              <div className="text-xs text-gray-400 text-center border-t pt-4">
-                ID: {profile.id}
+              {/* Footer */}
+              <div className="pt-6 border-t border-slate-100 flex flex-col items-center gap-1">
+                {profile.last_active && (
+                  <span className="text-[10px] text-slate-400 inline-flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Hoạt động lần cuối: {new Date(profile.last_active).toLocaleDateString('vi-VN')}
+                  </span>
+                )}
+                <span className="text-[10px] font-medium text-slate-300 tracking-wider">ID: {profile.id}</span>
               </div>
             </div>
           </div>
         </div>
+
 
         {/* Album Modal - Improved for all devices */}
         <Dialog open={showAlbumModal} onOpenChange={setShowAlbumModal}>

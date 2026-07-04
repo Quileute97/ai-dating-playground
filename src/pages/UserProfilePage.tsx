@@ -260,7 +260,7 @@ const UserProfilePage: React.FC = () => {
 
                   {/* Album count badge */}
                   <button
-                    onClick={() => setShowAlbumModal(true)}
+                    onClick={() => albumRef.current?.openGrid()}
                     className="absolute top-3 right-3 bg-black/40 hover:bg-black/60 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1.5 transition-colors border border-white/20"
                   >
                     <Album className="w-3.5 h-3.5" />

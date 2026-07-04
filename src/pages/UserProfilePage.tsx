@@ -20,7 +20,7 @@ const UserProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [showAlbumModal, setShowAlbumModal] = useState(false);
+  const albumRef = useRef<ProfileAlbumHandle>(null);
   
   const [showDonate, setShowDonate] = useState(false);
   const { toast } = useToast();

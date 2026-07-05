@@ -43,17 +43,31 @@ const UserProfilePage: React.FC = () => {
   useEffect(() => {
     if (!userId) return;
     setLoading(true);
-    supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single()
-      .then(({ data }) => {
-        console.log('Profile data:', data);
-        setProfile(data);
+    (async () => {
+      const { data: real } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+      if (real) {
+        setProfile(real);
         setLoading(false);
-      });
-  }, [userId]);
+        return;
+      }
+      // Fallback: có thể là Trust User (fake user)
+      const { data: fake } = await supabase
+        .from("fake_users")
+        .select("id")
+        .eq("id", userId)
+        .maybeSingle();
+      if (fake) {
+        navigate(`/u/${userId}`, { replace: true });
+        return;
+      }
+      setProfile(null);
+      setLoading(false);
+    })();
+  }, [userId, navigate]);
 
   const handleSendFriendRequest = async () => {
     if (!currentUser || !userId) return;

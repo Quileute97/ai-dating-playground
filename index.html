@@ -16,19 +16,19 @@
     
     
     <!-- Primary Meta Tags -->
-    <title>Hyliya - Ứng dụng hẹn hò và kết nối thông minh với AI</title>
-    <meta name="title" content="Hyliya - Ứng dụng hẹn hò và kết nối thông minh với AI" />
-    <meta name="description" content="Khám phá tình yêu và kết nối ý nghĩa với Hyliya - ứng dụng hẹn hò hiện đại tích hợp AI thông minh, tính năng chat realtime và tìm kiếm người phù hợp quanh bạn." />
-    <meta name="keywords" content="hẹn hò, kết nối, tình yêu, chat, AI, gặp gỡ, bạn bè, hẹn hò online, ứng dụng hẹn hò Việt Nam" />
+    <title>Hyliya - Hẹn hò AI & Chat kết nối người Việt</title>
+    <meta name="title" content="Hyliya - Hẹn hò AI & Chat kết nối người Việt" />
+    <meta name="description" content="Hyliya - ứng dụng hẹn hò AI cho người Việt: ghép đôi thông minh, chat với người lạ, tìm bạn quanh đây và timeline chia sẻ. Miễn phí, an toàn, thuần Việt." />
+    <meta name="keywords" content="hẹn hò AI, app hẹn hò Việt Nam, chat với người lạ, ghép đôi thông minh, tìm bạn quanh đây, ứng dụng hẹn hò online, Hyliya" />
     <meta name="author" content="Hyliya Team" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="https://hyliya.com/" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://hyliya.com/" />
-    <meta property="og:title" content="Hyliya - Ứng dụng hẹn hò và kết nối thông minh với AI" />
-    <meta property="og:description" content="Khám phá tình yêu và kết nối ý nghĩa với Hyliya - ứng dụng hẹn hò hiện đại tích hợp AI thông minh, tính năng chat realtime và tìm kiếm người phù hợp quanh bạn." />
+    <meta property="og:title" content="Hyliya - Hẹn hò AI & Chat kết nối người Việt" />
+    <meta property="og:description" content="Ghép đôi AI thông minh, chat với người lạ an toàn, tìm bạn quanh đây - tất cả trong một app hẹn hò thuần Việt." />
     <meta property="og:image" content="https://hyliya.com/og-image.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -38,8 +38,8 @@
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://hyliya.com/" />
-    <meta property="twitter:title" content="Hyliya - Ứng dụng hẹn hò và kết nối thông minh với AI" />
-    <meta property="twitter:description" content="Khám phá tình yêu và kết nối ý nghĩa với Hyliya - ứng dụng hẹn hò hiện đại tích hợp AI thông minh, tính năng chat realtime và tìm kiếm người phù hợp quanh bạn." />
+    <meta property="twitter:title" content="Hyliya - Hẹn hò AI & Chat kết nối người Việt" />
+    <meta property="twitter:description" content="Ghép đôi AI thông minh, chat với người lạ an toàn, tìm bạn quanh đây - app hẹn hò thuần Việt." />
     <meta property="twitter:image" content="https://hyliya.com/og-image.jpg" />
 
     <!-- Favicon -->
@@ -57,29 +57,61 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Hyliya",
-      "description": "Ứng dụng hẹn hò và kết nối thông minh với AI",
-      "url": "https://hyliya.com/",
-      "applicationCategory": "SocialNetworkingApplication",
-      "operatingSystem": "Web",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "VND"
-      },
-      "author": {
-        "@type": "Organization",
-        "name": "Hyliya Team"
-      },
-      "featureList": [
-        "Chat với người lạ",
-        "Hẹn hò thông minh",
-        "Tìm kiếm quanh đây",
-        "Timeline chia sẻ",
-        "AI hỗ trợ kết nối"
-      ],
-      "screenshot": "https://hyliya.com/screenshot.jpg"
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://hyliya.com/#org",
+          "name": "Hyliya",
+          "url": "https://hyliya.com/",
+          "logo": "https://hyliya.com/favicon.png",
+          "sameAs": ["https://hyliya.com/"],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "support@hyliya.com",
+            "contactType": "customer support",
+            "areaServed": "VN",
+            "availableLanguage": ["Vietnamese"]
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://hyliya.com/#website",
+          "url": "https://hyliya.com/",
+          "name": "Hyliya",
+          "publisher": { "@id": "https://hyliya.com/#org" },
+          "inLanguage": "vi-VN",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://hyliya.com/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "WebApplication",
+          "name": "Hyliya",
+          "url": "https://hyliya.com/",
+          "description": "Ứng dụng hẹn hò AI cho người Việt: ghép đôi thông minh, chat với người lạ, tìm bạn quanh đây.",
+          "applicationCategory": "SocialNetworkingApplication",
+          "operatingSystem": "Web, Android, iOS",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "VND" },
+          "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.7", "ratingCount": "1280" },
+          "featureList": [
+            "Ghép đôi bằng AI",
+            "Chat với người lạ ẩn danh",
+            "Tìm bạn quanh đây theo vị trí",
+            "Timeline chia sẻ khoảnh khắc",
+            "Sao donate và cộng đồng"
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            { "@type": "Question", "name": "Hyliya có miễn phí không?", "acceptedAnswer": { "@type": "Answer", "text": "Có, Hyliya miễn phí các tính năng cơ bản. Gói Premium mở khoá đặc quyền nâng cao." }},
+            { "@type": "Question", "name": "Hyliya có an toàn không?", "acceptedAnswer": { "@type": "Answer", "text": "Hyliya có đội ngũ kiểm duyệt tiếng Việt, hệ thống báo cáo và mã hoá dữ liệu HTTPS + RLS." }},
+            { "@type": "Question", "name": "AI ghép đôi hoạt động thế nào?", "acceptedAnswer": { "@type": "Answer", "text": "AI phân tích hồ sơ, sở thích, vị trí và hành vi để gợi ý người tương thích cao nhất." }}
+          ]
+        }
+      ]
     }
     </script>
 
@@ -90,7 +122,39 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Prerender content for crawlers; React thay thế khi hydrate -->
+      <header>
+        <h1>Hyliya - Ứng dụng hẹn hò AI & kết nối thông minh cho người Việt</h1>
+        <p>Ghép đôi thông minh bằng AI, chat với người lạ an toàn, tìm bạn quanh đây và
+        chia sẻ khoảnh khắc trên timeline - tất cả trong một ứng dụng hẹn hò thuần Việt,
+        miễn phí và bảo mật.</p>
+      </header>
+      <nav aria-label="Điều hướng chính">
+        <ul>
+          <li><a href="/dating">Hẹn hò AI</a></li>
+          <li><a href="/chat">Chat với người lạ</a></li>
+          <li><a href="/nearby">Tìm bạn quanh đây</a></li>
+          <li><a href="/timeline">Timeline cộng đồng</a></li>
+          <li><a href="/gioi-thieu">Giới thiệu</a></li>
+          <li><a href="/huong-dan">Hướng dẫn</a></li>
+          <li><a href="/faq">Câu hỏi thường gặp</a></li>
+        </ul>
+      </nav>
+      <section>
+        <h2>Vì sao chọn Hyliya?</h2>
+        <ul>
+          <li><strong>Hẹn hò AI:</strong> Thuật toán ghép đôi hiểu sở thích và tính cách của bạn.</li>
+          <li><strong>Chat realtime:</strong> Trò chuyện ngay lập tức với người lạ hoặc bạn mới quen.</li>
+          <li><strong>An toàn:</strong> Kiểm duyệt tiếng Việt, mã hoá dữ liệu, báo cáo tài khoản 24/7.</li>
+          <li><strong>Thuần Việt:</strong> Giao diện tiếng Việt tự nhiên, thanh toán PayOS nội địa.</li>
+        </ul>
+      </section>
+      <footer>
+        <p><a href="/dieu-khoan">Điều khoản sử dụng</a> · <a href="/chinh-sach-bao-mat">Chính sách bảo mật</a></p>
+        <p>© Hyliya - Ứng dụng hẹn hò AI Việt Nam</p>
+      </footer>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

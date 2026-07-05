@@ -5,7 +5,11 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Disallow: /payment
 Disallow: /payment-cancel
+Disallow: /payment-success
+Disallow: /messages
+Disallow: /notifications
 Disallow: /reset-password
 
 # Crawl-delay for respectful crawling

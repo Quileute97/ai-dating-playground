@@ -29,6 +29,10 @@ import NotificationsTab from "./NotificationsTab";
 import PremiumBadge from "./PremiumBadge";
 import { useNotificationAlerts } from "@/hooks/useNotificationAlerts";
 
+const HOME_SEO_TITLE = "Hyliya - Hẹn hò AI & kết nối thông minh cho người Việt";
+const HOME_SEO_DESCRIPTION = "Hyliya là ứng dụng hẹn hò AI cho người Việt với ghép đôi thông minh, chat an toàn, tìm bạn quanh đây và timeline chia sẻ khoảnh khắc.";
+const HOME_SEO_KEYWORDS = "hẹn hò AI, app hẹn hò Việt Nam, ghép đôi thông minh, chat với người lạ, tìm bạn quanh đây, Hyliya";
+
 const DatingApp = () => {
   const { toast } = useToast();
   const location = useLocation();
@@ -229,9 +233,9 @@ const DatingApp = () => {
     const baseUrl = "https://hyliya.com";
     const seoData = {
       chat: {
-        title: "Chat với người lạ - Kết nối ngẫu nhiên | Hyliya",
-        description: "Trò chuyện ẩn danh với người lạ trên Hyliya. Tìm kiếm những cuộc trò chuyện thú vị, kết bạn mới và khám phá những kết nối bất ngờ.",
-        keywords: "chat với người lạ, trò chuyện ẩn danh, kết nối ngẫu nhiên, chat online, Hyliya",
+        title: HOME_SEO_TITLE,
+        description: HOME_SEO_DESCRIPTION,
+        keywords: HOME_SEO_KEYWORDS,
         url: `${baseUrl}/`,
       },
       dating: {

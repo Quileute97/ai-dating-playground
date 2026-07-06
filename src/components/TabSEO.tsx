@@ -8,7 +8,7 @@ const TabSEO = ({ activeTab }: TabSEOProps) => {
   const baseUrl = "https://hyliya.com";
   
   const tabData: Record<string, { path: string; label: string }> = {
-    chat: { path: '/', label: 'Chat với người lạ' },
+    chat: { path: '/', label: 'Hyliya - Hẹn hò AI & kết nối thông minh cho người Việt' },
     dating: { path: '/dating', label: 'Hẹn hò' },
     nearby: { path: '/nearby', label: 'Quanh đây' },
     timeline: { path: '/timeline', label: 'Timeline' },

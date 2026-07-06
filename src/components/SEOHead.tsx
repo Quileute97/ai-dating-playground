@@ -12,9 +12,9 @@ interface SEOHeadProps {
 }
 
 const SEOHead: React.FC<SEOHeadProps> = ({
-  title = "Hyliya - Ứng dụng hẹn hò và kết nối thông minh với AI",
-  description = "Khám phá tình yêu và kết nối ý nghĩa với Hyliya - ứng dụng hẹn hò hiện đại tích hợp AI thông minh, tính năng chat realtime và tìm kiếm người phù hợp quanh bạn.",
-  keywords = "hẹn hò, kết nối, tình yêu, chat, AI, gặp gỡ, bạn bè, hẹn hò online, ứng dụng hẹn hò Việt Nam",
+  title = "Hyliya - Hẹn hò AI & kết nối thông minh cho người Việt",
+  description = "Hyliya là ứng dụng hẹn hò AI cho người Việt với ghép đôi thông minh, chat an toàn, tìm bạn quanh đây và timeline chia sẻ khoảnh khắc.",
+  keywords = "hẹn hò AI, app hẹn hò Việt Nam, ghép đôi thông minh, chat với người lạ, tìm bạn quanh đây, Hyliya",
   image = "https://hyliya.com/og-image.jpg",
   url = "https://hyliya.com/",
   type = "website"

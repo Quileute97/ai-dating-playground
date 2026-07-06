@@ -18,7 +18,7 @@ const StructuredData: React.FC<StructuredDataProps> = ({
           "@context": "https://schema.org",
           "@type": "WebApplication",
           "name": "Hyliya",
-          "description": "Ứng dụng hẹn hò và kết nối thông minh với AI",
+          "description": "Ứng dụng hẹn hò AI và kết nối thông minh cho người Việt",
           "url": "https://hyliya.com/",
           "applicationCategory": "SocialNetworkingApplication",
           "operatingSystem": "Web",
@@ -32,8 +32,8 @@ const StructuredData: React.FC<StructuredDataProps> = ({
             "name": "Hyliya Team"
           },
           "featureList": [
-            "Chat với người lạ",
-            "Hẹn hò thông minh", 
+            "Ghép đôi bằng AI",
+            "Chat với người lạ an toàn",
             "Tìm kiếm quanh đây",
             "Timeline chia sẻ",
             "AI hỗ trợ kết nối"

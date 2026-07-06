@@ -141,8 +141,8 @@ const ChatInterface = ({ user, isAdminMode = false, anonId }: ChatInterfaceProps
               <Users className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-gray-800">Chat với người lạ</h1>
-              <p className="text-sm text-gray-500">Kết nối và trò chuyện ngẫu nhiên</p>
+              <h1 className="font-bold text-gray-800 leading-tight">Hyliya - Hẹn hò AI & kết nối thông minh cho người Việt</h1>
+              <p className="text-sm text-gray-500">Chat an toàn, ghép đôi thông minh và tìm bạn quanh đây</p>
             </div>
           </div>
           {user && (

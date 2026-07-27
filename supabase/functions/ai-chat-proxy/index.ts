@@ -7,14 +7,25 @@ const corsHeaders = {
 };
 
 interface ChatMessage {
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant";
   content: string;
 }
 
 interface ChatRequest {
   messages: ChatMessage[];
-  systemPrompt?: string;
+  personality?: "friendly" | "romantic" | "cool" | "funny" | "shy";
 }
+
+const PROMPTS: Record<string, string> = {
+  friendly: "You are a friendly, warm Vietnamese dating chat companion. Keep replies short and kind.",
+  romantic: "You are a romantic, sweet Vietnamese dating chat companion. Keep replies short and heartfelt.",
+  cool: "You are a cool, laid-back Vietnamese dating chat companion. Keep replies short and casual.",
+  funny: "You are a witty, humorous Vietnamese dating chat companion. Keep replies short and playful.",
+  shy: "You are a shy, gentle Vietnamese dating chat companion. Keep replies short and soft.",
+};
+
+const MAX_MESSAGES = 20;
+const MAX_MESSAGE_LEN = 1000;
 
 serve(async (req) => {
   // Handle CORS preflight requests

@@ -64,27 +64,33 @@ serve(async (req) => {
 
     // Parse request body
     const body: ChatRequest = await req.json();
-    const { messages, systemPrompt } = body;
+    const { messages, personality } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Messages array is required"
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        }
+        JSON.stringify({ success: false, error: "Messages array is required" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
+    }
+    if (messages.length > MAX_MESSAGES) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Too many messages (max ${MAX_MESSAGES})` }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+    for (const m of messages) {
+      if (!m || (m.role !== "user" && m.role !== "assistant") || typeof m.content !== "string" || m.content.length > MAX_MESSAGE_LEN) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Invalid message format" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
     }
 
     console.log("📝 Processing", messages.length, "messages");
 
-    // Build messages array with system prompt if provided
-    const openaiMessages = systemPrompt 
-      ? [{ role: "system" as const, content: systemPrompt }, ...messages]
-      : messages;
+    const systemPrompt = PROMPTS[personality ?? "friendly"] ?? PROMPTS.friendly;
+    const openaiMessages = [{ role: "system" as const, content: systemPrompt }, ...messages];
 
     // Call OpenAI API
     const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {

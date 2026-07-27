@@ -68,20 +68,24 @@ serve(async (req) => {
     // Get raw body for signature verification
     const rawBody = await req.text();
     
-    // Verify webhook signature
+    // Verify webhook signature (REQUIRED)
     const webhookSecret = Deno.env.get('PAYOS_WEBHOOK_SECRET');
-    if (webhookSecret) {
-      const providedSignature = req.headers.get('x-payos-signature');
-      
-      if (!providedSignature) {
-        console.error('❌ Missing webhook signature');
-        return new Response(JSON.stringify({ error: 'Missing signature' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-      
-      // Create HMAC signature
+    if (!webhookSecret) {
+      console.error('❌ PAYOS_WEBHOOK_SECRET not configured - refusing webhook');
+      return new Response(JSON.stringify({ error: 'Webhook secret not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    const providedSignature = req.headers.get('x-payos-signature');
+    if (!providedSignature) {
+      console.error('❌ Missing webhook signature');
+      return new Response(JSON.stringify({ error: 'Missing signature' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    {
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
         'raw',
@@ -90,17 +94,9 @@ serve(async (req) => {
         false,
         ['sign']
       );
-      
-      const signature = await crypto.subtle.sign(
-        'HMAC',
-        key,
-        encoder.encode(rawBody)
-      );
-      
+      const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody));
       const computedSignature = Array.from(new Uint8Array(signature))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-      
+        .map(b => b.toString(16).padStart(2, '0')).join('');
       if (computedSignature !== providedSignature) {
         console.error('❌ Invalid webhook signature');
         return new Response(JSON.stringify({ error: 'Invalid signature' }), {
@@ -108,10 +104,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
-      
       console.log('✅ Webhook signature verified');
-    } else {
-      console.warn('⚠️ PAYOS_WEBHOOK_SECRET not configured - skipping signature verification');
     }
     
     const webhookData: PayOSWebhookData = JSON.parse(rawBody);

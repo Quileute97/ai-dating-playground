@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { supabaseAnon } from "../supabase";
 
 export default defineTool({
   name: "search_profiles",
@@ -13,12 +13,8 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ query, limit }) => {
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
-    const q = query.replace(/[%_]/g, "");
+    const supabase = supabaseAnon();
+    const q = query.replace(/[%_,()]/g, "");
     const { data, error } = await supabase
       .from("profiles")
       .select("id, username, display_name, bio, age, gender, location, avatar_url, is_premium")

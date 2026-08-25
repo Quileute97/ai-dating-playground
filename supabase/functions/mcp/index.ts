@@ -6,9 +6,56 @@
 import { defineMcp } from "npm:@lovable.dev/mcp-js@0.20.1";
 
 // src/lib/mcp/tools/search-profiles.ts
-import { createClient } from "npm:@supabase/supabase-js@^2.50.0";
 import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.1";
 import { z } from "npm:zod@^3.25.76";
+
+// src/lib/mcp/supabase.ts
+import { createClient } from "npm:@supabase/supabase-js@^2.50.0";
+function runtimeEnv(name) {
+  const runtime = globalThis;
+  return runtime.Deno?.env?.get?.(name) ?? runtime.process?.env?.[name];
+}
+function configuredEnv(names) {
+  for (const name of names) {
+    const value = runtimeEnv(name)?.trim();
+    if (value) return value;
+  }
+  return void 0;
+}
+function supabaseProjectUrl() {
+  const url = configuredEnv(["SUPABASE_URL", "VITE_SUPABASE_URL"]);
+  if (!url) throw new Error("SUPABASE_URL (or VITE_SUPABASE_URL) is required");
+  return url;
+}
+function supabasePublishableKey() {
+  const direct = configuredEnv([
+    "SUPABASE_PUBLISHABLE_KEY",
+    "VITE_SUPABASE_PUBLISHABLE_KEY"
+  ]);
+  if (direct) return direct;
+  const keyset = runtimeEnv("SUPABASE_PUBLISHABLE_KEYS");
+  if (keyset) {
+    try {
+      const parsed = JSON.parse(keyset);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const keys = parsed;
+        const key = [keys.default, ...Object.values(keys)].find((v) => typeof v === "string" && v.trim().startsWith("sb_publishable_"))?.trim();
+        if (key) return key;
+      }
+    } catch {
+    }
+  }
+  const legacy = configuredEnv(["SUPABASE_ANON_KEY", "VITE_SUPABASE_ANON_KEY"]);
+  if (legacy) return legacy;
+  throw new Error("SUPABASE_PUBLISHABLE_KEY, SUPABASE_PUBLISHABLE_KEYS, or SUPABASE_ANON_KEY is required");
+}
+function supabaseAnon() {
+  return createClient(supabaseProjectUrl(), supabasePublishableKey(), {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+
+// src/lib/mcp/tools/search-profiles.ts
 var search_profiles_default = defineTool({
   name: "search_profiles",
   title: "Search profiles",
@@ -19,12 +66,8 @@ var search_profiles_default = defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ query, limit }) => {
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY,
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    );
-    const q = query.replace(/[%_]/g, "");
+    const supabase = supabaseAnon();
+    const q = query.replace(/[%_,()]/g, "");
     const { data, error } = await supabase.from("profiles").select("id, username, display_name, bio, age, gender, location, avatar_url, is_premium").or(`username.ilike.%${q}%,display_name.ilike.%${q}%,location.ilike.%${q}%`).limit(limit ?? 10);
     if (error) {
       return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
@@ -37,7 +80,6 @@ var search_profiles_default = defineTool({
 });
 
 // src/lib/mcp/tools/get-profile.ts
-import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.50.0";
 import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.1";
 import { z as z2 } from "npm:zod@^3.25.76";
 var get_profile_default = defineTool2({
@@ -53,11 +95,7 @@ var get_profile_default = defineTool2({
     if (!id && !username) {
       return { content: [{ type: "text", text: "Provide either id or username." }], isError: true };
     }
-    const supabase = createClient2(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY,
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    );
+    const supabase = supabaseAnon();
     let query = supabase.from("profiles").select("id, username, display_name, bio, age, gender, location, avatar_url, album, is_premium, created_at").limit(1);
     query = id ? query.eq("id", id) : query.eq("username", username);
     const { data, error } = await query.maybeSingle();
@@ -75,7 +113,6 @@ var get_profile_default = defineTool2({
 });
 
 // src/lib/mcp/tools/list-recent-posts.ts
-import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.50.0";
 import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.1";
 import { z as z3 } from "npm:zod@^3.25.76";
 var list_recent_posts_default = defineTool3({
@@ -87,11 +124,7 @@ var list_recent_posts_default = defineTool3({
   },
   annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: false },
   handler: async ({ limit }) => {
-    const supabase = createClient3(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY,
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    );
+    const supabase = supabaseAnon();
     const { data, error } = await supabase.from("timeline_posts").select("id, user_id, content, media_urls, hashtags, likes_count, comments_count, created_at").order("created_at", { ascending: false }).limit(limit ?? 10);
     if (error) {
       return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };

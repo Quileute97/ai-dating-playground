@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { supabaseAnon } from "../supabase";
 
 export default defineTool({
   name: "get_profile",
@@ -15,11 +15,7 @@ export default defineTool({
     if (!id && !username) {
       return { content: [{ type: "text", text: "Provide either id or username." }], isError: true };
     }
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
+    const supabase = supabaseAnon();
     let query = supabase
       .from("profiles")
       .select("id, username, display_name, bio, age, gender, location, avatar_url, album, is_premium, created_at")

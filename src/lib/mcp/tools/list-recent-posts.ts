@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { supabaseAnon } from "../supabase";
 
 export default defineTool({
   name: "list_recent_posts",
@@ -11,11 +11,7 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: false },
   handler: async ({ limit }) => {
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
+    const supabase = supabaseAnon();
     const { data, error } = await supabase
       .from("timeline_posts")
       .select("id, user_id, content, media_urls, hashtags, likes_count, comments_count, created_at")

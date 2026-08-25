@@ -79,6 +79,112 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_commissions: {
+        Row: {
+          affiliate_id: string | null
+          buyer_id: string | null
+          commission_amount: number | null
+          commission_rate: number | null
+          content_id: string | null
+          created_at: string | null
+          gross_amount: number | null
+          id: string
+          status: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          affiliate_id?: string | null
+          buyer_id?: string | null
+          commission_amount?: number | null
+          commission_rate?: number | null
+          content_id?: string | null
+          created_at?: string | null
+          gross_amount?: number | null
+          id?: string
+          status?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          affiliate_id?: string | null
+          buyer_id?: string | null
+          commission_amount?: number | null
+          commission_rate?: number | null
+          content_id?: string | null
+          created_at?: string | null
+          gross_amount?: number | null
+          id?: string
+          status?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_links: {
+        Row: {
+          clicks: number | null
+          code: string
+          content_id: string | null
+          created_at: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          clicks?: number | null
+          code: string
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          clicks?: number | null
+          code?: string
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_links_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          created_at: string | null
+          referral_code: string
+          total_commission: number | null
+          total_referrals: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          referral_code: string
+          total_commission?: number | null
+          total_referrals?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          referral_code?: string
+          total_commission?: number | null
+          total_referrals?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_prompts: {
         Row: {
           category: string | null
@@ -172,6 +278,185 @@ export type Database = {
           },
         ]
       }
+      content_purchases: {
+        Row: {
+          amount: number
+          content_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          content_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          content_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_purchases_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_reviews: {
+        Row: {
+          comment: string | null
+          content_id: string
+          created_at: string | null
+          id: string
+          rating: number | null
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          content_id: string
+          created_at?: string | null
+          id?: string
+          rating?: number | null
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          content_id?: string
+          created_at?: string | null
+          id?: string
+          rating?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_reviews_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_uploads: {
+        Row: {
+          admin_note: string | null
+          article_body: string | null
+          average_rating: number | null
+          created_at: string | null
+          creator_id: string
+          description: string | null
+          difficulty: string | null
+          download_count: number | null
+          drive_file_id: string | null
+          duration_minutes: number | null
+          embed_url: string | null
+          file_url: string | null
+          id: string
+          like_count: number | null
+          price: number | null
+          program: string | null
+          question_count: number | null
+          status: string | null
+          subject_id: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          type: string
+          university_id: string | null
+          updated_at: string | null
+          view_count: number | null
+          year_level: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          article_body?: string | null
+          average_rating?: number | null
+          created_at?: string | null
+          creator_id: string
+          description?: string | null
+          difficulty?: string | null
+          download_count?: number | null
+          drive_file_id?: string | null
+          duration_minutes?: number | null
+          embed_url?: string | null
+          file_url?: string | null
+          id?: string
+          like_count?: number | null
+          price?: number | null
+          program?: string | null
+          question_count?: number | null
+          status?: string | null
+          subject_id?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          type?: string
+          university_id?: string | null
+          updated_at?: string | null
+          view_count?: number | null
+          year_level?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          article_body?: string | null
+          average_rating?: number | null
+          created_at?: string | null
+          creator_id?: string
+          description?: string | null
+          difficulty?: string | null
+          download_count?: number | null
+          drive_file_id?: string | null
+          duration_minutes?: number | null
+          embed_url?: string | null
+          file_url?: string | null
+          id?: string
+          like_count?: number | null
+          price?: number | null
+          program?: string | null
+          question_count?: number | null
+          status?: string | null
+          subject_id?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          type?: string
+          university_id?: string | null
+          updated_at?: string | null
+          view_count?: number | null
+          year_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_uploads_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_uploads_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_uploads_year_level_fkey"
+            columns: ["year_level"]
+            isOneToOne: false
+            referencedRelation: "year_levels"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
@@ -198,6 +483,323 @@ export type Database = {
           user_real_id?: string
         }
         Relationships: []
+      }
+      creator_applications: {
+        Row: {
+          admin_note: string | null
+          avatar_url: string | null
+          bank_info: Json | null
+          bio: string | null
+          created_at: string | null
+          full_name: string
+          id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          avatar_url?: string | null
+          bank_info?: Json | null
+          bio?: string | null
+          created_at?: string | null
+          full_name: string
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          avatar_url?: string | null
+          bank_info?: Json | null
+          bio?: string | null
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      creator_tests: {
+        Row: {
+          access: string | null
+          created_at: string | null
+          creator_id: string
+          description: string | null
+          difficulty: Database["public"]["Enums"]["test_difficulty"] | null
+          duration_minutes: number | null
+          id: string
+          is_published: boolean | null
+          passing_score: number | null
+          published_at: string | null
+          slug: string
+          status: Database["public"]["Enums"]["test_status"] | null
+          subject: string | null
+          title: string
+          topic: string | null
+          total_points: number | null
+          total_questions: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          access?: string | null
+          created_at?: string | null
+          creator_id: string
+          description?: string | null
+          difficulty?: Database["public"]["Enums"]["test_difficulty"] | null
+          duration_minutes?: number | null
+          id?: string
+          is_published?: boolean | null
+          passing_score?: number | null
+          published_at?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["test_status"] | null
+          subject?: string | null
+          title: string
+          topic?: string | null
+          total_points?: number | null
+          total_questions?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          access?: string | null
+          created_at?: string | null
+          creator_id?: string
+          description?: string | null
+          difficulty?: Database["public"]["Enums"]["test_difficulty"] | null
+          duration_minutes?: number | null
+          id?: string
+          is_published?: boolean | null
+          passing_score?: number | null
+          published_at?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["test_status"] | null
+          subject?: string | null
+          title?: string
+          topic?: string | null
+          total_points?: number | null
+          total_questions?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      exam_attempts: {
+        Row: {
+          answers: Json | null
+          created_at: string | null
+          duration_seconds: number | null
+          id: string
+          passed: boolean | null
+          score: number | null
+          test_id: string
+          user_id: string
+        }
+        Insert: {
+          answers?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          passed?: boolean | null
+          score?: number | null
+          test_id: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          id?: string
+          passed?: boolean | null
+          score?: number | null
+          test_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_attempts_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "creator_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "exam_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_comments: {
+        Row: {
+          content: string
+          created_at: string
+          exam_id: string
+          id: string
+          is_pinned: boolean
+          parent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          exam_id: string
+          id?: string
+          is_pinned?: boolean
+          parent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          exam_id?: string
+          id?: string
+          is_pinned?: boolean
+          parent_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_comments_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "exam_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_submissions: {
+        Row: {
+          answers: Json
+          correct_count: number
+          created_at: string
+          duration_seconds: number
+          exam_id: string
+          id: string
+          score: number
+          total_count: number
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          correct_count?: number
+          created_at?: string
+          duration_seconds?: number
+          exam_id: string
+          id?: string
+          score?: number
+          total_count?: number
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          correct_count?: number
+          created_at?: string
+          duration_seconds?: number
+          exam_id?: string
+          id?: string
+          score?: number
+          total_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_submissions_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exams: {
+        Row: {
+          created_at: string
+          description: string
+          difficulty: string
+          duration_minutes: number
+          id: string
+          question_count: number
+          slug: string
+          subject_id: string
+          tier: string
+          title: string
+          updated_at: string
+          year_level: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          difficulty?: string
+          duration_minutes?: number
+          id?: string
+          question_count?: number
+          slug: string
+          subject_id: string
+          tier?: string
+          title: string
+          updated_at?: string
+          year_level?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          difficulty?: string
+          duration_minutes?: number
+          id?: string
+          question_count?: number
+          slug?: string
+          subject_id?: string
+          tier?: string
+          title?: string
+          updated_at?: string
+          year_level?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exams_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fake_post_comments: {
         Row: {
@@ -446,6 +1048,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string | null
+          data: Json | null
+          id: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payos_invoices: {
         Row: {
           amount: number
@@ -631,6 +1266,47 @@ export type Database = {
         }
         Relationships: []
       }
+      questions: {
+        Row: {
+          content: string
+          correct_option: string
+          created_at: string
+          exam_id: string
+          explanation: string
+          id: string
+          options: Json
+          order_index: number
+        }
+        Insert: {
+          content: string
+          correct_option: string
+          created_at?: string
+          exam_id: string
+          explanation?: string
+          id?: string
+          options?: Json
+          order_index?: number
+        }
+        Update: {
+          content?: string
+          correct_option?: string
+          created_at?: string
+          exam_id?: string
+          explanation?: string
+          id?: string
+          options?: Json
+          order_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       star_transactions: {
         Row: {
           amount: number
@@ -715,6 +1391,107 @@ export type Database = {
         }
         Relationships: []
       }
+      study_activity: {
+        Row: {
+          activity_date: string
+          created_at: string
+          id: string
+          points: number
+          user_id: string
+        }
+        Insert: {
+          activity_date?: string
+          created_at?: string
+          id?: string
+          points?: number
+          user_id: string
+        }
+        Update: {
+          activity_date?: string
+          created_at?: string
+          id?: string
+          points?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subjects: {
+        Row: {
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      test_questions: {
+        Row: {
+          correct_answer: string | null
+          created_at: string | null
+          explanation: string | null
+          id: string
+          options: Json | null
+          order_index: number | null
+          points: number | null
+          question_text: string
+          question_type: Database["public"]["Enums"]["question_type"] | null
+          test_id: string
+        }
+        Insert: {
+          correct_answer?: string | null
+          created_at?: string | null
+          explanation?: string | null
+          id?: string
+          options?: Json | null
+          order_index?: number | null
+          points?: number | null
+          question_text: string
+          question_type?: Database["public"]["Enums"]["question_type"] | null
+          test_id: string
+        }
+        Update: {
+          correct_answer?: string | null
+          created_at?: string | null
+          explanation?: string | null
+          id?: string
+          options?: Json | null
+          order_index?: number | null
+          points?: number | null
+          question_text?: string
+          question_type?: Database["public"]["Enums"]["question_type"] | null
+          test_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_questions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "creator_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       timeline_messages: {
         Row: {
           content: string
@@ -739,6 +1516,39 @@ export type Database = {
           read?: boolean | null
           receiver_id?: string
           sender_id?: string
+        }
+        Relationships: []
+      }
+      universities: {
+        Row: {
+          city: string | null
+          created_at: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          short_name: string | null
+          slug: string
+          sort_order: number | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          short_name?: string | null
+          slug: string
+          sort_order?: number | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          short_name?: string | null
+          slug?: string
+          sort_order?: number | null
         }
         Relationships: []
       }
@@ -859,6 +1669,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number
+          last_active_date: string | null
+          longest_streak: number
+          total_points: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          last_active_date?: string | null
+          longest_streak?: number
+          total_points?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          last_active_date?: string | null
+          longest_streak?: number
+          total_points?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           created_at: string
@@ -898,9 +1738,262 @@ export type Database = {
         }
         Relationships: []
       }
+      vmed_payouts: {
+        Row: {
+          account_info: Json
+          admin_note: string | null
+          amount: number
+          created_at: string | null
+          creator_id: string
+          id: string
+          method: string
+          processed_at: string | null
+          status: string | null
+        }
+        Insert: {
+          account_info: Json
+          admin_note?: string | null
+          amount: number
+          created_at?: string | null
+          creator_id: string
+          id?: string
+          method: string
+          processed_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          account_info?: Json
+          admin_note?: string | null
+          amount?: number
+          created_at?: string | null
+          creator_id?: string
+          id?: string
+          method?: string
+          processed_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      vmed_profiles: {
+        Row: {
+          avatar_url: string | null
+          bank_account: Json | null
+          created_at: string
+          creator_bio: string | null
+          current_year_level: string | null
+          full_name: string
+          is_pro: boolean
+          is_verified_creator: boolean | null
+          onboarding_completed: boolean | null
+          onboarding_quiz_score: number | null
+          payout_status: string | null
+          pro_expires_at: string | null
+          role: Database["public"]["Enums"]["vmed_role"] | null
+          total_earnings: number | null
+          updated_at: string
+          user_id: string
+          weak_subjects: string[] | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bank_account?: Json | null
+          created_at?: string
+          creator_bio?: string | null
+          current_year_level?: string | null
+          full_name?: string
+          is_pro?: boolean
+          is_verified_creator?: boolean | null
+          onboarding_completed?: boolean | null
+          onboarding_quiz_score?: number | null
+          payout_status?: string | null
+          pro_expires_at?: string | null
+          role?: Database["public"]["Enums"]["vmed_role"] | null
+          total_earnings?: number | null
+          updated_at?: string
+          user_id: string
+          weak_subjects?: string[] | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bank_account?: Json | null
+          created_at?: string
+          creator_bio?: string | null
+          current_year_level?: string | null
+          full_name?: string
+          is_pro?: boolean
+          is_verified_creator?: boolean | null
+          onboarding_completed?: boolean | null
+          onboarding_quiz_score?: number | null
+          payout_status?: string | null
+          pro_expires_at?: string | null
+          role?: Database["public"]["Enums"]["vmed_role"] | null
+          total_earnings?: number | null
+          updated_at?: string
+          user_id?: string
+          weak_subjects?: string[] | null
+        }
+        Relationships: []
+      }
+      vmed_royalties: {
+        Row: {
+          content_id: string | null
+          created_at: string | null
+          creator_id: string | null
+          creator_share: number | null
+          gross_revenue: number | null
+          id: string
+          month: string
+          payout_id: string | null
+          platform_share: number | null
+          status: string | null
+          total_sales: number | null
+        }
+        Insert: {
+          content_id?: string | null
+          created_at?: string | null
+          creator_id?: string | null
+          creator_share?: number | null
+          gross_revenue?: number | null
+          id?: string
+          month: string
+          payout_id?: string | null
+          platform_share?: number | null
+          status?: string | null
+          total_sales?: number | null
+        }
+        Update: {
+          content_id?: string | null
+          created_at?: string | null
+          creator_id?: string | null
+          creator_share?: number | null
+          gross_revenue?: number | null
+          id?: string
+          month?: string
+          payout_id?: string | null
+          platform_share?: number | null
+          status?: string | null
+          total_sales?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vmed_royalties_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_uploads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vmed_royalties_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "vmed_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vmed_transactions: {
+        Row: {
+          amount: number
+          buyer_id: string
+          content_id: string | null
+          created_at: string | null
+          creator_earnings: number
+          creator_id: string | null
+          id: string
+          paid_out: boolean | null
+          payment_method: string | null
+          payment_status: string | null
+          platform_fee: number
+          transaction_id: string | null
+        }
+        Insert: {
+          amount: number
+          buyer_id: string
+          content_id?: string | null
+          created_at?: string | null
+          creator_earnings: number
+          creator_id?: string | null
+          id?: string
+          paid_out?: boolean | null
+          payment_method?: string | null
+          payment_status?: string | null
+          platform_fee: number
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          buyer_id?: string
+          content_id?: string | null
+          created_at?: string | null
+          creator_earnings?: number
+          creator_id?: string | null
+          id?: string
+          paid_out?: boolean | null
+          payment_method?: string | null
+          payment_status?: string | null
+          platform_fee?: number
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vmed_transactions_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      year_levels: {
+        Row: {
+          code: string
+          label: string
+          program: string | null
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          label: string
+          program?: string | null
+          sort_order: number
+        }
+        Update: {
+          code?: string
+          label?: string
+          program?: string | null
+          sort_order?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      vmed_profiles_public: {
+        Row: {
+          avatar_url: string | null
+          creator_bio: string | null
+          full_name: string | null
+          is_verified_creator: boolean | null
+          role: Database["public"]["Enums"]["vmed_role"] | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          creator_bio?: string | null
+          full_name?: string | null
+          is_verified_creator?: boolean | null
+          role?: Database["public"]["Enums"]["vmed_role"] | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          creator_bio?: string | null
+          full_name?: string | null
+          is_verified_creator?: boolean | null
+          role?: Database["public"]["Enums"]["vmed_role"] | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       claim_daily_stars: {
@@ -988,6 +2081,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_creator_earnings: {
+        Args: { amount: number; profile_id: string }
+        Returns: undefined
+      }
       like_fake_post: {
         Args: { post_id_param: string; user_id_param: string }
         Returns: undefined
@@ -1009,6 +2106,10 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      question_type: "multiple_choice" | "true_false" | "essay"
+      test_difficulty: "easy" | "medium" | "hard"
+      test_status: "draft" | "published" | "archived"
+      vmed_role: "student" | "creator" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1137,6 +2238,10 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      question_type: ["multiple_choice", "true_false", "essay"],
+      test_difficulty: ["easy", "medium", "hard"],
+      test_status: ["draft", "published", "archived"],
+      vmed_role: ["student", "creator", "admin"],
     },
   },
 } as const

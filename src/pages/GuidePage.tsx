@@ -9,6 +9,38 @@ const GuidePage: React.FC = () => (
       description="Hướng dẫn từng bước sử dụng Hyliya: tạo hồ sơ hấp dẫn, chat với người lạ an toàn, tìm bạn quanh đây và sử dụng tính năng ghép đôi AI hiệu quả."
       keywords="hướng dẫn Hyliya, cách dùng app hẹn hò, mẹo hẹn hò online, tips ghép đôi AI"
       url="https://hyliya.com/huong-dan"
+      breadcrumbs={[
+        { name: "Trang chủ", url: "https://hyliya.com/" },
+        { name: "Hướng dẫn", url: "https://hyliya.com/huong-dan" }
+      ]}
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "Cách sử dụng ứng dụng hẹn hò Hyliya",
+        "description": "Hướng dẫn từng bước tạo hồ sơ, ghép đôi bằng AI và kết nối an toàn trên Hyliya.",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "name": "Bước 1: Tạo hồ sơ hấp dẫn",
+            "text": "Đăng tải ảnh rõ mặt, viết tiểu sử ngắn 2-3 câu về sở thích và mục tiêu tình cảm."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Bước 2: Khám phá & ghép đôi",
+            "text": "Vào tab Hẹn hò để xem các gợi ý AI. Quẹt phải nếu thích, quẹt trái để bỏ qua."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Bước 3: Chat & gặp gỡ",
+            "text": "Sử dụng tab Tin nhắn hoặc Chat ngẫu nhiên để trò chuyện an toàn."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Bước 4: Tìm bạn quanh đây",
+            "text": "Bật vị trí và mở tab Quanh đây để xem người dùng gần bạn theo bán kính tuỳ chọn."
+          }
+        ]
+      }}
     />
     <main className="max-w-3xl mx-auto px-5 py-10 prose prose-slate">
       <nav className="text-sm text-slate-500 mb-4">

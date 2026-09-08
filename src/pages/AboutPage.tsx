@@ -10,6 +10,10 @@ const AboutPage: React.FC = () => {
         description="Hyliya là ứng dụng hẹn hò và kết nối thông minh tích hợp AI dành cho người Việt: chat realtime, tìm bạn quanh đây, ghép đôi phù hợp và timeline chia sẻ cảm xúc."
         keywords="giới thiệu Hyliya, app hẹn hò AI Việt Nam, ứng dụng kết nối thông minh, hẹn hò online, chat AI"
         url="https://hyliya.com/gioi-thieu"
+        breadcrumbs={[
+          { name: "Trang chủ", url: "https://hyliya.com/" },
+          { name: "Giới thiệu", url: "https://hyliya.com/gioi-thieu" }
+        ]}
       />
       <main className="max-w-3xl mx-auto px-5 py-10 prose prose-slate">
         <nav className="text-sm text-slate-500 mb-4">

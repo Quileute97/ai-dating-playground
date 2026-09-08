@@ -9,6 +9,10 @@ const PrivacyPage: React.FC = () => (
       description="Chính sách bảo mật của Hyliya: cách chúng tôi thu thập, sử dụng và bảo vệ dữ liệu người dùng trên ứng dụng hẹn hò và kết nối Hyliya."
       keywords="chính sách bảo mật Hyliya, privacy policy, bảo vệ dữ liệu, hẹn hò an toàn"
       url="https://hyliya.com/chinh-sach-bao-mat"
+      breadcrumbs={[
+        { name: "Trang chủ", url: "https://hyliya.com/" },
+        { name: "Chính sách bảo mật", url: "https://hyliya.com/chinh-sach-bao-mat" }
+      ]}
     />
     <main className="max-w-3xl mx-auto px-5 py-10 prose prose-slate">
       <nav className="text-sm text-slate-500 mb-4">

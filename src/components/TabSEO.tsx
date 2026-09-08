@@ -65,10 +65,17 @@ const TabSEO = ({ activeTab }: TabSEOProps) => {
       {/* Alternate URLs for language/region variations */}
       <link rel="alternate" hrefLang="vi-VN" href={canonicalUrl} />
       <link rel="alternate" hrefLang="vi" href={canonicalUrl} />
+      <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
       
       {/* Open Graph meta tags */}
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:type" content="website" />
+      <meta property="og:title" content={currentTab.label} />
+      <meta property="og:image" content={`${baseUrl}/og-image.jpg`} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:site_name" content="Hyliya" />
+      <meta property="og:locale" content="vi_VN" />
       
       {/* Twitter Card meta tags */}
       <meta name="twitter:url" content={canonicalUrl} />

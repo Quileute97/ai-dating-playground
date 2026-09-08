@@ -43,10 +43,12 @@ const FAQPage: React.FC = () => {
         description="Giải đáp các câu hỏi thường gặp về ứng dụng hẹn hò Hyliya: bảo mật, AI ghép đôi, chat ngẫu nhiên, gói Premium và cách xoá tài khoản."
         keywords="FAQ Hyliya, câu hỏi thường gặp, hỗ trợ Hyliya"
         url="https://hyliya.com/faq"
+        breadcrumbs={[
+          { name: "Trang chủ", url: "https://hyliya.com/" },
+          { name: "FAQ", url: "https://hyliya.com/faq" }
+        ]}
+        jsonLd={jsonLd}
       />
-      <Helmet>
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-      </Helmet>
       <main className="max-w-3xl mx-auto px-5 py-10">
         <nav className="text-sm text-slate-500 mb-4">
           <Link to="/" className="hover:underline">Trang chủ</Link> / FAQ

@@ -136,7 +136,16 @@ Sau khi upload, cấu trúc phải như sau:
 
 ```
 /home/hyliya.com/public_html/
-├── index.html
+├── index.html                 # Trang chủ (Prerendered SSG)
+├── gioi-thieu/index.html       # Trang Giới thiệu (Prerendered SSG)
+├── huong-dan/index.html        # Trang Hướng dẫn (Prerendered SSG)
+├── faq/index.html              # Trang FAQ (Prerendered SSG)
+├── dieu-khoan/index.html       # Trang Điều khoản (Prerendered SSG)
+├── chinh-sach-bao-mat/index.html # Trang Chính sách (Prerendered SSG)
+├── dating/index.html           # Trang Hẹn hò AI (Prerendered SSG)
+├── chat/index.html             # Trang Chat người lạ (Prerendered SSG)
+├── nearby/index.html           # Trang Quanh đây (Prerendered SSG)
+├── timeline/index.html         # Trang Timeline (Prerendered SSG)
 ├── assets/
 │   ├── index-xxxxx.js
 │   ├── index-xxxxx.css
@@ -144,11 +153,14 @@ Sau khi upload, cấu trúc phải như sau:
 ├── .htaccess
 ├── robots.txt
 ├── sitemap.xml
-├── favicon.ico
+├── og-image.jpg                # Chuẩn 1200x630px Open Graph
+├── favicon.svg / favicon.png / favicon.ico
 └── ...
 ```
 
-⚠️ **QUAN TRỌNG**: Các file phải nằm **TRỰC TIẾP** trong public_html/, KHÔNG được có thêm thư mục dist/ bên trong!
+✨ **Lợi ích SEO vượt trội**: Nhờ quy trình SSG tự động, mỗi URL trên server đều có file `index.html` tĩnh với mã hash (md5sum), thẻ meta và nội dung semantic độc lập. Web server sẽ trả về nội dung hoàn chỉnh ngay lập tức cho Googlebot và bot mạng xã hội mà không cần phụ thuộc vào client JavaScript.
+
+⚠️ **QUAN TRỌNG**: Toàn bộ nội dung trong thư mục `dist/` phải được upload trực tiếp vào `public_html/`!
 
 ---
 

@@ -9,6 +9,10 @@ const TermsPage: React.FC = () => (
       description="Điều khoản và điều kiện sử dụng ứng dụng hẹn hò Hyliya. Quy tắc cộng đồng, quyền và nghĩa vụ của người dùng khi tham gia Hyliya."
       keywords="điều khoản sử dụng Hyliya, terms of service, quy định người dùng"
       url="https://hyliya.com/dieu-khoan"
+      breadcrumbs={[
+        { name: "Trang chủ", url: "https://hyliya.com/" },
+        { name: "Điều khoản sử dụng", url: "https://hyliya.com/dieu-khoan" }
+      ]}
     />
     <main className="max-w-3xl mx-auto px-5 py-10 prose prose-slate">
       <nav className="text-sm text-slate-500 mb-4">

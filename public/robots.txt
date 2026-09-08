@@ -1,5 +1,5 @@
-
 # Robots.txt for Hyliya Dating App
+# https://hyliya.com/
 
 User-agent: *
 Allow: /
@@ -12,13 +12,7 @@ Disallow: /messages
 Disallow: /notifications
 Disallow: /reset-password
 
-# Crawl-delay for respectful crawling
-Crawl-delay: 1
-
-# Sitemap
-Sitemap: https://hyliya.com/sitemap.xml
-
-# Specific rules for major search engines
+# Search engines
 User-agent: Googlebot
 Allow: /
 Disallow: /admin
@@ -29,7 +23,7 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 
-User-agent: Slurp
+User-agent: YandexBot
 Allow: /
 Disallow: /admin
 Disallow: /api/
@@ -43,3 +37,9 @@ Allow: /
 
 User-agent: LinkedInBot
 Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+# Sitemap
+Sitemap: https://hyliya.com/sitemap.xml
